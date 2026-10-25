@@ -1,0 +1,27 @@
+# macOS / OS
+.DS_Store
+Thumbs.db
+
+# Node / Tauri
+node_modules/
+dist/
+target/
+src-tauri/target/
+src-tauri/gen/
+
+# Env / secrets (o app não usa, mas nunca deve entrar)
+.env
+.env.*
+*.pem
+*.key
+
+# Editores
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Dados locais de projetos de teste
+/tmp-projects/
+/references/
+GEMINI.md
+/docs/
