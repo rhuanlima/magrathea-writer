@@ -1,0 +1,132 @@
+@import './fonts.css';
+
+:root {
+  /* Colors - Light Substrate (Default) */
+  --color-paper-base: #F7F4EB;
+  --color-paper-surface: #EFECE1;
+  --color-paper-elevated: #FFFFFF;
+  --color-paper-border: #E3DDCF;
+  --color-paper-hover: #E6E2D4;
+  --color-ink-charcoal: #1E231D;
+  --color-ink-muted: #696E64;
+  --color-ink-faded: #A4A89E;
+  --color-ink-dim: #ABABA3;
+  --color-olive: #5E6F45;
+  --color-olive-hover: #46562F;
+  --color-olive-subtle: #EEF2E6;
+  --color-bronze: #C4A468;
+  --color-bronze-text: #7A6230;
+  --color-bronze-deep: #8C733E;
+  --color-chip-bg: #F0EADE;
+  --color-error: #BA1A1A;
+
+  /* Typography Families */
+  --font-literary: 'EB Garamond', Georgia, serif;
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* Typographic Hierarchy */
+  --text-display-lg: 600 48px/56px var(--font-literary);
+  --text-headline-lg: 600 32px/40px var(--font-literary);
+  --text-headline-md: 500 24px/32px var(--font-literary);
+  --text-headline-sm: 500 20px/28px var(--font-literary);
+  --text-body-lg: 400 19px/32px var(--font-literary);
+  --text-body-md: 400 17px/28px var(--font-literary);
+  --text-body-sm: 400 15px/24px var(--font-literary);
+  --text-ui-label-lg: 600 14px/20px var(--font-ui);
+  --text-ui-label-md: 500 12px/16px var(--font-ui);
+  --text-ui-label-sm: 500 11px/14px var(--font-ui);
+  --text-code-meta: 400 13px/20px var(--font-mono);
+
+  /* Spacing */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 1rem;
+  --space-lg: 1.5rem;
+  --space-xl: 2.5rem;
+  --gutter: 1rem;
+  --gutter-desktop: 1.5rem;
+  --margin: 1rem;
+  --margin-desktop: 3rem;
+
+  /* Roundedness */
+  --rounded-sm: 0.125rem;
+  --rounded-default: 0.25rem;
+  --rounded-md: 0.375rem;
+  --rounded-lg: 0.5rem;
+  --rounded-xl: 0.75rem;
+  --rounded-full: 9999px;
+
+  /* Shadows (Paper Atmosphere) */
+  --shadow-hud: 0 4px 20px -2px rgba(30, 35, 29, 0.06), 0 2px 6px -1px rgba(30, 35, 29, 0.04);
+  --shadow-modal: 0 16px 40px -4px rgba(30, 35, 29, 0.12), 0 4px 12px -2px rgba(30, 35, 29, 0.06);
+  --shadow-inset: inset 0 1px 2px rgba(30, 35, 29, 0.04);
+
+  /* Accessibility & Transitions */
+  --focus-ring: 2px solid var(--color-olive);
+  --focus-offset: 2px;
+  --transition-focus: 200ms ease;
+}
+
+/* System Dark Mode fallback */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper-base: #1B1D19;
+    --color-paper-surface: #23261F;
+    --color-paper-elevated: #2B2F27;
+    --color-paper-border: #383C32;
+    --color-paper-hover: #30342B;
+    --color-ink-charcoal: #E9E6DA;
+    --color-ink-muted: #A4A89E;
+    --color-ink-faded: #767A6E;
+    --color-ink-dim: #5A5E53;
+    --color-olive: #8AA66A;
+    --color-olive-hover: #A3BD84;
+    --color-olive-subtle: #2A3023;
+    --color-bronze: #D4B97F;
+    --color-bronze-text: #D4B97F;
+    --color-chip-bg: #33301F;
+    --color-error: #FFB4AB;
+  }
+}
+
+/* Explicit Dark Theme */
+:root[data-theme="dark"] {
+  --color-paper-base: #1B1D19;
+  --color-paper-surface: #23261F;
+  --color-paper-elevated: #2B2F27;
+  --color-paper-border: #383C32;
+  --color-paper-hover: #30342B;
+  --color-ink-charcoal: #E9E6DA;
+  --color-ink-muted: #A4A89E;
+  --color-ink-faded: #767A6E;
+  --color-ink-dim: #5A5E53;
+  --color-olive: #8AA66A;
+  --color-olive-hover: #A3BD84;
+  --color-olive-subtle: #2A3023;
+  --color-bronze: #D4B97F;
+  --color-bronze-text: #D4B97F;
+  --color-chip-bg: #33301F;
+  --color-error: #FFB4AB;
+}
+
+/* Explicit Light Theme override */
+:root[data-theme="light"] {
+  --color-paper-base: #F7F4EB;
+  --color-paper-surface: #EFECE1;
+  --color-paper-elevated: #FFFFFF;
+  --color-paper-border: #E3DDCF;
+  --color-paper-hover: #E6E2D4;
+  --color-ink-charcoal: #1E231D;
+  --color-ink-muted: #696E64;
+  --color-ink-faded: #A4A89E;
+  --color-ink-dim: #ABABA3;
+  --color-olive: #5E6F45;
+  --color-olive-hover: #46562F;
+  --color-olive-subtle: #EEF2E6;
+  --color-bronze: #C4A468;
+  --color-bronze-text: #7A6230;
+  --color-bronze-deep: #8C733E;
+  --color-chip-bg: #F0EADE;
+  --color-error: #BA1A1A;
+}

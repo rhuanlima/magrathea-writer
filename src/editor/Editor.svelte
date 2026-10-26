@@ -34,16 +34,32 @@
         EditorView.theme({
           '&': {
             height: '100%',
-            fontSize: '16px',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
+            fontSize: '19px',
+            lineHeight: '32px',
+            fontFamily: 'var(--font-literary)',
+            backgroundColor: 'var(--color-paper-base)',
+            color: 'var(--color-ink-charcoal)',
           },
           '.cm-scroller': {
             overflow: 'auto',
-            padding: '16px',
+            padding: 'var(--space-lg) var(--space-md)',
           },
           '.cm-content': {
             maxWidth: '720px',
             margin: '0 auto',
+            caretColor: 'var(--color-olive)',
+          },
+          '.cm-cursor': {
+            borderLeftColor: 'var(--color-olive)',
+            borderLeftWidth: '2px',
+          },
+          '.cm-selectionBackground, ::selection': {
+            backgroundColor: 'rgba(94, 111, 69, 0.2) !important',
+          },
+          '.cm-gutters': {
+            backgroundColor: 'var(--color-paper-base)',
+            borderColor: 'var(--color-paper-border)',
+            color: 'var(--color-ink-faded)',
           },
         }),
       ],
@@ -71,5 +87,6 @@
     height: 100%;
     min-height: 300px;
     box-sizing: border-box;
+    background-color: var(--color-paper-base);
   }
 </style>
