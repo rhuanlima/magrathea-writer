@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Distraction-free offline encrypted literary studio"
 authors = ["Rhuan Lima"]
 edition = "2021"
-license = "AGPL-3.0"
+license = "AGPL-3.0-or-later"
 
 [lib]
 name = "magrathea_writer_lib"
