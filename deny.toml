@@ -2,7 +2,6 @@
 # Reference: https://embarkstudios.github.io/cargo-deny/
 
 [licenses]
-unlicensed = "deny"
 allow = [
   "AGPL-3.0",
   "GPL-3.0",
