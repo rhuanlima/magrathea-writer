@@ -1,7 +1,9 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capability set for Magrathea Writer window",
+  "description": "Minimal capabilities for Magrathea Writer desktop window",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": [
+    "core:default"
+  ]
 }
