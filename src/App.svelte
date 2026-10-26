@@ -1,6 +1,7 @@
 <script lang="ts">
   import Editor from './editor/Editor.svelte';
   import { i18n, t } from './i18n';
+  import { theme } from './design';
 
   let currentContent = $state(
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
@@ -27,7 +28,16 @@
     <div class="header-actions">
       <button
         type="button"
-        class="locale-button"
+        class="action-button"
+        onclick={() => theme.toggleTheme()}
+        title="Toggle Theme (Light / Dark / System)"
+      >
+        {theme.mode.toUpperCase()}
+      </button>
+
+      <button
+        type="button"
+        class="action-button"
         onclick={toggleLanguage}
         title={t('app.switchLanguage')}
       >
@@ -47,9 +57,9 @@
     padding: 0;
     width: 100%;
     height: 100%;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: #1a1c19;
-    color: #e5e5e0;
+    font-family: var(--font-ui);
+    background-color: var(--color-paper-base);
+    color: var(--color-ink-charcoal);
   }
 
   .app-shell {
@@ -57,6 +67,7 @@
     flex-direction: column;
     height: 100vh;
     box-sizing: border-box;
+    background-color: var(--color-paper-base);
   }
 
   .app-header {
@@ -64,19 +75,19 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0 16px;
-    border-bottom: 1px solid #2a2e28;
-    background-color: #141613;
+    padding: 0 var(--space-md);
+    border-bottom: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-surface);
   }
 
   .brand {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-sm);
     font-size: 14px;
     font-weight: 600;
     letter-spacing: 0.5px;
-    color: #5E6F45;
+    color: var(--color-olive);
   }
 
   .logo-mark {
@@ -84,41 +95,49 @@
   }
 
   .brand-title {
-    color: #f1f1eb;
+    color: var(--color-ink-charcoal);
   }
 
   .brand-tagline {
     font-size: 12px;
     font-weight: 400;
-    color: #8c9085;
-    margin-left: 8px;
+    color: var(--color-ink-muted);
+    margin-left: var(--space-sm);
   }
 
   .header-actions {
     display: flex;
     align-items: center;
+    gap: var(--space-sm);
   }
 
-  .locale-button {
+  .action-button {
     background: transparent;
-    border: 1px solid #3c4238;
-    color: #c7cbbe;
-    border-radius: 4px;
+    border: 1px solid var(--color-paper-border);
+    color: var(--color-ink-muted);
+    border-radius: var(--rounded-default);
     padding: 4px 10px;
     font-size: 11px;
     font-weight: 600;
+    font-family: var(--font-mono);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: all var(--transition-focus);
   }
 
-  .locale-button:hover {
-    background: #252a22;
-    border-color: #5E6F45;
-    color: #f1f1eb;
+  .action-button:hover {
+    background: var(--color-paper-hover);
+    border-color: var(--color-olive);
+    color: var(--color-ink-charcoal);
+  }
+
+  .action-button:focus-visible {
+    outline: var(--focus-ring);
+    outline-offset: var(--focus-offset);
   }
 
   .editor-workspace {
     flex: 1;
     overflow: hidden;
+    background-color: var(--color-paper-base);
   }
 </style>
