@@ -17,4 +17,3 @@
 - [ ] Nenhuma dependência nova sem justificativa nesta descrição
 - [ ] Nenhum acesso à rede, telemetria ou segredo introduzido (ver SECURITY.md)
 - [ ] Se mudou UI: screenshot anexado e DESIGN.md respeitado
-- [ ] Commits sem assinatura de agente e sem co-autoria do projeto (indicação de desenvolvimento com IA permitida nesta descrição; ver AGENTS.md)
