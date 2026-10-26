@@ -1,0 +1,20 @@
+================================================================================
+Magrathea Writer - Third-Party Font Notices (SIL Open Font License 1.1)
+================================================================================
+
+1. EB Garamond
+   Copyright (c) 2011-2014, Georg Duffner (pEp, http://www.georgduffner.at)
+   Copyright (c) 2017-2020, Octavio Pardo (octaviopardo.com)
+   License: SIL Open Font License, Version 1.1 (OFL)
+
+2. Plus Jakarta Sans
+   Copyright (c) 2020, Gumpita Rahayu, Tokotype (tokotype.com)
+   License: SIL Open Font License, Version 1.1 (OFL)
+
+3. JetBrains Mono
+   Copyright (c) 2020, JetBrains s.r.o. (jetbrains.com)
+   License: SIL Open Font License, Version 1.1 (OFL)
+
+All fonts are bundled locally for offline confidentiality.
+Full text of the SIL Open Font License, Version 1.1:
+https://openfontlicense.org/
