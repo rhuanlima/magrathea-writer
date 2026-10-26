@@ -1,0 +1,104 @@
+name: CI Quality, Security & Matrix Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  security-and-lint:
+    name: Code Quality & Security Audits
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Frontend Linter (ESLint)
+        run: npm run lint
+
+      - name: Frontend Typecheck (svelte-check)
+        run: npm run typecheck
+
+      - name: Cargo Format Check
+        run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+      - name: Cargo Clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: NPM Dependency Audit
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Cargo Deny (Licenses & Sources)
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          manifest-path: src-tauri/Cargo.toml
+          command: check licenses sources
+
+  cross-platform-test:
+    name: Build & Test (${{ matrix.platform }})
+    needs: [security-and-lint]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'linux'
+            os: ubuntu-latest
+          - platform: 'macos'
+            os: macos-latest
+          - platform: 'windows'
+            os: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux System Dependencies (Tauri 2)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+
+      - name: Install NPM dependencies
+        run: npm ci
+
+      - name: Run Frontend Tests (Vitest)
+        run: npm test
+
+      - name: Build Frontend Bundle (Vite)
+        run: npm run build
+
+      - name: Run Backend Tests (Cargo)
+        run: cargo test --manifest-path src-tauri/Cargo.toml
