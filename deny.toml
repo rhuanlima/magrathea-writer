@@ -2,7 +2,7 @@
 # Reference: https://embarkstudios.github.io/cargo-deny/
 
 [licenses]
-allow-unmatched = true
+unused-allowed-license = "warn"
 confidence-threshold = 0.8
 allow = [
   "AGPL-3.0-or-later",
