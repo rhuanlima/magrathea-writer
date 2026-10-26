@@ -8,26 +8,60 @@ A **local-first, offline and encrypted** writing environment and literary "secon
 
 > In Douglas Adams' *The Hitchhiker's Guide to the Galaxy*, Magrathea is the planet that builds custom planets, with hand-sculpted mountains and coastlines. This app is the workshop for yours.
 
-**License:** [GNU AGPL v3](LICENSE) — free software; derivatives and network use must remain AGPL, crediting the original project. **No warranty of any kind: back up your vault and keep your recovery key safe** — losing both your password and recovery key means your work is unrecoverable by design (see [SECURITY.md](SECURITY.md) §7).
+**License:** [GNU AGPL v3](LICENSE) — free software; derivatives and network use must remain AGPL, crediting the original project. **No warranty of any kind: back up your vault and keep your recovery key safe** — losing both your password and recovery key means your work is unrecoverable by design.
 
 **Repository:** https://github.com/rhuanlima/magrathea-writer
 
-## Documents
+---
 
-Internal planning documents (PRD, backlog, security model, architecture) are written in Brazilian Portuguese; code, commits, PRs and public-facing docs are in English.
+## Tech Stack
 
-| File | Purpose |
-|---|---|
-| [PRD.md](PRD.md) | What to build and why (v1 scope, user stories, decisions) |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | How to build it (Tauri 2 + TypeScript + Svelte + CodeMirror 6, encrypted vault) |
-| [DESIGN.md](DESIGN.md) | Visual system (tokens, typography, components, dark mode) |
-| [SECURITY.md](SECURITY.md) | Threat model, cryptography requirements, liability |
-| [AGENTS.md](AGENTS.md) | Rules for AI agents (branches, PRs, no signing, backlog); `GEMINI.md` points to it |
-| [todo.md](todo.md) | The single backlog, by milestone |
-| `references/` | Visual mock-ups (HTML + PNG) |
-| `assets/brand/` | Logo and icon concept |
-| `docs/archive/` | Superseded drafts, history only |
+- **Core & Shell:** [Tauri 2](https://v2.tauri.app/) (Rust) — lightweight offline native window, memory-safe crypto and local vault storage.
+- **Frontend UI:** [Svelte 5](https://svelte.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) — ultra-responsive reactive UI without virtual DOM overhead.
+- **Editor:** [CodeMirror 6](https://codemirror.net/) — distraction-free literary writing with dynamic focus and Markdown support.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (v20+ recommended) and `npm`
+- [Rust](https://www.rust-lang.org/) toolchain (`rustc` and `cargo`)
+
+### Installation & Development
+
+```bash
+# Install frontend and Rust dependencies
+npm install
+cargo check --manifest-path src-tauri/Cargo.toml
+
+# Start development desktop app
+npm run tauri dev
+```
+
+### Quality & Testing
+
+```bash
+# Run linting (ESLint, Cargo Clippy, Cargo fmt)
+npm run lint
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+# Typecheck Svelte and TypeScript
+npm run typecheck
+
+# Run test suites (Vitest & Cargo test)
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# Production build
+npm run build
+npm run tauri build
+```
+
+---
 
 ## Contributing
 
-Read [AGENTS.md](AGENTS.md), pick the first item under **Próximos** in [todo.md](todo.md), create a branch and open a PR. Contributions require a DCO sign-off (`git commit -s`) by the human contributor. `CONTRIBUTING.md` (and `CONTRIBUTING.pt-BR.md`) will be published before the first release.
+Contributions require a DCO sign-off (`git commit -s`) by the human contributor. All development follows branch-based workflows with squash-merged Pull Requests.

@@ -4,29 +4,64 @@
 
 *Sua oficina particular de criação de mundos.*
 
-Ambiente de escrita e "segundo cérebro" literário, **local-first, offline e cifrado**, para autores de ficção e worldbuilders. Manuscrito, fichas de mundo e linha do tempo ficam num **cofre cifrado** na sua máquina: nenhum outro app lê seus arquivos. Quando quiser sair ou compartilhar, **exporte** (Markdown aberto para Obsidian, PDF, DOCX, EPUB).
-
-**Licença:** [GNU AGPL v3](LICENSE) — software livre; derivados e uso em rede devem continuar AGPL, com atribuição ao projeto original. Sem garantia de qualquer tipo; **faça backup e guarde sua chave de recuperação** (ver SECURITY.md). Apoie o projeto com um café ☕ (seção no app).
+Ambiente de escrita e "segundo cérebro" literário, **local-first, offline e cifrado**, para autores de ficção e worldbuilders. Manuscrito, fichas de mundo e linha do tempo ficam num **cofre cifrado** na sua máquina: nenhum outro aplicativo lê seus arquivos. Quando quiser sair ou compartilhar, **exporte** (Markdown aberto para Obsidian, PDF, DOCX, EPUB).
 
 > No *Guia do Mochileiro das Galáxias* (Douglas Adams), Magrathea é o planeta que fabrica planetas sob encomenda, com montanhas e litorais esculpidos à mão. Este app é a oficina para o seu.
 
+**Licença:** [GNU AGPL v3](LICENSE) — software livre; derivados e uso em rede devem continuar AGPL, com atribuição ao projeto original. **Sem garantia de qualquer tipo: faça backup do seu cofre e guarde sua chave de recuperação em local seguro** — a perda conjunta da senha e da chave de recuperação torna o conteúdo irrecuperável por princípio de segurança.
+
 **Repositório:** https://github.com/rhuanlima/magrathea-writer
 
-## Documentos
+---
 
-| Arquivo | Para quê |
-|---|---|
-| [PRD.md](PRD.md) | O que construir e por quê (escopo da v1, histórias, decisões) |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Como construir (Tauri 2 + TypeScript + CodeMirror 6, cofre cifrado) |
-| [DESIGN.md](DESIGN.md) | Sistema visual (tokens, tipografia, componentes, modo escuro) |
-| [SECURITY.md](SECURITY.md) | Modelo de ameaça e regras de segurança |
-| [AGENTS.md](AGENTS.md) | Regras para agentes de IA (branches, PRs, sem assinatura, backlog); `GEMINI.md` aponta para ele |
-| [todo.md](todo.md) | Backlog único, por marcos |
-| `references/` | Telas-modelo (HTML + PNG) |
-| `assets/brand/` | Conceito de logo e ícone |
-| `docs/archive/` | Versões antigas (PRD v1/v2, arquitetura Flutter, design system mono) — só histórico |
+## Tecnologias
 
-## Como começar a desenvolver
+- **Core & Shell:** [Tauri 2](https://v2.tauri.app/) (Rust) — janela nativa offline leve, criptografia com segurança de memória e armazenamento local em cofre.
+- **Interface Frontend:** [Svelte 5](https://svelte.dev/) + [TypeScript](https://www.typescriptlang.org/) + [Vite](https://vitejs.dev/) — interface reativa com excelente desempenho sem sobrecarga de DOM virtual.
+- **Editor Literário:** [CodeMirror 6](https://codemirror.net/) — escrita livre de distrações com foco dinâmico e suporte a Markdown.
 
-Leia [AGENTS.md](AGENTS.md), pegue o primeiro item de **Próximos** no [todo.md](todo.md), crie uma branch e abra um PR.
-Pendências do autor antes de começar: ver **Decisões pendentes** no `todo.md`.
+---
+
+## Como Executar
+
+### Pré-requisitos
+
+- [Node.js](https://nodejs.org/) (versão 20+ recomendada) e `npm`
+- Toolchain do [Rust](https://www.rust-lang.org/) (`rustc` e `cargo`)
+
+### Instalação e Desenvolvimento
+
+```bash
+# Instalar dependências de frontend e do Rust
+npm install
+cargo check --manifest-path src-tauri/Cargo.toml
+
+# Executar a aplicação desktop em modo de desenvolvimento
+npm run tauri dev
+```
+
+### Qualidade e Testes
+
+```bash
+# Checagem de formatação e lint (ESLint, Cargo Clippy, Cargo fmt)
+npm run lint
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+
+# Checagem de tipos Svelte e TypeScript
+npm run typecheck
+
+# Execução das suítes de testes (Vitest e Cargo test)
+npm test
+cargo test --manifest-path src-tauri/Cargo.toml
+
+# Compilação para produção
+npm run build
+npm run tauri build
+```
+
+---
+
+## Contribuição
+
+Contribuições exigem DCO sign-off (`git commit -s`) do colaborador humano. Todo o desenvolvimento adota fluxo baseado em branches e Pull Requests com merge via squash.
