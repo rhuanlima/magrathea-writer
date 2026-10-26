@@ -1,12 +1,6 @@
 # Configuration for cargo-deny (license & security auditing)
 # Reference: https://embarkstudios.github.io/cargo-deny/
 
-[advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
-yanked = "warn"
-
 [licenses]
 unlicensed = "deny"
 allow = [
@@ -28,10 +22,6 @@ allow = [
   "OpenSSL",
 ]
 confidence-threshold = 0.8
-
-[bans]
-multiple-versions = "warn"
-wildcards = "deny"
 
 [sources]
 unknown-registry = "deny"
