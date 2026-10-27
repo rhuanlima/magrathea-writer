@@ -139,6 +139,34 @@ export interface IndexOverviewResponse {
   unresolved_targets: string[];
 }
 
+export interface OccurrencePreview {
+  line_number: number;
+  raw_match: string;
+  old_snippet: string;
+  new_snippet: string;
+}
+
+export interface DocumentRefactorPreview {
+  item_id: string;
+  title: string;
+  kind: string;
+  occurrences: OccurrencePreview[];
+}
+
+export interface RenameRefactorPreviewResponse {
+  old_name: string;
+  new_name: string;
+  total_occurrences: number;
+  affected_documents: DocumentRefactorPreview[];
+}
+
+export interface ApplyRenameRefactorResponse {
+  snapshot_id: string;
+  modified_docs_count: number;
+  total_replacements: number;
+  applied_at: string;
+}
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -440,6 +468,40 @@ export async function safeInvoke<T>(
         } as T;
       }
       return null as T;
+    }
+    if (cmd === 'preview_rename_entity') {
+      const payload = args as unknown as { old_name: string; new_name: string };
+      return {
+        old_name: payload.old_name,
+        new_name: payload.new_name,
+        total_occurrences: 1,
+        affected_documents: [
+          {
+            item_id: 'mock-scene-1',
+            title: 'Cena 1: A Névoa da Manhã',
+            kind: 'scene',
+            occurrences: [
+              {
+                line_number: 1,
+                raw_match: `[[${payload.old_name}]]`,
+                old_snippet: `Encontrou [[${payload.old_name}]] na praia.`,
+                new_snippet: `Encontrou [[${payload.new_name}]] na praia.`,
+              },
+            ],
+          },
+        ],
+      } as T;
+    }
+    if (cmd === 'apply_rename_refactor') {
+      return {
+        snapshot_id: 'mock-snapshot-001',
+        modified_docs_count: 1,
+        total_replacements: 1,
+        applied_at: new Date().toISOString(),
+      } as T;
+    }
+    if (cmd === 'rollback_rename_refactor') {
+      return undefined as T;
     }
   }
 

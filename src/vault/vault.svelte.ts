@@ -10,6 +10,8 @@ import {
   type IndexOverviewResponse,
   type BacklinkEntry,
   type EntityEntry,
+  type RenameRefactorPreviewResponse,
+  type ApplyRenameRefactorResponse,
 } from '../tauri/bridge';
 
 class VaultStore {
@@ -30,13 +32,20 @@ class VaultStore {
   newRecoveryKeyAfterReencrypt = $state<string | null>(null);
   isSecurityModalOpen = $state(false);
 
-  // Segundo Cérebro (M2-01 .. M2-04)
+  // Segundo Cérebro (M2-01 .. M2-06)
   indexOverview = $state<IndexOverviewResponse | null>(null);
   activeBacklinks = $state<BacklinkEntry[]>([]);
   isInspectorOpen = $state(false);
   activeInspectorTab = $state<'metadata' | 'backlinks'>('metadata');
   isLoadingIndex = $state(false);
   isLoadingBacklinks = $state(false);
+
+  // Refatoração global e rollback (M2-05)
+  isRefactorModalOpen = $state(false);
+  refactorTarget = $state<string | null>(null);
+  lastSnapshotId = $state<string | null>(null);
+  isRefactoring = $state(false);
+  isRollingBack = $state(false);
 
   /**
    * Lista de todas as entidades e cenas registradas no cofre.
@@ -389,6 +398,66 @@ class VaultStore {
   }
 
   /**
+   * Abre o modal de refatoração global para uma entidade ou cena.
+   */
+  openRefactorModal(targetName: string) {
+    this.refactorTarget = targetName;
+    this.isRefactorModalOpen = true;
+  }
+
+  /**
+   * Fecha o modal de refatoração global.
+   */
+  closeRefactorModal() {
+    this.isRefactorModalOpen = false;
+    this.refactorTarget = null;
+  }
+
+  /**
+   * Gera a pré-visualização de renomeação em massa.
+   */
+  async previewRename(oldName: string, newName: string): Promise<RenameRefactorPreviewResponse> {
+    return await safeInvoke<RenameRefactorPreviewResponse>('preview_rename_entity', {
+      old_name: oldName,
+      new_name: newName,
+    });
+  }
+
+  /**
+   * Aplica a refatoração atômica em todo o projeto com gravação de snapshot.
+   */
+  async applyRename(oldName: string, newName: string): Promise<ApplyRenameRefactorResponse> {
+    this.isRefactoring = true;
+    try {
+      const response = await safeInvoke<ApplyRenameRefactorResponse>('apply_rename_refactor', {
+        old_name: oldName,
+        new_name: newName,
+      });
+      this.lastSnapshotId = response.snapshot_id;
+      await this.loadVaultIndex();
+      return response;
+    } finally {
+      this.isRefactoring = false;
+    }
+  }
+
+  /**
+   * Executa rollback da refatoração restaurando os conteúdos e metadados originais.
+   */
+  async rollbackRename(snapshotId?: string): Promise<void> {
+    const snapId = snapshotId || this.lastSnapshotId;
+    if (!snapId) throw new Error('Nenhum snapshot de refatoração para restaurar.');
+    this.isRollingBack = true;
+    try {
+      await safeInvoke('rollback_rename_refactor', { snapshot_id: snapId });
+      this.lastSnapshotId = null;
+      await this.loadVaultIndex();
+    } finally {
+      this.isRollingBack = false;
+    }
+  }
+
+  /**
    * Bloqueia o cofre atual em memória.
    */
   async lockVault() {
@@ -399,6 +468,8 @@ class VaultStore {
       this.indexOverview = null;
       this.activeBacklinks = [];
       this.isInspectorOpen = false;
+      this.isRefactorModalOpen = false;
+      this.lastSnapshotId = null;
     } catch (err) {
       this.errorMessage = String(err);
     }
@@ -420,6 +491,8 @@ class VaultStore {
       this.indexOverview = null;
       this.activeBacklinks = [];
       this.isInspectorOpen = false;
+      this.isRefactorModalOpen = false;
+      this.lastSnapshotId = null;
     } catch (err) {
       this.errorMessage = String(err);
     }

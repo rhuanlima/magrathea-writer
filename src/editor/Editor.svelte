@@ -11,6 +11,7 @@
   import { wikilinkDecoratorPlugin } from './wikilink-decorator';
   import { wikilinkAutocompleteExtension } from './wikilink-autocomplete';
   import { wikilinkHoverExtension } from './wikilink-hover';
+  import { externalLinksPlugin } from './external-links';
   import LiteraryBar from './LiteraryBar.svelte';
   import SceneHeader from './SceneHeader.svelte';
 
@@ -74,6 +75,7 @@
         wikilinkDecoratorPlugin,
         wikilinkAutocompleteExtension,
         wikilinkHoverExtension,
+        externalLinksPlugin,
         updateListener,
         EditorView.theme({
           '&': {
@@ -337,5 +339,56 @@
     font-weight: 500;
     border-top: 1px solid var(--color-paper-border, #E5E0D8);
     padding-top: 4px;
+  }
+
+  :global(.cm-external-link-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: var(--color-paper-base, #F8F5EE);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--font-ui, sans-serif);
+    font-size: 0.85em;
+    color: var(--color-ink-muted, #4A5247);
+    vertical-align: middle;
+    cursor: default;
+    user-select: none;
+  }
+
+  :global(.cm-external-link-icon) {
+    font-size: 0.85em;
+    opacity: 0.7;
+  }
+
+  :global(.cm-external-link-text) {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.9em;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  :global(.cm-external-link-copy) {
+    background: none;
+    border: none;
+    padding: 2px 4px;
+    cursor: pointer;
+    font-size: 11px;
+    border-radius: 3px;
+    color: var(--color-ink-faded, #6C7368);
+    transition: all 0.15s ease;
+  }
+
+  :global(.cm-external-link-copy:hover) {
+    background-color: var(--color-paper-border, #E5E0D8);
+    color: var(--color-ink-charcoal, #1E231D);
+  }
+
+  :global(.cm-external-link-copy.copied) {
+    color: var(--color-olive, #5E6F45);
+    font-weight: bold;
   }
 </style>

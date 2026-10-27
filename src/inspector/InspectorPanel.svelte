@@ -35,14 +35,26 @@
         <span class="inspector-badge">{activeItem?.kind || t('inspector.defaultKind')}</span>
         <h3 class="inspector-title">{activeItem?.title || t('inspector.noActiveItem')}</h3>
       </div>
-      <button
-        class="close-btn"
-        onclick={() => vault.toggleInspector(false)}
-        title={t('inspector.close')}
-        aria-label={t('inspector.close')}
-      >
-        ✕
-      </button>
+      <div class="header-actions">
+        {#if activeItem}
+          <button
+            class="refactor-btn"
+            onclick={() => vault.openRefactorModal(activeItem.title)}
+            title={t('refactor.modalTitle')}
+            aria-label={t('refactor.modalTitle')}
+          >
+            🔄
+          </button>
+        {/if}
+        <button
+          class="close-btn"
+          onclick={() => vault.toggleInspector(false)}
+          title={t('inspector.close')}
+          aria-label={t('inspector.close')}
+        >
+          ✕
+        </button>
+      </div>
     </div>
 
     <!-- Abas de Navegação -->
@@ -184,6 +196,28 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .refactor-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: var(--color-ink-faded, #6C7368);
+    padding: 4px;
+    border-radius: 4px;
+    transition: all 0.15s ease;
+  }
+
+  .refactor-btn:hover {
+    color: var(--color-bronze, #C28D58);
+    background-color: var(--color-paper-border);
   }
 
   .close-btn {

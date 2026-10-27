@@ -11,6 +11,7 @@
   import Sidebar from './manuscript/Sidebar.svelte';
   import TrashDrawer from './manuscript/TrashDrawer.svelte';
   import InspectorPanel from './inspector/InspectorPanel.svelte';
+  import RenameRefactorModal from './vault/RenameRefactorModal.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
@@ -160,6 +161,8 @@
     isOpen={vault.isSecurityModalOpen}
     onClose={() => vault.toggleSecurityModal(false)}
   />
+
+  <RenameRefactorModal />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />
