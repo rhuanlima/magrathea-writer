@@ -13,6 +13,7 @@ export const ptBR: TranslationSchema = {
     charactersCount: '{count} caracteres',
     unsavedChanges: 'Alterações não salvas',
     saved: 'Todas as alterações salvas no cofre',
+    saving: 'Salvando cifrado...',
   },
   vault: {
     status: {

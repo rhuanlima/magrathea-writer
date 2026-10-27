@@ -105,4 +105,28 @@ describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
     expect(vault.vaultPath).toBeNull();
     expect(vault.projectTitle).toBeNull();
   });
+
+  it('grava e carrega cena de forma atômica e cifrada quando o cofre está aberto', async () => {
+    vault.isOpen = true;
+    vault.isLocked = false;
+
+    const saveRes = await vault.saveScene(
+      'cena_01',
+      'Era uma vez um autor que confiava na criptografia offline.'
+    );
+    expect(saveRes.scene_id).toBe('cena_01');
+    expect(vault.lastSavedAt).toBeDefined();
+
+    const loaded = await vault.loadScene('cena_01');
+    expect(loaded).toBe('# Mock Scene Content');
+  });
+
+  it('impede gravação de cena quando o cofre está bloqueado', async () => {
+    vault.isOpen = true;
+    vault.isLocked = true;
+
+    await expect(vault.saveScene('cena_01', 'Texto')).rejects.toThrow(
+      'Cofre não está aberto ou está bloqueado.'
+    );
+  });
 });

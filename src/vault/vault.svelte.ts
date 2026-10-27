@@ -2,7 +2,12 @@
  * Gerenciador de estado reativo global do cofre (Svelte 5 Runes).
  */
 
-import { safeInvoke, type CreateVaultResponse, type VaultStatusResponse } from '../tauri/bridge';
+import {
+  safeInvoke,
+  type CreateVaultResponse,
+  type VaultStatusResponse,
+  type SaveSceneResponse,
+} from '../tauri/bridge';
 
 class VaultStore {
   isOpen = $state(false);
@@ -13,6 +18,8 @@ class VaultStore {
   recoveryKeyToken = $state<string | null>(null);
   isCreating = $state(false);
   isUnlocking = $state(false);
+  isSaving = $state(false);
+  lastSavedAt = $state<string | null>(null);
   errorMessage = $state<string | null>(null);
 
   /**
@@ -128,6 +135,51 @@ class VaultStore {
       throw err;
     } finally {
       this.isUnlocking = false;
+    }
+  }
+
+  /**
+   * Salva o conteúdo de uma cena de forma atômica e cifrada no cofre.
+   */
+  async saveScene(sceneId: string, content: string): Promise<SaveSceneResponse> {
+    if (!this.isOpen || this.isLocked) {
+      throw new Error('Cofre não está aberto ou está bloqueado.');
+    }
+
+    this.isSaving = true;
+    this.errorMessage = null;
+
+    try {
+      const response = await safeInvoke<SaveSceneResponse>('save_scene_content', {
+        scene_id: sceneId,
+        content,
+      });
+
+      this.lastSavedAt = response.saved_at;
+      return response;
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    } finally {
+      this.isSaving = false;
+    }
+  }
+
+  /**
+   * Carrega e decifra o conteúdo de uma cena armazenada no cofre.
+   */
+  async loadScene(sceneId: string): Promise<string> {
+    if (!this.isOpen || this.isLocked) {
+      throw new Error('Cofre não está aberto ou está bloqueado.');
+    }
+
+    try {
+      return await safeInvoke<string>('load_scene_content', {
+        scene_id: sceneId,
+      });
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
     }
   }
 

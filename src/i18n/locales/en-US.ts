@@ -13,6 +13,7 @@ export const enUS: TranslationSchema = {
     charactersCount: '{count} characters',
     unsavedChanges: 'Unsaved changes',
     saved: 'All changes saved to vault',
+    saving: 'Saving encrypted...',
   },
   vault: {
     status: {

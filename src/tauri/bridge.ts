@@ -30,6 +30,20 @@ export interface OpenRecoveryPayload {
   recovery_key: string;
 }
 
+export interface SaveScenePayload {
+  scene_id: string;
+  content: string;
+}
+
+export interface SaveSceneResponse {
+  scene_id: string;
+  saved_at: string;
+}
+
+export interface LoadScenePayload {
+  scene_id: string;
+}
+
 export interface VaultStatusResponse {
   is_open: boolean;
   is_locked: boolean;
@@ -100,6 +114,16 @@ export async function safeInvoke<T>(
     }
     if (cmd === 'lock_vault' || cmd === 'close_vault') {
       return undefined as T;
+    }
+    if (cmd === 'save_scene_content') {
+      const payload = args as unknown as SaveScenePayload;
+      return {
+        scene_id: payload?.scene_id || 'default_scene',
+        saved_at: new Date().toISOString(),
+      } as T;
+    }
+    if (cmd === 'load_scene_content') {
+      return '# Mock Scene Content' as T;
     }
   }
 

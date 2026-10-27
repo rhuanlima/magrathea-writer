@@ -292,6 +292,13 @@ pub fn open_vault_with_recovery_key_internal(
     })
 }
 
+/// Resposta de salvamento atômico de cena.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct SaveSceneResponse {
+    pub scene_id: String,
+    pub saved_at: String,
+}
+
 /// Fecha e desvincula o cofre atual, limpando metadados de sessão recente.
 #[tauri::command]
 pub fn close_vault(state: tauri::State<'_, AppState>) -> Result<(), String> {
@@ -318,6 +325,118 @@ pub fn close_vault_internal(state: &AppState) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+/// Salva o conteúdo de uma cena de forma estritamente atômica e cifrada no cofre.
+#[tauri::command]
+pub fn save_scene_content(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+    content: String,
+) -> Result<SaveSceneResponse, String> {
+    save_scene_content_internal(&state, &scene_id, &content)
+}
+
+/// Lógica interna para gravação atômica e cifrada de cena.
+pub fn save_scene_content_internal(
+    state: &AppState,
+    scene_id: &str,
+    content: &str,
+) -> Result<SaveSceneResponse, String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória para salvar o manuscrito.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado. Desbloqueie-o para salvar.".to_string());
+    }
+
+    let trimmed_id = if scene_id.trim().is_empty() {
+        "default_scene"
+    } else {
+        scene_id.trim()
+    };
+
+    // 1. Gravação atômica cifrada do blob individual
+    vault
+        .write_blob(trimmed_id, content.as_bytes())
+        .map_err(|e| format!("Falha ao gravar blob cifrado: {e}"))?;
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+
+    // 2. Atualização atômica do manifesto criptográfico
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    if let Some(item) = manifest.items.iter_mut().find(|it| it.id == trimmed_id) {
+        item.blob_id = Some(trimmed_id.to_string());
+    } else {
+        manifest.items.push(crate::vault::ManifestItem {
+            id: trimmed_id.to_string(),
+            kind: "scene".to_string(),
+            parent_id: None,
+            title: "Cena Inicial".to_string(),
+            slug: "cena-inicial".to_string(),
+            blob_id: Some(trimmed_id.to_string()),
+            order: 0,
+            tags: Vec::new(),
+            status: Some("draft".to_string()),
+        });
+    }
+
+    // 3. Persistência atômica do manifesto com incremento de versão monotônica
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto autenticado: {e}"))?;
+
+    Ok(SaveSceneResponse {
+        scene_id: trimmed_id.to_string(),
+        saved_at: timestamp_iso,
+    })
+}
+
+/// Carrega e decifra o conteúdo em texto de uma cena armazenada no cofre.
+#[tauri::command]
+pub fn load_scene_content(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+) -> Result<String, String> {
+    load_scene_content_internal(&state, &scene_id)
+}
+
+/// Lógica interna para leitura e decifragem de cena.
+pub fn load_scene_content_internal(state: &AppState, scene_id: &str) -> Result<String, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória para carregar o manuscrito.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado. Desbloqueie-o para ler.".to_string());
+    }
+
+    let trimmed_id = if scene_id.trim().is_empty() {
+        "default_scene"
+    } else {
+        scene_id.trim()
+    };
+
+    let blob_bytes = vault
+        .read_blob(trimmed_id)
+        .map_err(|e| format!("Falha ao ler blob da cena: {e}"))?;
+
+    String::from_utf8(blob_bytes)
+        .map_err(|e| format!("Conteúdo da cena não é uma string UTF-8 válida: {e}"))
 }
 
 /// Constrói o caminho canônico do cofre com a extensão `.magrathea`.
@@ -437,6 +556,23 @@ mod tests {
 
         assert!(recovery_res.is_open);
         assert!(!recovery_res.is_locked);
+
+        // 7.1. Gravação atômica cifrada de conteúdo de cena
+        let save_res = save_scene_content_internal(
+            &state,
+            "cena_cap1",
+            "No princípio, o Universo foi criado. Isso irritou muita gente.",
+        )
+        .expect("deve salvar cena com sucesso");
+        assert_eq!(save_res.scene_id, "cena_cap1");
+
+        // 7.2. Leitura e decifragem de conteúdo de cena
+        let loaded =
+            load_scene_content_internal(&state, "cena_cap1").expect("deve carregar cena decifrada");
+        assert_eq!(
+            loaded,
+            "No princípio, o Universo foi criado. Isso irritou muita gente."
+        );
 
         // 8. Fechamento total do cofre (close_vault)
         close_vault_internal(&state).expect("deve fechar cofre");
