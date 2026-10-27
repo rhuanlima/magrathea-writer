@@ -245,6 +245,76 @@ impl VaultHeader {
         let dek = unwrap_key(recovery_key, &nonce, &wrapped_dek, slot_aad.as_bytes())?;
         Ok(dek)
     }
+
+    /// Altera a frase-senha mestra re-envelopando a DEK no Slot 0 com uma nova KEK.
+    pub fn change_passphrase(
+        &mut self,
+        current_passphrase: &[u8],
+        new_passphrase: &[u8],
+        custom_params: Option<Argon2Params>,
+    ) -> Result<(), VaultError> {
+        let dek = self.unlock_with_passphrase(current_passphrase)?;
+
+        let params = custom_params.unwrap_or(Argon2Params {
+            memory_kib: self.kdf_params.memory_kib,
+            iterations: self.kdf_params.iterations,
+            parallelism: self.kdf_params.parallelism,
+        });
+
+        let new_salt = generate_salt();
+        let new_kek = derive_key(new_passphrase, &new_salt, &params)?;
+
+        let slot0_aad = format!("MAGRATHEA-V1:slot:0:{}", self.vault_id);
+        let (slot0_nonce, slot0_wrapped) = wrap_key(&new_kek, &dek, slot0_aad.as_bytes())?;
+
+        self.kdf_params.salt_hex = hex_encode(&new_salt);
+        self.kdf_params.memory_kib = params.memory_kib;
+        self.kdf_params.iterations = params.iterations;
+        self.kdf_params.parallelism = params.parallelism;
+
+        self.slot_passphrase.nonce_hex = hex_encode(slot0_nonce.as_bytes());
+        self.slot_passphrase.wrapped_dek_hex = hex_encode(&slot0_wrapped);
+
+        Ok(())
+    }
+
+    /// Re-envelopa uma nova DEK em ambos os Slots 0 e 1 durante o processo de recifragem integral do cofre.
+    pub fn rekey(
+        &mut self,
+        new_dek: &SecretKey,
+        passphrase: &[u8],
+        new_recovery_key: &SecretKey,
+        custom_params: Option<Argon2Params>,
+    ) -> Result<(), VaultError> {
+        let params = custom_params.unwrap_or(Argon2Params {
+            memory_kib: self.kdf_params.memory_kib,
+            iterations: self.kdf_params.iterations,
+            parallelism: self.kdf_params.parallelism,
+        });
+
+        let new_salt = generate_salt();
+        let new_kek = derive_key(passphrase, &new_salt, &params)?;
+
+        let slot0_aad = format!("MAGRATHEA-V1:slot:0:{}", self.vault_id);
+        let (slot0_nonce, slot0_wrapped) = wrap_key(&new_kek, new_dek, slot0_aad.as_bytes())?;
+
+        let slot1_aad = format!("MAGRATHEA-V1:slot:1:{}", self.vault_id);
+        let (slot1_nonce, slot1_wrapped) =
+            wrap_key(new_recovery_key, new_dek, slot1_aad.as_bytes())?;
+
+        self.kdf_params.salt_hex = hex_encode(&new_salt);
+        self.kdf_params.memory_kib = params.memory_kib;
+        self.kdf_params.iterations = params.iterations;
+        self.kdf_params.parallelism = params.parallelism;
+
+        self.slot_passphrase.nonce_hex = hex_encode(slot0_nonce.as_bytes());
+        self.slot_passphrase.wrapped_dek_hex = hex_encode(&slot0_wrapped);
+
+        self.slot_recovery.nonce_hex = hex_encode(slot1_nonce.as_bytes());
+        self.slot_recovery.wrapped_dek_hex = hex_encode(&slot1_wrapped);
+
+        Ok(())
+    }
 }
 
 /// Creates a new vault initialization package: header and unencrypted DEK.
@@ -605,6 +675,71 @@ impl UnlockedVault {
     /// Retorna referência imutável ao cabeçalho público do cofre.
     pub fn header(&self) -> &VaultHeader {
         &self.header
+    }
+
+    /// Retorna referência mutável ao cabeçalho público do cofre.
+    pub fn header_mut(&mut self) -> &mut VaultHeader {
+        &mut self.header
+    }
+
+    /// Obtém referência imutável à chave DEK ativa em memória.
+    pub fn dek(&self) -> Result<&SecretKey, VaultError> {
+        if self.is_locked() {
+            return Err(VaultError::Locked);
+        }
+        self.dek.as_ref().ok_or(VaultError::Locked)
+    }
+
+    /// Grava o cabeçalho público no arquivo `header` de forma atômica.
+    pub fn save_header(&self) -> Result<(), VaultError> {
+        let header_path = self.root_path.join("header");
+        let header_json = serde_json::to_string_pretty(&self.header)
+            .map_err(|e| VaultError::Serialization(e.to_string()))?;
+        atomic_write(&header_path, header_json.as_bytes())?;
+        Ok(())
+    }
+
+    /// Recifra integralmente todos os blobs (cenas ativas e lixeira) e o manifesto com uma nova DEK.
+    pub fn reencrypt_all(
+        &mut self,
+        new_dek: SecretKey,
+        timestamp_iso: &str,
+    ) -> Result<(), VaultError> {
+        if self.is_locked() {
+            return Err(VaultError::Locked);
+        }
+        let old_dek = self.dek.as_ref().ok_or(VaultError::Locked)?;
+        let manifest = self.manifest.as_ref().ok_or(VaultError::Locked)?;
+
+        let mut blob_ids = Vec::new();
+        for it in manifest.items.iter().chain(manifest.trash.iter()) {
+            if let Some(ref bid) = it.blob_id {
+                blob_ids.push(bid.clone());
+            }
+        }
+
+        // 1. Recifra cada blob individual
+        for bid in &blob_ids {
+            let blob_path = self.root_path.join("blobs").join(format!("{bid}.blob"));
+            if blob_path.exists() {
+                let old_bytes = fs::read(&blob_path).map_err(|e| VaultError::Io(e.to_string()))?;
+                let plaintext = decrypt_blob(old_dek, bid, &old_bytes)?;
+                let new_blob = encrypt_blob(&new_dek, bid, &plaintext)?;
+                atomic_write(&blob_path, &new_blob)?;
+            }
+        }
+
+        // 2. Incrementa e recifra o manifesto
+        let manifest_mut = self.manifest.as_mut().unwrap();
+        manifest_mut.bump_version(timestamp_iso);
+        let manifest_path = self.root_path.join("manifest.blob");
+        let new_manifest_bytes = manifest_mut.encrypt(&new_dek)?;
+        atomic_write(&manifest_path, &new_manifest_bytes)?;
+
+        // 3. Atualiza chave DEK em memória
+        self.dek = Some(new_dek);
+
+        Ok(())
     }
 
     /// Verifica se o cofre está bloqueado.

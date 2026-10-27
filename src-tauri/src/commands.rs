@@ -4,6 +4,7 @@ use crate::crypto::SecretKey;
 use crate::state::AppState;
 use crate::vault::VaultStorage;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::{Path, PathBuf};
 
 /// Resposta retornada após a criação bem-sucedida de um cofre.
@@ -906,6 +907,225 @@ pub fn reorder_manuscript_items_internal(
         .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
 
     Ok(())
+}
+
+/// Altera a frase-senha mestra do cofre ativo sem necessidade de recifrar os blobs de texto.
+#[tauri::command]
+pub fn change_vault_passphrase(
+    state: tauri::State<'_, AppState>,
+    current_passphrase: String,
+    new_passphrase: String,
+) -> Result<(), String> {
+    change_vault_passphrase_internal(&state, &current_passphrase, &new_passphrase)
+}
+
+/// Lógica interna para alteração de frase-senha mestra.
+pub fn change_vault_passphrase_internal(
+    state: &AppState,
+    current_passphrase: &str,
+    new_passphrase: &str,
+) -> Result<(), String> {
+    if new_passphrase.len() < 10 {
+        return Err("A nova senha mestra deve conter no mínimo 10 caracteres.".to_string());
+    }
+
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let vault_id = vault.header().vault_id.clone();
+
+    // Re-envelopa a DEK no Slot 0 com a nova frase-senha
+    vault
+        .header_mut()
+        .change_passphrase(
+            current_passphrase.as_bytes(),
+            new_passphrase.as_bytes(),
+            None,
+        )
+        .map_err(|e| format!("Falha ao alterar senha mestra: {e}"))?;
+
+    vault
+        .save_header()
+        .map_err(|e| format!("Falha ao salvar cabeçalho atualizado: {e}"))?;
+
+    // Se a credencial estava salva no chaveiro do SO, atualiza com a nova senha
+    if let Ok(true) = crate::keychain::has_vault_secret(&vault_id) {
+        let _ = crate::keychain::save_vault_secret(&vault_id, new_passphrase);
+    }
+
+    Ok(())
+}
+
+/// Recifra integralmente o cofre (gera nova DEK, recifra todos os blobs e o manifesto, e gera nova chave de recuperação).
+#[tauri::command]
+pub fn reencrypt_vault(
+    state: tauri::State<'_, AppState>,
+    passphrase: String,
+) -> Result<String, String> {
+    reencrypt_vault_internal(&state, &passphrase)
+}
+
+/// Lógica interna para recifragem completa do cofre com rotação de DEK e nova chave de recuperação.
+pub fn reencrypt_vault_internal(state: &AppState, passphrase: &str) -> Result<String, String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    // 1. Valida que a frase-senha atual abre o Slot 0
+    let _ = vault
+        .header()
+        .unlock_with_passphrase(passphrase.as_bytes())
+        .map_err(|_| {
+            "Senha incorreta. A recifragem requer autenticação com a senha atual.".to_string()
+        })?;
+
+    // 2. Gera nova DEK aleatória e nova chave de recuperação
+    let new_dek = crate::crypto::SecretKey::generate();
+    let recovery_key = crate::crypto::SecretKey::generate();
+    let recovery_token_formatted = recovery_key.to_formatted_token();
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+
+    // 3. Recifra todos os blobs e o manifesto em disco com a nova DEK
+    vault
+        .reencrypt_all(new_dek.clone(), &timestamp_iso)
+        .map_err(|e| format!("Falha ao recifrar conteúdos do cofre: {e}"))?;
+
+    // 4. Re-envelopa a nova DEK nos Slots 0 e 1 no cabeçalho
+    vault
+        .header_mut()
+        .rekey(&new_dek, passphrase.as_bytes(), &recovery_key, None)
+        .map_err(|e| format!("Falha ao atualizar slots do cabeçalho: {e}"))?;
+
+    vault
+        .save_header()
+        .map_err(|e| format!("Falha ao gravar novo cabeçalho do cofre: {e}"))?;
+
+    Ok(recovery_token_formatted)
+}
+
+/// Consulta se o cofre ativo possui credencial lembrada no chaveiro do SO.
+#[tauri::command]
+pub fn get_vault_keyring_status(state: tauri::State<'_, AppState>) -> Result<bool, String> {
+    get_vault_keyring_status_internal(&state)
+}
+
+/// Lógica interna para consulta de status do chaveiro.
+pub fn get_vault_keyring_status_internal(state: &AppState) -> Result<bool, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    let vault_id = &vault.header().vault_id;
+    crate::keychain::has_vault_secret(vault_id)
+}
+
+/// Salva a credencial do cofre no chaveiro do sistema operacional.
+#[tauri::command]
+pub fn save_to_keyring(
+    state: tauri::State<'_, AppState>,
+    passphrase: String,
+) -> Result<(), String> {
+    save_to_keyring_internal(&state, &passphrase)
+}
+
+/// Lógica interna para gravação no chaveiro do SO.
+pub fn save_to_keyring_internal(state: &AppState, passphrase: &str) -> Result<(), String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    // Valida a frase-senha antes de persistir no chaveiro
+    vault
+        .header()
+        .unlock_with_passphrase(passphrase.as_bytes())
+        .map_err(|_| "Senha incorreta. Não é possível salvar no chaveiro.".to_string())?;
+
+    let vault_id = &vault.header().vault_id;
+    crate::keychain::save_vault_secret(vault_id, passphrase)
+}
+
+/// Remove a credencial do cofre do chaveiro do sistema operacional.
+#[tauri::command]
+pub fn remove_from_keyring(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    remove_from_keyring_internal(&state)
+}
+
+/// Lógica interna para remoção do chaveiro do SO.
+pub fn remove_from_keyring_internal(state: &AppState) -> Result<(), String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    let vault_id = &vault.header().vault_id;
+    crate::keychain::delete_vault_secret(vault_id)
+}
+
+/// Abre e desbloqueia um cofre utilizando a credencial armazenada no chaveiro do SO.
+#[tauri::command]
+pub fn open_vault_with_keyring(
+    state: tauri::State<'_, AppState>,
+    vault_path: String,
+) -> Result<VaultStatusResponse, String> {
+    open_vault_with_keyring_internal(&state, &vault_path)
+}
+
+/// Lógica interna para abertura de cofre via chaveiro do SO.
+pub fn open_vault_with_keyring_internal(
+    state: &AppState,
+    vault_path: &str,
+) -> Result<VaultStatusResponse, String> {
+    let raw_path = PathBuf::from(vault_path.trim());
+    if !raw_path.exists() {
+        return Err(format!("Caminho do cofre não encontrado: {vault_path}"));
+    }
+
+    let header_path = raw_path.join("header");
+    let header_bytes =
+        fs::read(&header_path).map_err(|e| format!("Falha ao ler cabeçalho do cofre: {e}"))?;
+    let header: crate::vault::VaultHeader =
+        serde_json::from_slice(&header_bytes).map_err(|e| format!("Cabeçalho corrompido: {e}"))?;
+
+    let secret_opt = crate::keychain::get_vault_secret(&header.vault_id)?;
+    let passphrase = secret_opt.ok_or_else(|| {
+        "Nenhuma credencial encontrada no chaveiro do SO para este cofre.".to_string()
+    })?;
+
+    open_vault_with_passphrase_internal(state, vault_path, &passphrase)
 }
 
 /// Constrói o caminho canônico do cofre com a extensão `.magrathea`.

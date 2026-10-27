@@ -7,6 +7,7 @@
   import { manuscript } from './vault/manuscript.svelte';
   import CreateVaultModal from './vault/CreateVaultModal.svelte';
   import LockScreen from './vault/LockScreen.svelte';
+  import VaultSecurityModal from './vault/VaultSecurityModal.svelte';
   import Sidebar from './manuscript/Sidebar.svelte';
   import TrashDrawer from './manuscript/TrashDrawer.svelte';
   import { InactivityTracker } from './vault/inactivity';
@@ -91,6 +92,15 @@
       {:else}
         <button
           type="button"
+          class="action-button"
+          onclick={() => vault.toggleSecurityModal(true)}
+          title={t('vault.security.modalTitle')}
+        >
+          🛡️ {t('vault.security.tabChangePassphrase')}
+        </button>
+
+        <button
+          type="button"
           class="action-button lock-action"
           onclick={() => vault.lockVault()}
           title={t('vault.status.lockButton')}
@@ -133,6 +143,11 @@
   />
 
   <TrashDrawer />
+
+  <VaultSecurityModal
+    isOpen={vault.isSecurityModalOpen}
+    onClose={() => vault.toggleSecurityModal(false)}
+  />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />

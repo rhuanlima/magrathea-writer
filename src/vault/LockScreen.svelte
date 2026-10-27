@@ -44,6 +44,15 @@
   async function handleCloseVault() {
     await vault.closeVault();
   }
+
+  async function handleUnlockWithKeyring() {
+    localError = null;
+    try {
+      await vault.openWithKeyring();
+    } catch (err) {
+      localError = String(err);
+    }
+  }
 </script>
 
 <div class="lock-backdrop" role="dialog" aria-modal="true" aria-labelledby="lock-title">
@@ -63,6 +72,21 @@
     {#if localError || vault.errorMessage}
       <div class="error-banner" role="alert">
         <span>⚠️ {localError || vault.errorMessage}</span>
+      </div>
+    {/if}
+
+    {#if vault.hasKeyringEnabled}
+      <button
+        type="button"
+        class="keyring-unlock-button"
+        onclick={handleUnlockWithKeyring}
+        disabled={vault.isUnlocking}
+      >
+        🔑 {vault.isUnlocking ? t('vault.unlock.unlockingWithKeyring') : t('vault.unlock.unlockWithKeyringButton')}
+      </button>
+
+      <div class="or-separator">
+        <span class="or-text">ou</span>
       </div>
     {/if}
 
@@ -212,6 +236,45 @@
     font-size: 13px;
     margin-bottom: var(--space-md);
     text-align: left;
+  }
+
+  .keyring-unlock-button {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--color-paper-elevated);
+    border: 1px solid var(--color-olive);
+    border-radius: var(--rounded-default);
+    color: var(--color-olive);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-bottom: var(--space-md);
+    transition: all var(--transition-focus);
+  }
+
+  .keyring-unlock-button:hover:not(:disabled) {
+    background-color: rgba(94, 111, 69, 0.1);
+  }
+
+  .or-separator {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin-bottom: var(--space-md);
+  }
+
+  .or-separator::before,
+  .or-separator::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--color-paper-border);
+  }
+
+  .or-text {
+    padding: 0 8px;
+    font-size: 11px;
+    color: var(--color-ink-muted);
   }
 
   .lock-form {

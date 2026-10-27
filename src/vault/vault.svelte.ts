@@ -21,6 +21,11 @@ class VaultStore {
   isSaving = $state(false);
   lastSavedAt = $state<string | null>(null);
   errorMessage = $state<string | null>(null);
+  hasKeyringEnabled = $state(false);
+  isReencrypting = $state(false);
+  isChangingPassphrase = $state(false);
+  newRecoveryKeyAfterReencrypt = $state<string | null>(null);
+  isSecurityModalOpen = $state(false);
 
   /**
    * Sincroniza o estado em memória com o backend Tauri.
@@ -33,6 +38,10 @@ class VaultStore {
       this.vaultId = status.vault_id;
       this.projectTitle = status.project_title;
       this.vaultPath = status.vault_path;
+
+      if (this.isOpen && !this.isLocked) {
+        await this.checkKeyringStatus();
+      }
     } catch (err) {
       this.errorMessage = String(err);
     }
@@ -181,6 +190,128 @@ class VaultStore {
       this.errorMessage = String(err);
       throw err;
     }
+  }
+
+  /**
+   * Altera a frase-senha mestra do cofre ativo.
+   */
+  async changePassphrase(currentPass: string, newPass: string): Promise<void> {
+    this.isChangingPassphrase = true;
+    this.errorMessage = null;
+
+    try {
+      await safeInvoke('change_vault_passphrase', {
+        current_passphrase: currentPass,
+        new_passphrase: newPass,
+      });
+      await this.checkKeyringStatus();
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    } finally {
+      this.isChangingPassphrase = false;
+    }
+  }
+
+  /**
+   * Recifra o cofre por completo, rotacionando a DEK e gerando uma nova chave de recuperação.
+   */
+  async reencryptVault(passphrase: string): Promise<string> {
+    this.isReencrypting = true;
+    this.errorMessage = null;
+
+    try {
+      const newRecoveryToken = await safeInvoke<string>('reencrypt_vault', {
+        passphrase,
+      });
+      this.newRecoveryKeyAfterReencrypt = newRecoveryToken;
+      return newRecoveryToken;
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    } finally {
+      this.isReencrypting = false;
+    }
+  }
+
+  /**
+   * Verifica se o cofre possui credencial salva no chaveiro do SO.
+   */
+  async checkKeyringStatus(): Promise<boolean> {
+    try {
+      const status = await safeInvoke<boolean>('get_vault_keyring_status');
+      this.hasKeyringEnabled = status;
+      return status;
+    } catch {
+      this.hasKeyringEnabled = false;
+      return false;
+    }
+  }
+
+  /**
+   * Habilita e salva a senha do cofre no chaveiro do SO.
+   */
+  async saveToKeyring(passphrase: string): Promise<void> {
+    try {
+      await safeInvoke('save_to_keyring', { passphrase });
+      this.hasKeyringEnabled = true;
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    }
+  }
+
+  /**
+   * Remove a credencial do cofre do chaveiro do SO.
+   */
+  async removeFromKeyring(): Promise<void> {
+    try {
+      await safeInvoke('remove_from_keyring');
+      this.hasKeyringEnabled = false;
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    }
+  }
+
+  /**
+   * Desbloqueia o cofre automaticamente via chaveiro do SO.
+   */
+  async openWithKeyring(targetPath?: string): Promise<VaultStatusResponse> {
+    const path = targetPath || this.vaultPath;
+    if (!path) {
+      throw new Error('Nenhum caminho de cofre definido.');
+    }
+
+    this.isUnlocking = true;
+    this.errorMessage = null;
+
+    try {
+      const response = await safeInvoke<VaultStatusResponse>('open_vault_with_keyring', {
+        vault_path: path,
+      });
+
+      this.isOpen = response.is_open;
+      this.isLocked = response.is_locked;
+      this.vaultId = response.vault_id;
+      this.projectTitle = response.project_title;
+      this.vaultPath = response.vault_path;
+      this.hasKeyringEnabled = true;
+
+      return response;
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    } finally {
+      this.isUnlocking = false;
+    }
+  }
+
+  /**
+   * Alterna a exibição do modal de segurança do cofre.
+   */
+  toggleSecurityModal(open?: boolean) {
+    this.isSecurityModalOpen = open !== undefined ? open : !this.isSecurityModalOpen;
   }
 
   /**

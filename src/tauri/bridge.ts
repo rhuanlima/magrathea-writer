@@ -93,6 +93,23 @@ export interface ReorderItemsPayload {
   ordered_ids: string[];
 }
 
+export interface ChangePassphrasePayload {
+  current_passphrase: string;
+  new_passphrase: string;
+}
+
+export interface ReencryptVaultPayload {
+  passphrase: string;
+}
+
+export interface KeyringPassphrasePayload {
+  passphrase: string;
+}
+
+export interface OpenKeyringPayload {
+  vault_path: string;
+}
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -131,6 +148,7 @@ let mockItems: ManifestItem[] = [
 ];
 
 let mockTrash: ManifestItem[] = [];
+let mockKeyringStatus = false;
 const mockSceneBlobs: Record<string, string> = {
   'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',
 };
@@ -309,6 +327,36 @@ export async function safeInvoke<T>(
         }
       });
       return undefined as T;
+    }
+    if (cmd === 'change_vault_passphrase') {
+      const payload = args as unknown as ChangePassphrasePayload;
+      if (payload?.new_passphrase?.length < 10) {
+        throw new Error('A nova senha mestra deve conter no mínimo 10 caracteres.');
+      }
+      return undefined as T;
+    }
+    if (cmd === 'reencrypt_vault') {
+      return '11111111-22222222-33333333-44444444-55555555-66666666-77777777-88888888' as T;
+    }
+    if (cmd === 'get_vault_keyring_status') {
+      return mockKeyringStatus as T;
+    }
+    if (cmd === 'save_to_keyring') {
+      mockKeyringStatus = true;
+      return undefined as T;
+    }
+    if (cmd === 'remove_from_keyring') {
+      mockKeyringStatus = false;
+      return undefined as T;
+    }
+    if (cmd === 'open_vault_with_keyring') {
+      return {
+        is_open: true,
+        is_locked: false,
+        vault_id: 'test-vault-uuid-0001',
+        project_title: 'Romance Teste',
+        vault_path: '/home/author/Documents/Romance.magrathea',
+      } as T;
     }
   }
 

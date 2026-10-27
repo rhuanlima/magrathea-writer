@@ -68,6 +68,42 @@ export const ptBR: TranslationSchema = {
       invalidRecoveryKeyError: 'Chave de recuperação incorreta ou malformatada.',
       closeVaultButton: 'Fechar este cofre e voltar ao início',
       autoLockNotice: 'Bloqueio automático por segurança e inatividade ativado.',
+      unlockWithKeyringButton: 'Desbloquear com Chaveiro do SO',
+      unlockingWithKeyring: 'Consultando chaveiro do SO...',
+    },
+    security: {
+      modalTitle: 'Segurança & Criptografia do Cofre',
+      tabChangePassphrase: 'Trocar Senha',
+      tabReencrypt: 'Recifrar Cofre',
+      tabKeyring: 'Chaveiro do SO',
+      currentPassphraseLabel: 'Frase-Senha Mestra Atual',
+      currentPassphrasePlaceholder: 'Digite a senha atual do cofre...',
+      newPassphraseLabel: 'Nova Frase-Senha Mestra',
+      newPassphrasePlaceholder: 'Digite a nova senha (mínimo 10 caracteres)...',
+      confirmNewPassphraseLabel: 'Confirmar Nova Frase-Senha Mestra',
+      confirmNewPassphrasePlaceholder: 'Repita a nova senha mestra...',
+      changePassphraseButton: 'Atualizar Senha Mestra',
+      changingPassphrase: 'Derivando nova KEK com Argon2id...',
+      passphraseChangedSuccess: 'Senha mestra alterada com sucesso! A chave DEK foi re-embrulhada.',
+      reencryptTitle: 'Recifragem Completa & Rotação de DEK',
+      reencryptExplanation:
+        'A recifragem substitui a Chave de Cifragem de Dados (DEK) por uma chave inteiramente nova. Todos os capítulos, cenas e a lixeira são decifrados e recifrados do zero no disco.',
+      reencryptWarning:
+        'ATENÇÃO: Cópias antigas do cofre em outros locais não poderão ser abertas com as novas credenciais. Uma nova chave de recuperação de emergência será gerada e a anterior deixará de funcionar.',
+      reencryptButton: 'Iniciar Recifragem Completa',
+      reencrypting: 'Recifrando todos os arquivos do cofre...',
+      reencryptSuccessTitle: 'Cofre Recifrado com Sucesso!',
+      reencryptNewKeyNote:
+        'Sua nova Chave de Recuperação de Emergência foi gerada. Guarde-a em local seguro!',
+      keyringTitle: 'Lembrar no Chaveiro do Sistema Operacional',
+      keyringDescription:
+        'Permite desbloquear este cofre sem precisar redigitar a frase-senha mestra a cada bloqueio automático.',
+      keyringWarningLimitation:
+        'AVISO DE SEGURANÇA: No macOS, o item é protegido pelo app e biometria. No Windows e Linux, outros processos em execução na mesma conta de usuário podem conseguir ler credenciais do chaveiro, enfraquecendo a garantia de isolamento total. Mantenha desativado em máquinas compartilhadas.',
+      enableKeyringLabel: 'Armazenar credencial com segurança no chaveiro do SO',
+      keyringPassphrasePrompt: 'Digite sua senha mestra para autorizar a gravação no chaveiro:',
+      keyringEnabledSuccess: 'Credencial salva no chaveiro do sistema.',
+      keyringDisabledSuccess: 'Credencial removida com segurança do chaveiro do sistema.',
     },
   },
   common: {
