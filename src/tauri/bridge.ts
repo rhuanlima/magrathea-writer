@@ -20,6 +20,16 @@ export interface CreateVaultResponse {
   vault_path: string;
 }
 
+export interface OpenVaultPayload {
+  vault_path: string;
+  passphrase: string;
+}
+
+export interface OpenRecoveryPayload {
+  vault_path: string;
+  recovery_key: string;
+}
+
 export interface VaultStatusResponse {
   is_open: boolean;
   is_locked: boolean;
@@ -62,7 +72,33 @@ export async function safeInvoke<T>(
         vault_path: `${payload?.dir_path || '/home/author/Documents'}/${payload?.project_title || 'Romance'}.magrathea`,
       } as T;
     }
-    if (cmd === 'lock_vault') {
+    if (cmd === 'open_vault_with_passphrase') {
+      const payload = args as unknown as OpenVaultPayload;
+      if (payload?.passphrase === 'wrong-passphrase') {
+        throw new Error('Senha incorreta ou cofre corrompido.');
+      }
+      return {
+        is_open: true,
+        is_locked: false,
+        vault_id: 'test-vault-uuid-0001',
+        project_title: 'Romance Teste',
+        vault_path: payload?.vault_path || '/home/author/Documents/Romance.magrathea',
+      } as T;
+    }
+    if (cmd === 'open_vault_with_recovery_key') {
+      const payload = args as unknown as OpenRecoveryPayload;
+      if (payload?.recovery_key === 'invalid-key') {
+        throw new Error('Chave de recuperação incorreta ou cofre corrompido.');
+      }
+      return {
+        is_open: true,
+        is_locked: false,
+        vault_id: 'test-vault-uuid-0001',
+        project_title: 'Romance Teste',
+        vault_path: payload?.vault_path || '/home/author/Documents/Romance.magrathea',
+      } as T;
+    }
+    if (cmd === 'lock_vault' || cmd === 'close_vault') {
       return undefined as T;
     }
   }

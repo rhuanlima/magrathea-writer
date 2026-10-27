@@ -62,4 +62,47 @@ describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
     expect(vault.isLocked).toBe(true);
     expect(vault.recoveryKeyToken).toBeNull();
   });
+
+  it('desbloqueia cofre com frase-senha com sucesso', async () => {
+    vault.vaultPath = '/home/author/Documents/Romance.magrathea';
+    vault.isLocked = true;
+
+    const res = await vault.openWithPassphrase('frase-senha-correta');
+    expect(res.is_open).toBe(true);
+    expect(vault.isOpen).toBe(true);
+    expect(vault.isLocked).toBe(false);
+    expect(vault.projectTitle).toBe('Romance Teste');
+  });
+
+  it('falha ao tentar desbloquear com senha errada', async () => {
+    vault.vaultPath = '/home/author/Documents/Romance.magrathea';
+    vault.isLocked = true;
+
+    await expect(vault.openWithPassphrase('wrong-passphrase')).rejects.toThrow();
+    expect(vault.isLocked).toBe(true);
+    expect(vault.errorMessage).toContain('Senha incorreta');
+  });
+
+  it('desbloqueia cofre com chave de recuperação', async () => {
+    vault.vaultPath = '/home/author/Documents/Romance.magrathea';
+    vault.isLocked = true;
+
+    const res = await vault.openWithRecoveryKey('valid-recovery-token');
+    expect(res.is_open).toBe(true);
+    expect(vault.isOpen).toBe(true);
+    expect(vault.isLocked).toBe(false);
+  });
+
+  it('desvincula e fecha o cofre ao chamar closeVault', async () => {
+    vault.isOpen = true;
+    vault.isLocked = false;
+    vault.vaultPath = '/home/author/Documents/Romance.magrathea';
+    vault.projectTitle = 'Romance Teste';
+
+    await vault.closeVault();
+    expect(vault.isOpen).toBe(false);
+    expect(vault.isLocked).toBe(true);
+    expect(vault.vaultPath).toBeNull();
+    expect(vault.projectTitle).toBeNull();
+  });
 });

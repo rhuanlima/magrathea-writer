@@ -15,6 +15,9 @@ pub fn run() {
             commands::create_vault,
             commands::get_vault_status,
             commands::lock_vault,
+            commands::open_vault_with_passphrase,
+            commands::open_vault_with_recovery_key,
+            commands::close_vault,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");

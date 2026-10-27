@@ -1,14 +1,35 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import Editor from './editor/Editor.svelte';
   import { i18n, t } from './i18n';
   import { theme } from './design';
   import { vault } from './vault/vault.svelte';
   import CreateVaultModal from './vault/CreateVaultModal.svelte';
+  import LockScreen from './vault/LockScreen.svelte';
+  import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
   let currentContent = $state(
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
   );
+  let tracker: InactivityTracker | null = null;
+
+  onMount(() => {
+    void vault.refreshStatus();
+    tracker = new InactivityTracker({
+      onTimeout: () => {
+        if (vault.isOpen && !vault.isLocked) {
+          void vault.lockVault();
+        }
+      },
+      lockOnHidden: true,
+    });
+    tracker.start();
+  });
+
+  onDestroy(() => {
+    tracker?.stop();
+  });
 
   function handleContentChange(updated: string) {
     currentContent = updated;
@@ -89,6 +110,10 @@
     onClose={() => (isCreateModalOpen = false)}
     onSuccess={handleVaultCreated}
   />
+
+  {#if vault.isLocked && vault.vaultPath}
+    <LockScreen />
+  {/if}
 </main>
 
 <style>
