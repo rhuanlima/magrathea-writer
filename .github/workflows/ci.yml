@@ -5,15 +5,16 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  security-and-lint:
-    name: Code Quality & Security Audits
+  fast-verification:
+    name: Fast Verification & Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,17 +37,13 @@ jobs:
 
       - name: Install Linux System Dependencies (Tauri 2)
         run: |
-          echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
-          echo 'Acquire::http::Timeout "30";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
-          echo 'Acquire::Retries "3";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
-          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
           sudo apt-get update -qq
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
             libwebkit2gtk-4.1-dev \
             libayatana-appindicator3-dev \
             librsvg2-dev
 
-      - name: Install dependencies
+      - name: Install Node dependencies
         run: npm ci
 
       - name: Frontend Linter (ESLint)
@@ -55,11 +52,20 @@ jobs:
       - name: Frontend Typecheck (svelte-check)
         run: npm run typecheck
 
+      - name: Frontend Unit Tests (Vitest)
+        run: npm test
+
+      - name: Frontend Build (Vite)
+        run: npm run build
+
       - name: Cargo Format Check
         run: cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
 
       - name: Cargo Clippy
         run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+
+      - name: Cargo Unit & Integration Tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
 
       - name: NPM Dependency Audit
         run: npm audit --omit=dev --audit-level=high
@@ -70,17 +76,17 @@ jobs:
           manifest-path: src-tauri/Cargo.toml
           command: check licenses sources
 
-  cross-platform-test:
-    name: Build & Test (${{ matrix.platform }})
-    needs: [security-and-lint]
+  cross-platform-matrix:
+    name: Cross-Platform Build & Test (${{ matrix.platform }})
+    # Executa a matriz completa apenas em commits na main ou acionamento manual
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    needs: [fast-verification]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
         include:
-          - platform: 'linux'
-            os: ubuntu-latest
           - platform: 'macos'
             os: macos-latest
           - platform: 'windows'
@@ -104,24 +110,8 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install Linux System Dependencies (Tauri 2)
-        if: matrix.platform == 'linux'
-        run: |
-          echo 'Acquire::ForceIPv4 "true";' | sudo tee /etc/apt/apt.conf.d/99force-ipv4
-          echo 'Acquire::http::Timeout "30";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
-          echo 'Acquire::Retries "3";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
-          sudo sed -i 's/azure\.archive\.ubuntu\.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
-          sudo apt-get update -qq
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libayatana-appindicator3-dev \
-            librsvg2-dev
-
       - name: Install NPM dependencies
         run: npm ci
-
-      - name: Run Frontend Tests (Vitest)
-        run: npm test
 
       - name: Build Frontend Bundle (Vite)
         run: npm run build
