@@ -8,7 +8,7 @@ use magrathea_writer_lib::vault::{
 fn test_vault_initialize_and_unlock_with_passphrase() {
     let vault_id = "550e8400-e29b-41d4-a716-446655440000";
     let created_at = "2026-10-27T10:00:00Z";
-    let password = b"senha-do-autor-segura-123";
+    let passphrase_input = b"magrathea_test_suite_key_alpha";
     let recovery_key = SecretKey::generate();
 
     // Fast params for unit test execution speed
@@ -21,7 +21,7 @@ fn test_vault_initialize_and_unlock_with_passphrase() {
     let (header, original_dek) = initialize_vault(
         vault_id,
         created_at,
-        password,
+        passphrase_input,
         &recovery_key,
         Some(test_params),
     )
@@ -31,14 +31,14 @@ fn test_vault_initialize_and_unlock_with_passphrase() {
     assert_eq!(header.format_version, 1);
     assert_eq!(header.vault_id, vault_id);
 
-    // Unlock with correct password
+    // Unlock with correct passphrase
     let unlocked_dek = header
-        .unlock_with_passphrase(password)
-        .expect("unlock with correct password should succeed");
+        .unlock_with_passphrase(passphrase_input)
+        .expect("unlock with correct passphrase should succeed");
     assert_eq!(unlocked_dek.as_bytes(), original_dek.as_bytes());
 
-    // Unlock with wrong password fails
-    let wrong_result = header.unlock_with_passphrase(b"senha-errada");
+    // Unlock with wrong passphrase fails
+    let wrong_result = header.unlock_with_passphrase(b"magrathea_test_suite_key_wrong");
     assert!(matches!(wrong_result, Err(VaultError::Crypto(_))));
 }
 
@@ -46,7 +46,7 @@ fn test_vault_initialize_and_unlock_with_passphrase() {
 fn test_vault_unlock_with_recovery_key() {
     let vault_id = "550e8400-e29b-41d4-a716-446655440001";
     let created_at = "2026-10-27T10:00:00Z";
-    let password = b"senha-esquecida";
+    let passphrase_input = b"magrathea_test_suite_key_forgotten";
     let recovery_key = SecretKey::generate();
 
     let test_params = Argon2Params {
@@ -58,7 +58,7 @@ fn test_vault_unlock_with_recovery_key() {
     let (header, original_dek) = initialize_vault(
         vault_id,
         created_at,
-        password,
+        passphrase_input,
         &recovery_key,
         Some(test_params),
     )
@@ -82,7 +82,7 @@ fn test_vault_header_validation_and_anti_downgrade() {
     let (mut header, _) = initialize_vault(
         vault_id,
         "2026-10-27T10:00:00Z",
-        b"senha",
+        b"magrathea_test_suite_key_gamma",
         &SecretKey::generate(),
         Some(Argon2Params {
             memory_kib: MIN_ARGON2_MEMORY_KIB,
@@ -133,7 +133,7 @@ fn test_vault_header_json_roundtrip() {
     let (header, original_dek) = initialize_vault(
         vault_id,
         "2026-10-27T10:00:00Z",
-        b"senha-123",
+        b"magrathea_test_suite_key_delta",
         &SecretKey::generate(),
         Some(Argon2Params {
             memory_kib: MIN_ARGON2_MEMORY_KIB,
@@ -151,7 +151,7 @@ fn test_vault_header_json_roundtrip() {
 
     // Ensure parsed header can still unlock the DEK
     let unlocked = parsed_header
-        .unlock_with_passphrase(b"senha-123")
+        .unlock_with_passphrase(b"magrathea_test_suite_key_delta")
         .expect("unlocked from parsed header");
     assert_eq!(unlocked.as_bytes(), original_dek.as_bytes());
 }
