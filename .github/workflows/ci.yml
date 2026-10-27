@@ -14,7 +14,7 @@ jobs:
   fast-verification:
     name: Fast Verification & Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
           echo 'Acquire::http::Timeout "15";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
           echo 'Acquire::https::Timeout "15";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
           echo 'Acquire::Retries "3";' | sudo tee -a /etc/apt/apt.conf.d/99force-ipv4
-          sudo sed -i 's/azure.archive.ubuntu.com/archive.ubuntu.com/g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
+          sudo find /etc/apt/ -type f \( -name "*.list" -o -name "*.sources" \) -exec sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' {} +
           sudo apt-get update -q
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
             libwebkit2gtk-4.1-dev \

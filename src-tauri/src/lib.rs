@@ -2,6 +2,7 @@
 
 pub mod commands;
 pub mod crypto;
+pub mod document;
 pub mod state;
 pub mod vault;
 

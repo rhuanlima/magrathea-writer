@@ -6,6 +6,7 @@
   import { t } from '../i18n';
   import { vault } from '../vault/vault.svelte';
   import { AutosaveManager, type AutosaveStatus } from './autosave';
+  import { splitFrontmatter, countWords, countChars } from './document';
 
   interface Props {
     initialContent?: string;
@@ -20,10 +21,9 @@
   let autosaveStatus = $state<AutosaveStatus>('saved');
   let autosaveManager: AutosaveManager | null = null;
 
-  let wordsCount = $derived(
-    currentDoc.trim().length === 0 ? 0 : currentDoc.trim().split(/\s+/).length
-  );
-  let charsCount = $derived(currentDoc.length);
+  let bodyOnly = $derived(splitFrontmatter(currentDoc).body);
+  let wordsCount = $derived(countWords(bodyOnly));
+  let charsCount = $derived(countChars(bodyOnly));
 
   onMount(() => {
     if (!editorElement) {
