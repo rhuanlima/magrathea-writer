@@ -58,7 +58,7 @@ export async function safeInvoke<T>(
         vault_id: 'test-vault-uuid-0001',
         project_title: payload?.project_title || 'Romance Teste',
         recovery_key_token:
-          '11223344-55667788-99aabbcc-ddeeff00-11223344-55667788-99aabbcc-ddeeff00',
+          '00000000-00000000-00000000-00000000-00000000-00000000-00000000-00000000',
         vault_path: `${payload?.dir_path || '/home/author/Documents'}/${payload?.project_title || 'Romance'}.magrathea`,
       } as T;
     }

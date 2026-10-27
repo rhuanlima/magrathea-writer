@@ -23,7 +23,7 @@ describe('password-strength (Medidor local de entropia)', () => {
   });
 
   it('aceita senhas com boa entropia e variedade de caracteres', () => {
-    const fair = assessPasswordStrength('C7#mK9!pL2@q');
+    const fair = assessPasswordStrength('ChaveForteValida!2026');
     expect(fair.score).toBeGreaterThanOrEqual(2);
     expect(fair.isAcceptable).toBe(true);
   });
