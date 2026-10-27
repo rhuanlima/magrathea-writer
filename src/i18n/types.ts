@@ -85,6 +85,39 @@ export interface TranslationSchema {
     save: string;
     close: string;
   };
+  sidebar: {
+    toggle: string;
+  };
+  manuscript: {
+    treeTitle: string;
+    newPart: string;
+    newChapter: string;
+    newScene: string;
+    emptyTree: string;
+    trash: string;
+    emptyTrash: string;
+    restore: string;
+    noTrashItems: string;
+    confirmEmptyTrash: string;
+    rename: string;
+    delete: string;
+    tags: string;
+    tagPlaceholder: string;
+    moveUp: string;
+    moveDown: string;
+    status: {
+      draft: string;
+      revised: string;
+      final: string;
+    };
+  };
+  literary: {
+    emDash: string;
+    quotes: string;
+    guillemets: string;
+    ellipsis: string;
+    sceneBreak: string;
+  };
 }
 
 /**

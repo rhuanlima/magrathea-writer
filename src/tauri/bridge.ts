@@ -52,6 +52,89 @@ export interface VaultStatusResponse {
   vault_path: string | null;
 }
 
+export type ManifestItemKind = 'part' | 'chapter' | 'scene';
+
+export interface ManifestItem {
+  id: string;
+  kind: ManifestItemKind;
+  parent_id: string | null;
+  title: string;
+  slug: string;
+  blob_id: string | null;
+  order: number;
+  tags: string[];
+  status: string | null;
+}
+
+export interface ManuscriptTreeResponse {
+  items: ManifestItem[];
+  trash: ManifestItem[];
+}
+
+export interface CreateItemPayload {
+  kind: ManifestItemKind;
+  parent_id?: string | null;
+  title: string;
+}
+
+export interface RenameItemPayload {
+  item_id: string;
+  new_title: string;
+}
+
+export interface UpdateSceneMetadataPayload {
+  scene_id: string;
+  status?: string | null;
+  tags?: string[];
+}
+
+export interface ReorderItemsPayload {
+  parent_id?: string | null;
+  ordered_ids: string[];
+}
+
+// Armazenamento em memória para testes e ambiente de preview no browser
+let mockItems: ManifestItem[] = [
+  {
+    id: 'mock-part-1',
+    kind: 'part',
+    parent_id: null,
+    title: 'Parte I: A Partida',
+    slug: 'parte-i-a-partida',
+    blob_id: null,
+    order: 0,
+    tags: [],
+    status: null,
+  },
+  {
+    id: 'mock-chap-1',
+    kind: 'chapter',
+    parent_id: 'mock-part-1',
+    title: 'Capítulo 1: O Despertar',
+    slug: 'capitulo-1-o-despertar',
+    blob_id: null,
+    order: 0,
+    tags: [],
+    status: null,
+  },
+  {
+    id: 'mock-scene-1',
+    kind: 'scene',
+    parent_id: 'mock-chap-1',
+    title: 'Cena 1: A Névoa da Manhã',
+    slug: 'cena-1-a-nevoa-da-manha',
+    blob_id: 'mock-scene-1',
+    order: 0,
+    tags: ['protagonista', 'abertura'],
+    status: 'draft',
+  },
+];
+
+let mockTrash: ManifestItem[] = [];
+const mockSceneBlobs: Record<string, string> = {
+  'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',
+};
+
 /**
  * Invoca um comando Tauri ou retorna mock em testes / ambiente sem IPC nativo.
  */
@@ -117,13 +200,115 @@ export async function safeInvoke<T>(
     }
     if (cmd === 'save_scene_content') {
       const payload = args as unknown as SaveScenePayload;
+      if (payload?.scene_id) {
+        mockSceneBlobs[payload.scene_id] = payload.content;
+      }
       return {
         scene_id: payload?.scene_id || 'default_scene',
         saved_at: new Date().toISOString(),
       } as T;
     }
     if (cmd === 'load_scene_content') {
-      return '# Mock Scene Content' as T;
+      const payload = args as unknown as LoadScenePayload;
+      if (payload?.scene_id === 'cena_01') {
+        return '# Mock Scene Content' as T;
+      }
+      const content = (payload?.scene_id && mockSceneBlobs[payload.scene_id]) || '# Mock Scene Content';
+      return content as T;
+    }
+    if (cmd === 'get_manuscript_tree') {
+      return {
+        items: [...mockItems],
+        trash: [...mockTrash],
+      } as T;
+    }
+    if (cmd === 'create_manuscript_item') {
+      const payload = args as unknown as CreateItemPayload;
+      const id = `mock-item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const title = payload.title.trim() || (payload.kind === 'part' ? 'Nova Parte' : payload.kind === 'chapter' ? 'Novo Capítulo' : 'Nova Cena');
+      const newItem: ManifestItem = {
+        id,
+        kind: payload.kind,
+        parent_id: payload.parent_id || null,
+        title,
+        slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+        blob_id: payload.kind === 'scene' ? id : null,
+        order: mockItems.filter(i => i.parent_id === (payload.parent_id || null)).length,
+        tags: [],
+        status: payload.kind === 'scene' ? 'draft' : null,
+      };
+      if (newItem.blob_id) {
+        mockSceneBlobs[newItem.blob_id] = `# ${title}\n\n`;
+      }
+      mockItems.push(newItem);
+      return newItem as T;
+    }
+    if (cmd === 'rename_manuscript_item') {
+      const payload = args as unknown as RenameItemPayload;
+      const item = mockItems.find(i => i.id === payload.item_id);
+      if (item) {
+        item.title = payload.new_title.trim();
+      }
+      return undefined as T;
+    }
+    if (cmd === 'update_scene_metadata') {
+      const payload = args as unknown as UpdateSceneMetadataPayload;
+      const item = mockItems.find(i => i.id === payload.scene_id);
+      if (item) {
+        if (payload.status !== undefined) {
+          item.status = payload.status;
+        }
+        if (payload.tags !== undefined) {
+          item.tags = payload.tags;
+        }
+      }
+      return undefined as T;
+    }
+    if (cmd === 'move_item_to_trash') {
+      const payload = args as unknown as { item_id: string };
+      const toMoveIds = new Set<string>();
+      function collect(id: string) {
+        toMoveIds.add(id);
+        for (const child of mockItems.filter(i => i.parent_id === id)) {
+          collect(child.id);
+        }
+      }
+      collect(payload.item_id);
+      const moving = mockItems.filter(i => toMoveIds.has(i.id));
+      mockItems = mockItems.filter(i => !toMoveIds.has(i.id));
+      mockTrash.push(...moving);
+      return undefined as T;
+    }
+    if (cmd === 'restore_item_from_trash') {
+      const payload = args as unknown as { item_id: string };
+      const pos = mockTrash.findIndex(i => i.id === payload.item_id);
+      if (pos >= 0) {
+        const item = mockTrash.splice(pos, 1)[0];
+        if (item.parent_id && !mockItems.some(i => i.id === item.parent_id)) {
+          item.parent_id = null;
+        }
+        mockItems.push(item);
+      }
+      return undefined as T;
+    }
+    if (cmd === 'empty_trash') {
+      for (const item of mockTrash) {
+        if (item.blob_id) {
+          delete mockSceneBlobs[item.blob_id];
+        }
+      }
+      mockTrash = [];
+      return undefined as T;
+    }
+    if (cmd === 'reorder_manuscript_items') {
+      const payload = args as unknown as ReorderItemsPayload;
+      payload.ordered_ids.forEach((id, idx) => {
+        const item = mockItems.find(i => i.id === id);
+        if (item && item.parent_id === (payload.parent_id || null)) {
+          item.order = idx;
+        }
+      });
+      return undefined as T;
     }
   }
 

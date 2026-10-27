@@ -439,6 +439,475 @@ pub fn load_scene_content_internal(state: &AppState, scene_id: &str) -> Result<S
         .map_err(|e| format!("Conteúdo da cena não é uma string UTF-8 válida: {e}"))
 }
 
+/// Estrutura de resposta contendo a árvore do manuscrito e a lixeira interna.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ManuscriptTreeResponse {
+    pub items: Vec<crate::vault::ManifestItem>,
+    pub trash: Vec<crate::vault::ManifestItem>,
+}
+
+/// Obtém todos os nós da árvore do romance e da lixeira criptografada.
+#[tauri::command]
+pub fn get_manuscript_tree(
+    state: tauri::State<'_, AppState>,
+) -> Result<ManuscriptTreeResponse, String> {
+    get_manuscript_tree_internal(&state)
+}
+
+/// Lógica interna para obtenção da árvore do manuscrito.
+pub fn get_manuscript_tree_internal(state: &AppState) -> Result<ManuscriptTreeResponse, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let manifest = vault
+        .manifest()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    Ok(ManuscriptTreeResponse {
+        items: manifest.items.clone(),
+        trash: manifest.trash.clone(),
+    })
+}
+
+/// Cria um novo nó hierárquico no manuscrito (Parte, Capítulo ou Cena).
+#[tauri::command]
+pub fn create_manuscript_item(
+    state: tauri::State<'_, AppState>,
+    kind: String,
+    parent_id: Option<String>,
+    title: String,
+) -> Result<crate::vault::ManifestItem, String> {
+    create_manuscript_item_internal(&state, &kind, parent_id.as_deref(), &title)
+}
+
+/// Lógica interna para criação de nó no manuscrito.
+pub fn create_manuscript_item_internal(
+    state: &AppState,
+    kind: &str,
+    parent_id: Option<&str>,
+    title: &str,
+) -> Result<crate::vault::ManifestItem, String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let trimmed_title = if title.trim().is_empty() {
+        match kind {
+            "part" => "Nova Parte",
+            "chapter" => "Novo Capítulo",
+            _ => "Nova Cena",
+        }
+    } else {
+        title.trim()
+    };
+
+    let item_id = format!(
+        "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
+        rand::random::<u32>(),
+        rand::random::<u16>(),
+        rand::random::<u16>() & 0x0fff,
+        (rand::random::<u16>() & 0x3fff) | 0x8000,
+        rand::random::<u64>() & 0xffffffffffff
+    );
+
+    let slug = trimmed_title
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+
+    let blob_id = if kind == "scene" {
+        Some(item_id.clone())
+    } else {
+        None
+    };
+
+    if let Some(ref bid) = blob_id {
+        let initial_doc = format!("# {trimmed_title}\n\n");
+        vault
+            .write_blob(bid, initial_doc.as_bytes())
+            .map_err(|e| format!("Falha ao inicializar blob da cena: {e}"))?;
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let order = manifest
+        .items
+        .iter()
+        .filter(|it| it.parent_id.as_deref() == parent_id)
+        .count() as u32;
+
+    let item = crate::vault::ManifestItem {
+        id: item_id,
+        kind: kind.to_string(),
+        parent_id: parent_id.map(|s| s.to_string()),
+        title: trimmed_title.to_string(),
+        slug,
+        blob_id,
+        order,
+        tags: Vec::new(),
+        status: if kind == "scene" {
+            Some("draft".to_string())
+        } else {
+            None
+        },
+    };
+
+    manifest.items.push(item.clone());
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(item)
+}
+
+/// Renomeia um nó do manuscrito.
+#[tauri::command]
+pub fn rename_manuscript_item(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+    new_title: String,
+) -> Result<(), String> {
+    rename_manuscript_item_internal(&state, &item_id, &new_title)
+}
+
+/// Lógica interna para renomeação de nó.
+pub fn rename_manuscript_item_internal(
+    state: &AppState,
+    item_id: &str,
+    new_title: &str,
+) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let trimmed = new_title.trim();
+    if trimmed.is_empty() {
+        return Err("O título não pode ser vazio.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let item = manifest
+        .items
+        .iter_mut()
+        .find(|it| it.id == item_id)
+        .ok_or_else(|| format!("Item '{item_id}' não encontrado."))?;
+
+    item.title = trimmed.to_string();
+    item.slug = trimmed
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c } else { '-' })
+        .collect::<String>()
+        .trim_matches('-')
+        .to_string();
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
+/// Atualiza o status e etiquetas livres de uma cena.
+#[tauri::command]
+pub fn update_scene_metadata(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+    status: Option<String>,
+    tags: Vec<String>,
+) -> Result<(), String> {
+    update_scene_metadata_internal(&state, &item_id, status, tags)
+}
+
+/// Lógica interna para atualização de metadados da cena.
+pub fn update_scene_metadata_internal(
+    state: &AppState,
+    item_id: &str,
+    status: Option<String>,
+    tags: Vec<String>,
+) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let item = manifest
+        .items
+        .iter_mut()
+        .find(|it| it.id == item_id)
+        .ok_or_else(|| format!("Item '{item_id}' não encontrado."))?;
+
+    item.status = status;
+    item.tags = tags;
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
+/// Move um item e seus filhos recursivos para a lixeira interna cifrada.
+#[tauri::command]
+pub fn move_item_to_trash(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+) -> Result<(), String> {
+    move_item_to_trash_internal(&state, &item_id)
+}
+
+/// Lógica interna para mover para a lixeira.
+pub fn move_item_to_trash_internal(state: &AppState, item_id: &str) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let mut to_move_ids = std::collections::HashSet::new();
+    to_move_ids.insert(item_id.to_string());
+
+    let mut added = true;
+    while added {
+        added = false;
+        for it in &manifest.items {
+            if let Some(ref pid) = it.parent_id {
+                if to_move_ids.contains(pid) && !to_move_ids.contains(&it.id) {
+                    to_move_ids.insert(it.id.clone());
+                    added = true;
+                }
+            }
+        }
+    }
+
+    let mut moved_items = Vec::new();
+    manifest.items.retain(|it| {
+        if to_move_ids.contains(&it.id) {
+            moved_items.push(it.clone());
+            false
+        } else {
+            true
+        }
+    });
+
+    manifest.trash.extend(moved_items);
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
+/// Restaura um item da lixeira interna para o manuscrito ativo.
+#[tauri::command]
+pub fn restore_item_from_trash(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+) -> Result<(), String> {
+    restore_item_from_trash_internal(&state, &item_id)
+}
+
+/// Lógica interna para restauração de item da lixeira.
+pub fn restore_item_from_trash_internal(state: &AppState, item_id: &str) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let pos = manifest
+        .trash
+        .iter()
+        .position(|it| it.id == item_id)
+        .ok_or_else(|| format!("Item '{item_id}' não encontrado na lixeira."))?;
+
+    let mut item = manifest.trash.remove(pos);
+
+    if let Some(ref pid) = item.parent_id {
+        if !manifest.items.iter().any(|it| it.id == *pid) {
+            item.parent_id = None;
+        }
+    }
+
+    manifest.items.push(item);
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
+/// Esvazia definitivamente a lixeira interna, apagando os blobs correspondentes no disco.
+#[tauri::command]
+pub fn empty_trash(state: tauri::State<'_, AppState>) -> Result<(), String> {
+    empty_trash_internal(&state)
+}
+
+/// Lógica interna para esvaziamento permanente da lixeira.
+pub fn empty_trash_internal(state: &AppState) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    let blobs_to_delete: Vec<String> = manifest
+        .trash
+        .iter()
+        .filter_map(|it| it.blob_id.clone())
+        .collect();
+
+    manifest.trash.clear();
+
+    for bid in &blobs_to_delete {
+        let _ = vault.delete_blob(bid);
+    }
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
+/// Reordena uma lista de itens irmãos sob um mesmo nó pai.
+#[tauri::command]
+pub fn reorder_manuscript_items(
+    state: tauri::State<'_, AppState>,
+    parent_id: Option<String>,
+    ordered_ids: Vec<String>,
+) -> Result<(), String> {
+    reorder_manuscript_items_internal(&state, parent_id.as_deref(), &ordered_ids)
+}
+
+/// Lógica interna para reordenação de itens.
+pub fn reorder_manuscript_items_internal(
+    state: &AppState,
+    parent_id: Option<&str>,
+    ordered_ids: &[String],
+) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    for (idx, id) in ordered_ids.iter().enumerate() {
+        if let Some(it) = manifest.items.iter_mut().find(|it| it.id == *id) {
+            if it.parent_id.as_deref() == parent_id {
+                it.order = idx as u32;
+            }
+        }
+    }
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
 /// Constrói o caminho canônico do cofre com a extensão `.magrathea`.
 fn resolve_vault_path(base_dir: &Path, title: &str) -> PathBuf {
     let path_str = base_dir.display().to_string();

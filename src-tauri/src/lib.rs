@@ -21,6 +21,14 @@ pub fn run() {
             commands::close_vault,
             commands::save_scene_content,
             commands::load_scene_content,
+            commands::get_manuscript_tree,
+            commands::create_manuscript_item,
+            commands::rename_manuscript_item,
+            commands::update_scene_metadata,
+            commands::move_item_to_trash,
+            commands::restore_item_from_trash,
+            commands::empty_trash,
+            commands::reorder_manuscript_items,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");

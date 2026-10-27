@@ -5,8 +5,11 @@
   import { markdown } from '@codemirror/lang-markdown';
   import { t } from '../i18n';
   import { vault } from '../vault/vault.svelte';
+  import { manuscript } from '../vault/manuscript.svelte';
   import { AutosaveManager, type AutosaveStatus } from './autosave';
   import { splitFrontmatter, countWords, countChars } from './document';
+  import LiteraryBar from './LiteraryBar.svelte';
+  import SceneHeader from './SceneHeader.svelte';
 
   interface Props {
     initialContent?: string;
@@ -16,10 +19,11 @@
   let { initialContent = '', onChange }: Props = $props();
 
   let editorElement: HTMLDivElement | null = $state(null);
-  let view: EditorView | null = null;
+  let view = $state<EditorView | null>(null);
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
   let autosaveManager: AutosaveManager | null = null;
+  let lastLoadedSceneId = $state<string | null>(null);
 
   let bodyOnly = $derived(splitFrontmatter(currentDoc).body);
   let wordsCount = $derived(countWords(bodyOnly));
@@ -35,7 +39,8 @@
       delayMs: 800,
       onSave: async (content) => {
         if (vault.isOpen && !vault.isLocked) {
-          await vault.saveScene('default_scene', content);
+          const targetSceneId = manuscript.activeSceneId || 'default_scene';
+          await vault.saveScene(targetSceneId, content);
         }
       },
       onStatusChange: (status) => {
@@ -100,6 +105,36 @@
     });
   });
 
+  // Reage à mudança de cena ativa selecionada na barra lateral
+  $effect(() => {
+    const activeId = manuscript.activeSceneId;
+    if (activeId && activeId !== lastLoadedSceneId && view) {
+      lastLoadedSceneId = activeId;
+      void (async () => {
+        if (autosaveManager) {
+          await autosaveManager.flush();
+        }
+        try {
+          const scene = manuscript.items.find((i) => i.id === activeId);
+          const blobId = scene?.blob_id || activeId;
+          const content = await vault.loadScene(blobId);
+          currentDoc = content;
+          if (view) {
+            view.dispatch({
+              changes: {
+                from: 0,
+                to: view.state.doc.length,
+                insert: content,
+              },
+            });
+          }
+        } catch (err) {
+          console.error('Falha ao carregar conteúdo da cena:', err);
+        }
+      })();
+    }
+  });
+
   onDestroy(() => {
     if (autosaveManager) {
       void autosaveManager.flush();
@@ -114,7 +149,14 @@
 </script>
 
 <div class="editor-wrapper">
+  <LiteraryBar {view} />
+
+  {#if manuscript.activeScene}
+    <SceneHeader />
+  {/if}
+
   <div class="editor-container" bind:this={editorElement}></div>
+
   <footer class="editor-footer">
     <div class="stats">
       <span>{t('editor.wordsCount', { count: wordsCount })}</span>
