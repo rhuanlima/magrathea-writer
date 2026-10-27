@@ -2,12 +2,20 @@
 
 pub mod commands;
 pub mod crypto;
+pub mod state;
 pub mod vault;
 
 /// Initializes and executes the Tauri desktop application.
 pub fn run() {
     tauri::Builder::default()
-        .invoke_handler(tauri::generate_handler![commands::greet])
+        .manage(state::AppState::default())
+        .invoke_handler(tauri::generate_handler![
+            commands::greet,
+            commands::get_default_vault_dir,
+            commands::create_vault,
+            commands::get_vault_status,
+            commands::lock_vault,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
 }
