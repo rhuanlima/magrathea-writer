@@ -146,4 +146,23 @@ export const enUS: TranslationSchema = {
     ellipsis: 'Ellipsis (…)',
     sceneBreak: 'Scene Break (***)',
   },
+  inspector: {
+    title: 'Inspector',
+    close: 'Close inspector',
+    defaultKind: 'Document',
+    noActiveItem: 'No item selected',
+    selectItemToInspect: 'Select a scene or entity to inspect its metadata and connections.',
+    tabMetadata: 'Metadata',
+    tabBacklinks: 'Backlinks',
+    singleMention: '1 mention found in this manuscript:',
+    multipleMentions: '{count} mentions found in this manuscript:',
+    noBacklinksFound: 'No mentions found for this document.',
+    backlinksHint: 'Mention this document in other scenes using [[Name]] syntax.',
+  },
+  metadata: {
+    status: 'Status',
+    tags: 'Tags',
+    noTags: 'No tags defined',
+    slug: 'Semantic Slug',
+  },
 };

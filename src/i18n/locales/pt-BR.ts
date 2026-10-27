@@ -146,4 +146,23 @@ export const ptBR: TranslationSchema = {
     ellipsis: 'Reticências (…)',
     sceneBreak: 'Quebra de Cena (***)',
   },
+  inspector: {
+    title: 'Inspetor',
+    close: 'Fechar inspetor',
+    defaultKind: 'Documento',
+    noActiveItem: 'Nenhum item selecionado',
+    selectItemToInspect: 'Selecione uma cena ou entidade para inspecionar seus metadados e conexões.',
+    tabMetadata: 'Metadados',
+    tabBacklinks: 'Backlinks',
+    singleMention: '1 menção encontrada neste manuscrito:',
+    multipleMentions: '{count} menções encontradas neste manuscrito:',
+    noBacklinksFound: 'Nenhuma menção encontrada para este documento.',
+    backlinksHint: 'Cite este documento em outras cenas utilizando a sintaxe [[Nome]].',
+  },
+  metadata: {
+    status: 'Status',
+    tags: 'Etiquetas',
+    noTags: 'Nenhuma etiqueta definida',
+    slug: 'Slug Semântico',
+  },
 };

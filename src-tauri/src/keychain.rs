@@ -72,14 +72,26 @@ mod tests {
         // um erro gracioso de plataforma em vez de panic.
         match has_vault_secret(&test_vault_id) {
             Ok(false) => {
-                save_vault_secret(&test_vault_id, test_secret).expect("falha ao salvar");
-                assert!(has_vault_secret(&test_vault_id).unwrap());
-                assert_eq!(
-                    get_vault_secret(&test_vault_id).unwrap().as_deref(),
-                    Some(test_secret)
-                );
-                delete_vault_secret(&test_vault_id).expect("falha ao deletar");
-                assert!(!has_vault_secret(&test_vault_id).unwrap());
+                match save_vault_secret(&test_vault_id, test_secret) {
+                    Ok(()) => {
+                        assert!(has_vault_secret(&test_vault_id).unwrap());
+                        assert_eq!(
+                            get_vault_secret(&test_vault_id).unwrap().as_deref(),
+                            Some(test_secret)
+                        );
+                        delete_vault_secret(&test_vault_id).expect("falha ao deletar");
+                        assert!(!has_vault_secret(&test_vault_id).unwrap());
+                    }
+                    Err(e) => {
+                        // Ambientes restritos / sandbox macOS / headless CI
+                        assert!(
+                            e.contains("authorization was denied")
+                                || e.contains("Platform secure storage")
+                                || e.contains("DBus"),
+                            "Erro inesperado ao salvar no chaveiro: {e}"
+                        );
+                    }
+                }
             }
             Ok(true) => panic!("não deveria existir entrada para ID aleatório"),
             Err(e) => {

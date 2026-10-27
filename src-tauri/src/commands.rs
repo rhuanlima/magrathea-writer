@@ -1,6 +1,7 @@
 //! Comandos IPC expostos para o frontend via ponte Tauri.
 
 use crate::crypto::SecretKey;
+use crate::index::{BacklinkEntry, EntityEntry, IndexOverviewResponse, VaultIndex};
 use crate::state::AppState;
 use crate::vault::VaultStorage;
 use serde::{Deserialize, Serialize};
@@ -110,6 +111,12 @@ pub fn create_vault_internal(
         .active_vault
         .lock()
         .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    if let Ok(idx) = VaultIndex::build_from_vault(&unlocked_vault) {
+        if let Ok(mut idx_guard) = state.index.lock() {
+            *idx_guard = Some(idx);
+        }
+    }
     *guard = Some(unlocked_vault);
 
     Ok(CreateVaultResponse {
@@ -181,6 +188,10 @@ pub fn lock_vault_internal(state: &AppState) -> Result<(), String> {
     }
     *guard = None;
 
+    if let Ok(mut idx_guard) = state.index.lock() {
+        *idx_guard = None;
+    }
+
     Ok(())
 }
 
@@ -226,6 +237,12 @@ pub fn open_vault_with_passphrase_internal(
         .active_vault
         .lock()
         .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    if let Ok(idx) = VaultIndex::build_from_vault(&unlocked_vault) {
+        if let Ok(mut idx_guard) = state.index.lock() {
+            *idx_guard = Some(idx);
+        }
+    }
     *guard = Some(unlocked_vault);
 
     Ok(VaultStatusResponse {
@@ -282,6 +299,12 @@ pub fn open_vault_with_recovery_key_internal(
         .active_vault
         .lock()
         .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    if let Ok(idx) = VaultIndex::build_from_vault(&unlocked_vault) {
+        if let Ok(mut idx_guard) = state.index.lock() {
+            *idx_guard = Some(idx);
+        }
+    }
     *guard = Some(unlocked_vault);
 
     Ok(VaultStatusResponse {
@@ -317,6 +340,10 @@ pub fn close_vault_internal(state: &AppState) -> Result<(), String> {
         vault.lock();
     }
     *guard = None;
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        *idx_guard = None;
+    }
 
     if let Ok(mut last_path_guard) = state.last_vault_path.lock() {
         *last_path_guard = None;
@@ -395,6 +422,24 @@ pub fn save_scene_content_internal(
     vault
         .save_manifest(&timestamp_iso)
         .map_err(|e| format!("Falha ao salvar manifesto autenticado: {e}"))?;
+
+    let (item_title, item_kind) = {
+        let manifest = vault.manifest().map_err(|e| e.to_string())?;
+        manifest
+            .items
+            .iter()
+            .find(|it| it.id == trimmed_id)
+            .map(|it| (it.title.clone(), it.kind.clone()))
+            .unwrap_or_else(|| (trimmed_id.to_string(), "scene".to_string()))
+    };
+
+    drop(guard);
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        if let Some(ref mut idx) = *idx_guard {
+            idx.index_document_content(trimmed_id, &item_title, &item_kind, content);
+        }
+    }
 
     Ok(SaveSceneResponse {
         scene_id: trimmed_id.to_string(),
@@ -583,6 +628,24 @@ pub fn create_manuscript_item_internal(
         .save_manifest(&timestamp_iso)
         .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
 
+    let item_clone = item.clone();
+    drop(guard);
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        if let Some(ref mut idx) = *idx_guard {
+            idx.register_entity(EntityEntry {
+                id: item_clone.id.clone(),
+                title: item_clone.title.clone(),
+                slug: item_clone.slug.clone(),
+                kind: item_clone.kind.clone(),
+                tags: item_clone.tags.clone(),
+                status: item_clone.status.clone(),
+                summary: None,
+                mention_count: 0,
+            });
+        }
+    }
+
     Ok(item)
 }
 
@@ -640,9 +703,32 @@ pub fn rename_manuscript_item_internal(
         .trim_matches('-')
         .to_string();
 
+    let item_slug = item.slug.clone();
+    let item_kind = item.kind.clone();
+    let item_tags = item.tags.clone();
+    let item_status = item.status.clone();
+
     vault
         .save_manifest(&timestamp_iso)
         .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    drop(guard);
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        if let Some(ref mut idx) = *idx_guard {
+            idx.remove_entity(item_id);
+            idx.register_entity(EntityEntry {
+                id: item_id.to_string(),
+                title: trimmed.to_string(),
+                slug: item_slug,
+                kind: item_kind,
+                tags: item_tags,
+                status: item_status,
+                summary: None,
+                mention_count: 0,
+            });
+        }
+    }
 
     Ok(())
 }
@@ -759,6 +845,16 @@ pub fn move_item_to_trash_internal(state: &AppState, item_id: &str) -> Result<()
     vault
         .save_manifest(&timestamp_iso)
         .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    drop(guard);
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        if let Some(ref mut idx) = *idx_guard {
+            for id in &to_move_ids {
+                idx.remove_entity(id);
+            }
+        }
+    }
 
     Ok(())
 }
@@ -1145,6 +1241,114 @@ fn resolve_vault_path(base_dir: &Path, title: &str) -> PathBuf {
         .collect();
     let folder_name = format!("{sanitized_name}.magrathea");
     base_dir.join(folder_name)
+}
+
+/// Obtém a visão geral do índice do cofre em memória (entidades, links totais e pendentes).
+#[tauri::command]
+pub fn get_vault_index(state: tauri::State<'_, AppState>) -> Result<IndexOverviewResponse, String> {
+    get_vault_index_internal(&state)
+}
+
+/// Lógica interna para obter a visão geral do índice.
+pub fn get_vault_index_internal(state: &AppState) -> Result<IndexOverviewResponse, String> {
+    let idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_ref()
+        .ok_or_else(|| "Índice indisponível. Desbloqueie o cofre.".to_string())?;
+
+    Ok(index.get_overview())
+}
+
+/// Obtém todos os backlinks (menções em outros documentos) que apontam para um item.
+#[tauri::command]
+pub fn get_document_backlinks(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+) -> Result<Vec<BacklinkEntry>, String> {
+    get_document_backlinks_internal(&state, &item_id)
+}
+
+/// Lógica interna para obter backlinks de uma entidade ou cena.
+pub fn get_document_backlinks_internal(
+    state: &AppState,
+    item_id: &str,
+) -> Result<Vec<BacklinkEntry>, String> {
+    let idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_ref()
+        .ok_or_else(|| "Índice indisponível. Desbloqueie o cofre.".to_string())?;
+
+    Ok(index.get_backlinks(item_id))
+}
+
+/// Obtém metadados de pré-visualização (hover preview) para um termo citado via wikilink.
+#[tauri::command]
+pub fn get_entity_preview(
+    state: tauri::State<'_, AppState>,
+    query: String,
+) -> Result<Option<EntityEntry>, String> {
+    get_entity_preview_internal(&state, &query)
+}
+
+/// Lógica interna para resolução de prévia de entidade para hover popover.
+pub fn get_entity_preview_internal(
+    state: &AppState,
+    query: &str,
+) -> Result<Option<EntityEntry>, String> {
+    let idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_ref()
+        .ok_or_else(|| "Índice indisponível. Desbloqueie o cofre.".to_string())?;
+
+    Ok(index.resolve_wikilink(query).cloned())
+}
+
+/// Força a reconstrução em memória do índice a partir do cofre ativo.
+#[tauri::command]
+pub fn rebuild_vault_index(
+    state: tauri::State<'_, AppState>,
+) -> Result<IndexOverviewResponse, String> {
+    rebuild_vault_index_internal(&state)
+}
+
+/// Lógica interna para reconstrução do índice em memória.
+pub fn rebuild_vault_index_internal(state: &AppState) -> Result<IndexOverviewResponse, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let new_index = VaultIndex::build_from_vault(vault)
+        .map_err(|e| format!("Falha ao reconstruir índice: {e}"))?;
+
+    let overview = new_index.get_overview();
+    drop(guard);
+
+    if let Ok(mut idx_guard) = state.index.lock() {
+        *idx_guard = Some(new_index);
+    }
+
+    Ok(overview)
 }
 
 #[cfg(test)]
