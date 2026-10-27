@@ -2,6 +2,10 @@
 
 use crate::crypto::SecretKey;
 use crate::index::{BacklinkEntry, EntityEntry, IndexOverviewResponse, VaultIndex};
+use crate::refactor::{
+    apply_rename, preview_rename, rollback_rename, ApplyRenameRefactorResponse,
+    RenameRefactorPreviewResponse,
+};
 use crate::state::AppState;
 use crate::vault::VaultStorage;
 use serde::{Deserialize, Serialize};
@@ -192,6 +196,14 @@ pub fn lock_vault_internal(state: &AppState) -> Result<(), String> {
         *idx_guard = None;
     }
 
+    if let Ok(mut snap_guard) = state.refactor_snapshots.lock() {
+        snap_guard.clear();
+    }
+
+    if let Ok(mut snap_guard) = state.refactor_snapshots.lock() {
+        snap_guard.clear();
+    }
+
     Ok(())
 }
 
@@ -343,6 +355,10 @@ pub fn close_vault_internal(state: &AppState) -> Result<(), String> {
 
     if let Ok(mut idx_guard) = state.index.lock() {
         *idx_guard = None;
+    }
+
+    if let Ok(mut snap_guard) = state.refactor_snapshots.lock() {
+        snap_guard.clear();
     }
 
     if let Ok(mut last_path_guard) = state.last_vault_path.lock() {
@@ -1349,6 +1365,139 @@ pub fn rebuild_vault_index_internal(state: &AppState) -> Result<IndexOverviewRes
     }
 
     Ok(overview)
+}
+
+/// Gera a prévia de refatoração para renomear uma entidade e todas as suas citações.
+#[tauri::command]
+pub fn preview_rename_entity(
+    state: tauri::State<'_, AppState>,
+    old_name: String,
+    new_name: String,
+) -> Result<RenameRefactorPreviewResponse, String> {
+    preview_rename_entity_internal(&state, &old_name, &new_name)
+}
+
+/// Lógica interna para pré-visualização de renomeação.
+pub fn preview_rename_entity_internal(
+    state: &AppState,
+    old_name: &str,
+    new_name: &str,
+) -> Result<RenameRefactorPreviewResponse, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    preview_rename(vault, old_name, new_name)
+        .map_err(|e| format!("Falha na prévia de refatoração: {e}"))
+}
+
+/// Aplica a refatoração atômica em lote com snapshot de segurança.
+#[tauri::command]
+pub fn apply_rename_refactor(
+    state: tauri::State<'_, AppState>,
+    old_name: String,
+    new_name: String,
+) -> Result<ApplyRenameRefactorResponse, String> {
+    apply_rename_refactor_internal(&state, &old_name, &new_name)
+}
+
+/// Lógica interna para aplicação da refatoração com snapshot.
+pub fn apply_rename_refactor_internal(
+    state: &AppState,
+    old_name: &str,
+    new_name: &str,
+) -> Result<ApplyRenameRefactorResponse, String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let mut idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_mut()
+        .ok_or_else(|| "Índice indisponível em memória.".to_string())?;
+
+    let (response, snapshot) = apply_rename(vault, index, old_name, new_name)
+        .map_err(|e| format!("Falha ao aplicar refatoração: {e}"))?;
+
+    if let Ok(mut snap_guard) = state.refactor_snapshots.lock() {
+        snap_guard.insert(response.snapshot_id.clone(), snapshot);
+    }
+
+    Ok(response)
+}
+
+/// Desfaz uma refatoração anterior restaurando o snapshot do cofre.
+#[tauri::command]
+pub fn rollback_rename_refactor(
+    state: tauri::State<'_, AppState>,
+    snapshot_id: String,
+) -> Result<(), String> {
+    rollback_rename_refactor_internal(&state, &snapshot_id)
+}
+
+/// Lógica interna para rollback da refatoração.
+pub fn rollback_rename_refactor_internal(
+    state: &AppState,
+    snapshot_id: &str,
+) -> Result<(), String> {
+    let snapshot = {
+        let mut snap_guard = state
+            .refactor_snapshots
+            .lock()
+            .map_err(|_| "Falha ao obter lock de snapshots.".to_string())?;
+        snap_guard
+            .remove(snapshot_id)
+            .ok_or_else(|| format!("Snapshot '{snapshot_id}' não encontrado para rollback."))?
+    };
+
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let mut idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_mut()
+        .ok_or_else(|| "Índice indisponível em memória.".to_string())?;
+
+    rollback_rename(vault, index, &snapshot)
+        .map_err(|e| format!("Falha no rollback de refatoração: {e}"))?;
+
+    Ok(())
 }
 
 #[cfg(test)]

@@ -168,6 +168,25 @@ export interface TranslationSchema {
     noTags: string;
     slug: string;
   };
+  refactor: {
+    modalTitle: string;
+    explanation: string;
+    currentNameLabel: string;
+    newNameLabel: string;
+    newNamePlaceholder: string;
+    previewTitle: string;
+    checking: string;
+    occurrencesFound: string;
+    noOccurrencesFound: string;
+    mentionsLabel: string;
+    applyButton: string;
+    applying: string;
+    applySuccess: string;
+    undoButton: string;
+    rollingBack: string;
+    rollbackSuccess: string;
+    refactorAction: string;
+  };
 }
 
 /**

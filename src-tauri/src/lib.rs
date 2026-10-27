@@ -5,6 +5,7 @@ pub mod crypto;
 pub mod document;
 pub mod index;
 pub mod keychain;
+pub mod refactor;
 pub mod state;
 pub mod vault;
 
@@ -41,6 +42,9 @@ pub fn run() {
             commands::get_document_backlinks,
             commands::get_entity_preview,
             commands::rebuild_vault_index,
+            commands::preview_rename_entity,
+            commands::apply_rename_refactor,
+            commands::rollback_rename_refactor,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
