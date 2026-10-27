@@ -1,6 +1,7 @@
 //! Core library module for Magrathea Writer desktop application.
 
 pub mod commands;
+pub mod crypto;
 
 /// Initializes and executes the Tauri desktop application.
 pub fn run() {
