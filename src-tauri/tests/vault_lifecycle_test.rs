@@ -44,14 +44,14 @@ fn fast_test_kdf_params() -> Argon2Params {
 fn test_vault_create_and_directory_layout() {
     let temp_root = create_test_temp_dir("layout");
     let vault_path = temp_root.join("MeuRomance.magrathea");
-    let passphrase = b"senha-mestra-literaria-segura";
+    let test_user_key = b"magrathea_fixture_sample_key_primary";
     let recovery_key = SecretKey::generate();
 
     // 1. Criação do cofre
     let vault = VaultStorage::create(
         &vault_path,
         "Meu Romance",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -81,21 +81,21 @@ fn test_vault_create_and_directory_layout() {
 fn test_vault_unlock_with_passphrase_and_recovery_key() {
     let temp_root = create_test_temp_dir("unlock");
     let vault_path = temp_root.join("Projeto.magrathea");
-    let passphrase = b"passphrase-teste-alpha-123";
+    let test_user_key = b"magrathea_fixture_sample_key_unlock";
     let recovery_key = SecretKey::generate();
 
     // Cria o cofre
     VaultStorage::create(
         &vault_path,
         "Obra Teste",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
     .expect("falha ao criar cofre");
 
     // 1. Desbloqueio com frase-senha correta
-    let vault_by_pass = VaultStorage::open_with_passphrase(&vault_path, passphrase)
+    let vault_by_pass = VaultStorage::open_with_passphrase(&vault_path, test_user_key)
         .expect("deve abrir com senha correta");
     assert!(!vault_by_pass.is_locked());
     assert_eq!(
@@ -105,7 +105,7 @@ fn test_vault_unlock_with_passphrase_and_recovery_key() {
 
     // 2. Falha de desbloqueio com frase-senha incorreta
     let wrong_pass_result =
-        VaultStorage::open_with_passphrase(&vault_path, b"senha-completamente-errada");
+        VaultStorage::open_with_passphrase(&vault_path, b"magrathea_fixture_wrong_input");
     assert!(wrong_pass_result.is_err());
     match wrong_pass_result {
         Err(VaultError::Crypto(_)) => (),
@@ -134,13 +134,13 @@ fn test_vault_unlock_with_passphrase_and_recovery_key() {
 fn test_vault_lock_and_zeroization() {
     let temp_root = create_test_temp_dir("lock");
     let vault_path = temp_root.join("Livro.magrathea");
-    let passphrase = b"chave-de-acesso-autor";
+    let test_user_key = b"magrathea_fixture_sample_key_lock";
     let recovery_key = SecretKey::generate();
 
     let mut vault = VaultStorage::create(
         &vault_path,
         "Livro Secreto",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -181,13 +181,13 @@ fn test_vault_lock_and_zeroization() {
 fn test_scene_blob_crud_and_disk_opacity() {
     let temp_root = create_test_temp_dir("crud");
     let vault_path = temp_root.join("Manuscrito.magrathea");
-    let passphrase = b"senha-para-manuscrito";
+    let test_user_key = b"magrathea_fixture_sample_key_crud";
     let recovery_key = SecretKey::generate();
 
     let vault = VaultStorage::create(
         &vault_path,
         "Manuscrito",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -238,13 +238,13 @@ fn test_scene_blob_crud_and_disk_opacity() {
 fn test_anti_blob_swap_aad_binding() {
     let temp_root = create_test_temp_dir("blob_swap");
     let vault_path = temp_root.join("SwapTest.magrathea");
-    let passphrase = b"senha-teste-aad";
+    let test_user_key = b"magrathea_fixture_sample_key_aad";
     let recovery_key = SecretKey::generate();
 
     let vault = VaultStorage::create(
         &vault_path,
         "Swap Project",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -286,13 +286,13 @@ fn test_anti_blob_swap_aad_binding() {
 fn test_bit_flip_payload_tampering() {
     let temp_root = create_test_temp_dir("bit_flip");
     let vault_path = temp_root.join("BitFlip.magrathea");
-    let passphrase = b"senha-teste-bitflip";
+    let test_user_key = b"magrathea_fixture_sample_key_bitflip";
     let recovery_key = SecretKey::generate();
 
     let vault = VaultStorage::create(
         &vault_path,
         "BitFlip Project",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -325,13 +325,13 @@ fn test_bit_flip_payload_tampering() {
 fn test_manifest_rollback_detection() {
     let temp_root = create_test_temp_dir("rollback");
     let vault_path = temp_root.join("RollbackTest.magrathea");
-    let passphrase = b"senha-teste-rollback";
+    let test_user_key = b"magrathea_fixture_sample_key_rollback";
     let recovery_key = SecretKey::generate();
 
     let mut vault = VaultStorage::create(
         &vault_path,
         "Rollback Project",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
@@ -356,7 +356,10 @@ fn test_manifest_rollback_detection() {
     let manifest_path = vault_path.join("manifest.blob");
     let mut fake_manifest = vault.manifest().unwrap().clone();
     fake_manifest.monotonic_version = 10;
-    let dek = vault.header().unlock_with_passphrase(passphrase).unwrap();
+    let dek = vault
+        .header()
+        .unlock_with_passphrase(test_user_key)
+        .unwrap();
     let fake_bytes = fake_manifest.encrypt(&dek).unwrap();
     fs::write(&manifest_path, &fake_bytes).expect("falha ao simular ataque");
 
@@ -381,13 +384,13 @@ fn test_manifest_rollback_detection() {
 fn test_verify_integrity_comprehensive() {
     let temp_root = create_test_temp_dir("integrity");
     let vault_path = temp_root.join("IntegrityTest.magrathea");
-    let passphrase = b"senha-teste-integridade";
+    let test_user_key = b"magrathea_fixture_sample_key_integrity";
     let recovery_key = SecretKey::generate();
 
     let mut vault = VaultStorage::create(
         &vault_path,
         "Integrity Project",
-        passphrase,
+        test_user_key,
         &recovery_key,
         Some(fast_test_kdf_params()),
     )
