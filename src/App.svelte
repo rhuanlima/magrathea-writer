@@ -2,7 +2,10 @@
   import Editor from './editor/Editor.svelte';
   import { i18n, t } from './i18n';
   import { theme } from './design';
+  import { vault } from './vault/vault.svelte';
+  import CreateVaultModal from './vault/CreateVaultModal.svelte';
 
+  let isCreateModalOpen = $state(false);
   let currentContent = $state(
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
   );
@@ -15,6 +18,12 @@
     const nextLocale = i18n.locale === 'pt-BR' ? 'en-US' : 'pt-BR';
     i18n.setLocale(nextLocale);
   }
+
+  function handleVaultCreated() {
+    if (vault.projectTitle) {
+      currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
+    }
+  }
 </script>
 
 <main class="app-shell">
@@ -22,10 +31,35 @@
     <div class="brand">
       <span class="logo-mark">◈</span>
       <span class="brand-title">{t('app.title')}</span>
-      <span class="brand-tagline">{t('app.tagline')}</span>
+      {#if vault.isOpen && vault.projectTitle}
+        <span class="vault-pill" title={vault.vaultPath || ''}>
+          🔒 {vault.projectTitle}
+        </span>
+      {:else}
+        <span class="brand-tagline">{t('app.tagline')}</span>
+      {/if}
     </div>
 
     <div class="header-actions">
+      {#if !vault.isOpen}
+        <button
+          type="button"
+          class="action-button primary-action"
+          onclick={() => (isCreateModalOpen = true)}
+        >
+          + {t('vault.status.newVaultButton')}
+        </button>
+      {:else}
+        <button
+          type="button"
+          class="action-button lock-action"
+          onclick={() => vault.lockVault()}
+          title={t('vault.status.lockButton')}
+        >
+          🔒 {t('vault.status.lockButton')}
+        </button>
+      {/if}
+
       <button
         type="button"
         class="action-button"
@@ -49,6 +83,12 @@
   <section class="editor-workspace">
     <Editor initialContent={currentContent} onChange={handleContentChange} />
   </section>
+
+  <CreateVaultModal
+    isOpen={isCreateModalOpen}
+    onClose={() => (isCreateModalOpen = false)}
+    onSuccess={handleVaultCreated}
+  />
 </main>
 
 <style>
@@ -105,6 +145,21 @@
     margin-left: var(--space-sm);
   }
 
+  .vault-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    font-family: var(--font-ui);
+    background-color: var(--color-paper-elevated);
+    border: 1px solid var(--color-paper-border);
+    padding: 2px 8px;
+    border-radius: 12px;
+    color: var(--color-ink-charcoal);
+    margin-left: var(--space-sm);
+  }
+
   .header-actions {
     display: flex;
     align-items: center;
@@ -128,6 +183,30 @@
     background: var(--color-paper-hover);
     border-color: var(--color-olive);
     color: var(--color-ink-charcoal);
+  }
+
+  .action-button.primary-action {
+    background-color: var(--color-olive);
+    color: #ffffff;
+    border-color: var(--color-olive);
+    font-family: var(--font-ui);
+    font-size: 12px;
+  }
+
+  .action-button.primary-action:hover {
+    background-color: var(--color-olive-hover);
+    border-color: var(--color-olive-hover);
+  }
+
+  .action-button.lock-action {
+    color: var(--color-error);
+    border-color: var(--color-paper-border);
+    font-family: var(--font-ui);
+  }
+
+  .action-button.lock-action:hover {
+    background-color: #fdf2f2;
+    border-color: var(--color-error);
   }
 
   .action-button:focus-visible {

@@ -25,6 +25,42 @@ export interface TranslationSchema {
     unsavedChanges: string;
     saved: string;
   };
+  vault: {
+    status: {
+      noVaultOpen: string;
+      vaultOpen: string;
+      newVaultButton: string;
+      lockButton: string;
+    };
+    create: {
+      modalTitle: string;
+      step1Title: string;
+      step2Title: string;
+      projectTitleLabel: string;
+      projectTitlePlaceholder: string;
+      vaultDirLabel: string;
+      vaultDirPlaceholder: string;
+      passphraseLabel: string;
+      passphrasePlaceholder: string;
+      passphraseConfirmLabel: string;
+      passphraseConfirmPlaceholder: string;
+      passwordsDoNotMatch: string;
+      strengthEmpty: string;
+      strengthVeryWeak: string;
+      strengthWeak: string;
+      strengthFair: string;
+      strengthGood: string;
+      strengthStrong: string;
+      minRequirementsNote: string;
+      continueButton: string;
+      creatingVault: string;
+      recoveryWarning: string;
+      copyKeyButton: string;
+      copiedTooltip: string;
+      confirmSavedLabel: string;
+      openVaultButton: string;
+    };
+  };
   common: {
     languageName: string;
     cancel: string;
