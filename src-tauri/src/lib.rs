@@ -3,6 +3,7 @@
 pub mod commands;
 pub mod crypto;
 pub mod document;
+pub mod index;
 pub mod keychain;
 pub mod state;
 pub mod vault;
@@ -36,6 +37,10 @@ pub fn run() {
             commands::save_to_keyring,
             commands::remove_from_keyring,
             commands::open_vault_with_keyring,
+            commands::get_vault_index,
+            commands::get_document_backlinks,
+            commands::get_entity_preview,
+            commands::rebuild_vault_index,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");

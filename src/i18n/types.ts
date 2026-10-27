@@ -149,6 +149,25 @@ export interface TranslationSchema {
     ellipsis: string;
     sceneBreak: string;
   };
+  inspector: {
+    title: string;
+    close: string;
+    defaultKind: string;
+    noActiveItem: string;
+    selectItemToInspect: string;
+    tabMetadata: string;
+    tabBacklinks: string;
+    singleMention: string;
+    multipleMentions: string;
+    noBacklinksFound: string;
+    backlinksHint: string;
+  };
+  metadata: {
+    status: string;
+    tags: string;
+    noTags: string;
+    slug: string;
+  };
 }
 
 /**

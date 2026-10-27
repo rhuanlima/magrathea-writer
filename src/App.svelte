@@ -10,6 +10,7 @@
   import VaultSecurityModal from './vault/VaultSecurityModal.svelte';
   import Sidebar from './manuscript/Sidebar.svelte';
   import TrashDrawer from './manuscript/TrashDrawer.svelte';
+  import InspectorPanel from './inspector/InspectorPanel.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
@@ -101,6 +102,16 @@
 
         <button
           type="button"
+          class="action-button"
+          class:active-action={vault.isInspectorOpen}
+          onclick={() => vault.toggleInspector()}
+          title={t('inspector.title')}
+        >
+          ℹ️ {t('inspector.title')}
+        </button>
+
+        <button
+          type="button"
           class="action-button lock-action"
           onclick={() => vault.lockVault()}
           title={t('vault.status.lockButton')}
@@ -134,6 +145,7 @@
     <section class="editor-workspace">
       <Editor initialContent={currentContent} onChange={handleContentChange} />
     </section>
+    <InspectorPanel />
   </div>
 
   <CreateVaultModal

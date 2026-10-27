@@ -7,6 +7,9 @@ import {
   type CreateVaultResponse,
   type VaultStatusResponse,
   type SaveSceneResponse,
+  type IndexOverviewResponse,
+  type BacklinkEntry,
+  type EntityEntry,
 } from '../tauri/bridge';
 
 class VaultStore {
@@ -26,6 +29,21 @@ class VaultStore {
   isChangingPassphrase = $state(false);
   newRecoveryKeyAfterReencrypt = $state<string | null>(null);
   isSecurityModalOpen = $state(false);
+
+  // Segundo Cérebro (M2-01 .. M2-04)
+  indexOverview = $state<IndexOverviewResponse | null>(null);
+  activeBacklinks = $state<BacklinkEntry[]>([]);
+  isInspectorOpen = $state(false);
+  activeInspectorTab = $state<'metadata' | 'backlinks'>('metadata');
+  isLoadingIndex = $state(false);
+  isLoadingBacklinks = $state(false);
+
+  /**
+   * Lista de todas as entidades e cenas registradas no cofre.
+   */
+  get entities(): EntityEntry[] {
+    return this.indexOverview?.entities || [];
+  }
 
   /**
    * Sincroniza o estado em memória com o backend Tauri.
@@ -315,6 +333,62 @@ class VaultStore {
   }
 
   /**
+   * Carrega a visão geral do índice de entidades e conexões em memória.
+   */
+  async loadVaultIndex(): Promise<IndexOverviewResponse | null> {
+    if (!this.isOpen || this.isLocked) return null;
+    this.isLoadingIndex = true;
+    try {
+      const overview = await safeInvoke<IndexOverviewResponse>('get_vault_index');
+      this.indexOverview = overview;
+      return overview;
+    } catch (err) {
+      this.errorMessage = String(err);
+      return null;
+    } finally {
+      this.isLoadingIndex = false;
+    }
+  }
+
+  /**
+   * Carrega os backlinks (menções em outros documentos) que apontam para o item informado.
+   */
+  async loadBacklinks(itemId: string): Promise<BacklinkEntry[]> {
+    if (!this.isOpen || this.isLocked || !itemId) {
+      this.activeBacklinks = [];
+      return [];
+    }
+    this.isLoadingBacklinks = true;
+    try {
+      const backlinks = await safeInvoke<BacklinkEntry[]>('get_document_backlinks', {
+        item_id: itemId,
+      });
+      this.activeBacklinks = backlinks;
+      return backlinks;
+    } catch (err) {
+      this.errorMessage = String(err);
+      this.activeBacklinks = [];
+      return [];
+    } finally {
+      this.isLoadingBacklinks = false;
+    }
+  }
+
+  /**
+   * Alterna ou define a visibilidade do painel inspetor à direita.
+   */
+  toggleInspector(open?: boolean) {
+    this.isInspectorOpen = open !== undefined ? open : !this.isInspectorOpen;
+  }
+
+  /**
+   * Define a aba ativa no painel Inspetor ('metadata' ou 'backlinks').
+   */
+  setInspectorTab(tab: 'metadata' | 'backlinks') {
+    this.activeInspectorTab = tab;
+  }
+
+  /**
    * Bloqueia o cofre atual em memória.
    */
   async lockVault() {
@@ -322,6 +396,9 @@ class VaultStore {
       await safeInvoke('lock_vault');
       this.isLocked = true;
       this.recoveryKeyToken = null;
+      this.indexOverview = null;
+      this.activeBacklinks = [];
+      this.isInspectorOpen = false;
     } catch (err) {
       this.errorMessage = String(err);
     }
@@ -340,6 +417,9 @@ class VaultStore {
       this.vaultPath = null;
       this.recoveryKeyToken = null;
       this.errorMessage = null;
+      this.indexOverview = null;
+      this.activeBacklinks = [];
+      this.isInspectorOpen = false;
     } catch (err) {
       this.errorMessage = String(err);
     }

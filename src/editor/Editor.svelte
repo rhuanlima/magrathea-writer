@@ -8,6 +8,9 @@
   import { manuscript } from '../vault/manuscript.svelte';
   import { AutosaveManager, type AutosaveStatus } from './autosave';
   import { splitFrontmatter, countWords, countChars } from './document';
+  import { wikilinkDecoratorPlugin } from './wikilink-decorator';
+  import { wikilinkAutocompleteExtension } from './wikilink-autocomplete';
+  import { wikilinkHoverExtension } from './wikilink-hover';
   import LiteraryBar from './LiteraryBar.svelte';
   import SceneHeader from './SceneHeader.svelte';
 
@@ -41,6 +44,10 @@
         if (vault.isOpen && !vault.isLocked) {
           const targetSceneId = manuscript.activeSceneId || 'default_scene';
           await vault.saveScene(targetSceneId, content);
+          await vault.loadVaultIndex();
+          if (manuscript.activeSceneId) {
+            await vault.loadBacklinks(manuscript.activeSceneId);
+          }
         }
       },
       onStatusChange: (status) => {
@@ -64,6 +71,9 @@
       extensions: [
         basicSetup,
         markdown(),
+        wikilinkDecoratorPlugin,
+        wikilinkAutocompleteExtension,
+        wikilinkHoverExtension,
         updateListener,
         EditorView.theme({
           '&': {
@@ -251,5 +261,81 @@
     to {
       opacity: 1;
     }
+  }
+
+  :global(.cm-wikilink-chip) {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background-color: rgba(194, 141, 88, 0.15);
+    color: var(--color-bronze, #C28D58);
+    border: 1px solid rgba(194, 141, 88, 0.35);
+    border-radius: 4px;
+    padding: 1px 6px;
+    font-family: var(--font-ui, sans-serif);
+    font-size: 0.85em;
+    font-weight: 500;
+    line-height: 1.4;
+    vertical-align: middle;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  :global(.cm-wikilink-chip:hover) {
+    background-color: rgba(194, 141, 88, 0.25);
+    border-color: var(--color-bronze, #C28D58);
+  }
+
+  :global(.cm-wikilink-icon) {
+    font-size: 0.85em;
+  }
+
+  :global(.cm-wikilink-hover-card) {
+    background-color: var(--color-paper-elevated, #FFFDF9);
+    color: var(--color-ink-charcoal, #1E231D);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
+    padding: 10px 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    max-width: 320px;
+    font-family: var(--font-ui, sans-serif);
+    font-size: 13px;
+    line-height: 1.4;
+    z-index: 1000;
+  }
+
+  :global(.cm-wikilink-hover-header) {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  :global(.cm-wikilink-hover-badge) {
+    font-size: 10px;
+    text-transform: uppercase;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background-color: var(--color-paper-border, #E5E0D8);
+    color: var(--color-ink-faded, #6C7368);
+  }
+
+  :global(.cm-wikilink-hover-alias) {
+    font-size: 11px;
+    color: var(--color-ink-faded, #6C7368);
+    font-style: italic;
+  }
+
+  :global(.cm-wikilink-hover-body) {
+    margin-bottom: 8px;
+    color: var(--color-ink-muted, #4A5247);
+  }
+
+  :global(.cm-wikilink-hover-footer) {
+    font-size: 11px;
+    color: var(--color-olive, #5E6F45);
+    font-weight: 500;
+    border-top: 1px solid var(--color-paper-border, #E5E0D8);
+    padding-top: 4px;
   }
 </style>

@@ -110,6 +110,35 @@ export interface OpenKeyringPayload {
   vault_path: string;
 }
 
+export interface EntityEntry {
+  id: string;
+  title: string;
+  slug: string;
+  kind: string;
+  tags: string[];
+  status: string | null;
+  summary: string | null;
+  mention_count: number;
+}
+
+export interface BacklinkEntry {
+  source_id: string;
+  source_title: string;
+  source_kind: string;
+  target_query: string;
+  alias: string | null;
+  line_number: number;
+  byte_offset: number;
+  snippet: string;
+}
+
+export interface IndexOverviewResponse {
+  entities: EntityEntry[];
+  total_links_count: number;
+  unresolved_links_count: number;
+  unresolved_targets: string[];
+}
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -357,6 +386,60 @@ export async function safeInvoke<T>(
         project_title: 'Romance Teste',
         vault_path: '/home/author/Documents/Romance.magrathea',
       } as T;
+    }
+    if (cmd === 'get_vault_index' || cmd === 'rebuild_vault_index') {
+      const entities: EntityEntry[] = mockItems.map(item => ({
+        id: item.id,
+        title: item.title,
+        slug: item.slug,
+        kind: item.kind,
+        tags: item.tags,
+        status: item.status,
+        summary: item.kind === 'scene' ? 'Cena inicial da alvorada.' : null,
+        mention_count: item.title.includes('Névoa') ? 1 : 0,
+      }));
+      return {
+        entities,
+        total_links_count: 1,
+        unresolved_links_count: 0,
+        unresolved_targets: [],
+      } as T;
+    }
+    if (cmd === 'get_document_backlinks') {
+      const payload = args as unknown as { item_id: string };
+      if (payload.item_id === 'mock-scene-1') {
+        return [
+          {
+            source_id: 'mock-scene-2',
+            source_title: 'Cena 2: O Chamado',
+            source_kind: 'scene',
+            target_query: 'A Névoa da Manhã',
+            alias: null,
+            line_number: 4,
+            byte_offset: 120,
+            snippet: 'Lembrou-se do que viu em [[Cena 1: A Névoa da Manhã]] e partiu depressa.',
+          },
+        ] as T;
+      }
+      return [] as T;
+    }
+    if (cmd === 'get_entity_preview') {
+      const payload = args as unknown as { query: string };
+      const q = payload.query.toLowerCase().trim();
+      const match = mockItems.find(i => i.title.toLowerCase().includes(q) || i.slug.toLowerCase().includes(q));
+      if (match) {
+        return {
+          id: match.id,
+          title: match.title,
+          slug: match.slug,
+          kind: match.kind,
+          tags: match.tags,
+          status: match.status,
+          summary: 'Resumo da entidade detectada no cofre.',
+          mention_count: 1,
+        } as T;
+      }
+      return null as T;
     }
   }
 
