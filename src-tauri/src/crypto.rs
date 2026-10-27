@@ -105,6 +105,47 @@ impl SecretKey {
     pub fn as_bytes(&self) -> &[u8; KEY_LEN] {
         &self.0
     }
+
+    /// Codifica a chave secreta como uma string hexadecimal de 64 caracteres.
+    pub fn to_hex(&self) -> String {
+        let mut s = String::with_capacity(KEY_LEN * 2);
+        for b in &self.0 {
+            s.push_str(&format!("{b:02x}"));
+        }
+        s
+    }
+
+    /// Decodifica uma string hexadecimal de 64 caracteres em uma `SecretKey`.
+    /// Ignora hífens e espaços em branco para facilitar a entrada do autor.
+    pub fn from_hex(hex_str: &str) -> Result<Self, CryptoError> {
+        let cleaned: String = hex_str
+            .chars()
+            .filter(|c| !c.is_whitespace() && *c != '-')
+            .collect();
+        let cleaned = cleaned.to_lowercase();
+
+        if cleaned.len() != KEY_LEN * 2 {
+            return Err(CryptoError::InvalidLength {
+                expected: KEY_LEN * 2,
+                actual: cleaned.len(),
+            });
+        }
+
+        let mut bytes = [0u8; KEY_LEN];
+        for i in 0..KEY_LEN {
+            let byte_str = &cleaned[i * 2..i * 2 + 2];
+            bytes[i] =
+                u8::from_str_radix(byte_str, 16).map_err(|_| CryptoError::DecryptionFailed)?;
+        }
+        Ok(Self(bytes))
+    }
+
+    /// Formata a chave em 8 blocos de 8 caracteres separados por hífen para cópia e backup físico.
+    pub fn to_formatted_token(&self) -> String {
+        let hex = self.to_hex();
+        let chunks: Vec<&str> = (0..8).map(|i| &hex[i * 8..(i + 1) * 8]).collect();
+        chunks.join("-")
+    }
 }
 
 impl fmt::Debug for SecretKey {
