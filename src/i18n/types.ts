@@ -60,6 +60,22 @@ export interface TranslationSchema {
       confirmSavedLabel: string;
       openVaultButton: string;
     };
+    unlock: {
+      screenTitle: string;
+      lockedSubtitle: string;
+      passphraseLabel: string;
+      passphrasePlaceholder: string;
+      unlockButton: string;
+      unlocking: string;
+      useRecoveryKey: string;
+      usePassphrase: string;
+      recoveryKeyLabel: string;
+      recoveryKeyPlaceholder: string;
+      invalidPassphraseError: string;
+      invalidRecoveryKeyError: string;
+      closeVaultButton: string;
+      autoLockNotice: string;
+    };
   };
   common: {
     languageName: string;
