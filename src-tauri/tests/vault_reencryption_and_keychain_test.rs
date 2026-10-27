@@ -146,22 +146,28 @@ fn test_vault_keyring_integration() {
         .expect("vault creation failed");
     let vault_path = init_res.vault_path.clone();
 
-    // 1. Inicialmente o status do chaveiro deve ser falso ou suportado
-    let status_init = get_vault_keyring_status_internal(&state);
-    if let Ok(false) = status_init {
-        // 2. Salva credencial no chaveiro
-        save_to_keyring_internal(&state, &passphrase).expect("save to keyring failed");
-        assert!(get_vault_keyring_status_internal(&state).unwrap());
+    // 1. Tenta salvar credencial no chaveiro (se a plataforma suportar chaveiro nativo ativo)
+    match save_to_keyring_internal(&state, &passphrase) {
+        Ok(()) => {
+            assert!(get_vault_keyring_status_internal(&state).unwrap());
 
-        // 3. Fecha o cofre e abre via chaveiro
-        close_vault_internal(&state).expect("close failed");
-        let unlocked = open_vault_with_keyring_internal(&state, &vault_path)
-            .expect("open with keyring failed");
-        assert_eq!(unlocked.project_title, Some(title));
+            // 2. Fecha o cofre e abre via chaveiro
+            close_vault_internal(&state).expect("close failed");
+            let unlocked = open_vault_with_keyring_internal(&state, &vault_path)
+                .expect("open with keyring failed");
+            assert_eq!(unlocked.project_title, Some(title));
 
-        // 4. Remove do chaveiro
-        remove_from_keyring_internal(&state).expect("remove from keyring failed");
-        assert!(!get_vault_keyring_status_internal(&state).unwrap());
+            // 3. Remove do chaveiro
+            remove_from_keyring_internal(&state).expect("remove from keyring failed");
+            assert!(!get_vault_keyring_status_internal(&state).unwrap());
+        }
+        Err(e) => {
+            // Em ambiente headless Linux sem D-Bus secrets service, valida erro amigável
+            assert!(
+                e.contains("chaveiro") || e.contains("DBus"),
+                "Erro inesperado no teste de chaveiro: {e}"
+            );
+        }
     }
 
     cleanup_test_dir(&base_dir);

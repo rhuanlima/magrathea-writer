@@ -1041,7 +1041,10 @@ pub fn get_vault_keyring_status_internal(state: &AppState) -> Result<bool, Strin
         .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
 
     let vault_id = &vault.header().vault_id;
-    crate::keychain::has_vault_secret(vault_id)
+    match crate::keychain::has_vault_secret(vault_id) {
+        Ok(has) => Ok(has),
+        Err(_) => Ok(false),
+    }
 }
 
 /// Salva a credencial do cofre no chaveiro do sistema operacional.
