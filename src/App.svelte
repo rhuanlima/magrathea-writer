@@ -4,8 +4,11 @@
   import { i18n, t } from './i18n';
   import { theme } from './design';
   import { vault } from './vault/vault.svelte';
+  import { manuscript } from './vault/manuscript.svelte';
   import CreateVaultModal from './vault/CreateVaultModal.svelte';
   import LockScreen from './vault/LockScreen.svelte';
+  import Sidebar from './manuscript/Sidebar.svelte';
+  import TrashDrawer from './manuscript/TrashDrawer.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
@@ -15,7 +18,13 @@
   let tracker: InactivityTracker | null = null;
 
   onMount(() => {
-    void vault.refreshStatus();
+    void (async () => {
+      await vault.refreshStatus();
+      if (vault.isOpen && !vault.isLocked) {
+        await manuscript.refreshTree();
+      }
+    })();
+
     tracker = new InactivityTracker({
       onTimeout: () => {
         if (vault.isOpen && !vault.isLocked) {
@@ -40,16 +49,25 @@
     i18n.setLocale(nextLocale);
   }
 
-  function handleVaultCreated() {
+  async function handleVaultCreated() {
     if (vault.projectTitle) {
       currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
     }
+    await manuscript.refreshTree();
   }
 </script>
 
 <main class="app-shell">
   <header class="app-header">
     <div class="brand">
+      <button
+        type="button"
+        class="sidebar-toggle-btn"
+        onclick={() => manuscript.toggleSidebar()}
+        title={t('sidebar.toggle')}
+      >
+        ☰
+      </button>
       <span class="logo-mark">◈</span>
       <span class="brand-title">{t('app.title')}</span>
       {#if vault.isOpen && vault.projectTitle}
@@ -101,15 +119,20 @@
     </div>
   </header>
 
-  <section class="editor-workspace">
-    <Editor initialContent={currentContent} onChange={handleContentChange} />
-  </section>
+  <div class="app-workspace">
+    <Sidebar />
+    <section class="editor-workspace">
+      <Editor initialContent={currentContent} onChange={handleContentChange} />
+    </section>
+  </div>
 
   <CreateVaultModal
     isOpen={isCreateModalOpen}
     onClose={() => (isCreateModalOpen = false)}
     onSuccess={handleVaultCreated}
   />
+
+  <TrashDrawer />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />
@@ -153,6 +176,21 @@
     font-weight: 600;
     letter-spacing: 0.5px;
     color: var(--color-olive);
+  }
+
+  .sidebar-toggle-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--color-ink-muted);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+  }
+
+  .sidebar-toggle-btn:hover {
+    background-color: var(--color-paper-hover);
+    color: var(--color-ink-charcoal);
   }
 
   .logo-mark {
@@ -237,6 +275,13 @@
   .action-button:focus-visible {
     outline: var(--focus-ring);
     outline-offset: var(--focus-offset);
+  }
+
+  .app-workspace {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
   }
 
   .editor-workspace {
