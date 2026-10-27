@@ -24,6 +24,7 @@ export interface TranslationSchema {
     charactersCount: string;
     unsavedChanges: string;
     saved: string;
+    saving: string;
   };
   vault: {
     status: {
