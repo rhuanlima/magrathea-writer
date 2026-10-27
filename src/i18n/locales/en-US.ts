@@ -68,6 +68,42 @@ export const enUS: TranslationSchema = {
       invalidRecoveryKeyError: 'Invalid or incorrectly formatted recovery key.',
       closeVaultButton: 'Close this vault and return to home',
       autoLockNotice: 'Automatic lock on inactivity and security enabled.',
+      unlockWithKeyringButton: 'Unlock with OS Keyring',
+      unlockingWithKeyring: 'Querying OS Keyring...',
+    },
+    security: {
+      modalTitle: 'Vault Security & Encryption',
+      tabChangePassphrase: 'Change Password',
+      tabReencrypt: 'Re-encrypt Vault',
+      tabKeyring: 'OS Keyring',
+      currentPassphraseLabel: 'Current Master Passphrase',
+      currentPassphrasePlaceholder: 'Enter current master passphrase...',
+      newPassphraseLabel: 'New Master Passphrase',
+      newPassphrasePlaceholder: 'Enter new passphrase (minimum 10 characters)...',
+      confirmNewPassphraseLabel: 'Confirm New Master Passphrase',
+      confirmNewPassphrasePlaceholder: 'Repeat new passphrase...',
+      changePassphraseButton: 'Update Master Passphrase',
+      changingPassphrase: 'Deriving new KEK with Argon2id...',
+      passphraseChangedSuccess: 'Master passphrase changed successfully! DEK has been re-wrapped.',
+      reencryptTitle: 'Full Vault Re-encryption & DEK Rotation',
+      reencryptExplanation:
+        'Re-encrypting replaces the Data Encryption Key (DEK) with an entirely new key. All chapters, scenes, and trash items are decrypted and re-encrypted from scratch on disk.',
+      reencryptWarning:
+        'WARNING: Old copies of the vault stored elsewhere cannot be opened with the new credentials. A new emergency recovery key will be generated and the old one will become obsolete.',
+      reencryptButton: 'Start Full Re-encryption',
+      reencrypting: 'Re-encrypting all vault files...',
+      reencryptSuccessTitle: 'Vault Successfully Re-encrypted!',
+      reencryptNewKeyNote:
+        'Your new Emergency Recovery Key has been generated. Store it in a safe location!',
+      keyringTitle: 'Remember in Operating System Keyring',
+      keyringDescription:
+        'Allows unlocking this vault without re-entering the master passphrase after every auto-lock.',
+      keyringWarningLimitation:
+        'SECURITY NOTICE: On macOS, this entry is protected by app identity and biometrics. On Windows and Linux, other processes running under the same user account may be able to read keyring entries, weakening the isolation guarantee. Keep disabled on shared machines.',
+      enableKeyringLabel: 'Securely store credential in OS keyring',
+      keyringPassphrasePrompt: 'Enter your master passphrase to authorize storing in keyring:',
+      keyringEnabledSuccess: 'Credential successfully saved to system keyring.',
+      keyringDisabledSuccess: 'Credential safely deleted from system keyring.',
     },
   },
   common: {

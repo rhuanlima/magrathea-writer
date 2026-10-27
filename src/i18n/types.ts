@@ -76,6 +76,37 @@ export interface TranslationSchema {
       invalidRecoveryKeyError: string;
       closeVaultButton: string;
       autoLockNotice: string;
+      unlockWithKeyringButton: string;
+      unlockingWithKeyring: string;
+    };
+    security: {
+      modalTitle: string;
+      tabChangePassphrase: string;
+      tabReencrypt: string;
+      tabKeyring: string;
+      currentPassphraseLabel: string;
+      currentPassphrasePlaceholder: string;
+      newPassphraseLabel: string;
+      newPassphrasePlaceholder: string;
+      confirmNewPassphraseLabel: string;
+      confirmNewPassphrasePlaceholder: string;
+      changePassphraseButton: string;
+      changingPassphrase: string;
+      passphraseChangedSuccess: string;
+      reencryptTitle: string;
+      reencryptExplanation: string;
+      reencryptWarning: string;
+      reencryptButton: string;
+      reencrypting: string;
+      reencryptSuccessTitle: string;
+      reencryptNewKeyNote: string;
+      keyringTitle: string;
+      keyringDescription: string;
+      keyringWarningLimitation: string;
+      enableKeyringLabel: string;
+      keyringPassphrasePrompt: string;
+      keyringEnabledSuccess: string;
+      keyringDisabledSuccess: string;
     };
   };
   common: {
