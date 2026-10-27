@@ -2,6 +2,7 @@
 
 pub mod commands;
 pub mod crypto;
+pub mod vault;
 
 /// Initializes and executes the Tauri desktop application.
 pub fn run() {
