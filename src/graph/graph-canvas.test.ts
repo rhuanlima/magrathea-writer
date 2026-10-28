@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { graphStore } from './graph.svelte';
 import { canvasStore } from '../canvas/canvas.svelte';
-import type { GraphNode, CanvasNode } from '../tauri/bridge';
 
 describe('M8 — Grafo Narrativo e Canvas Visual (JSON Canvas)', () => {
   beforeEach(() => {
@@ -48,7 +47,7 @@ describe('M8 — Grafo Narrativo e Canvas Visual (JSON Canvas)', () => {
 
     it('deve alternar filtros de tipo (kind)', async () => {
       await graphStore.loadGraph();
-      const allKindsCount = graphStore.filteredNodes.length;
+      expect(graphStore.filteredNodes.length).toBeGreaterThan(0);
 
       // Mantém apenas 'character'
       graphStore.selectedKinds = ['character'];
