@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { t } from '../i18n';
   import { manuscript, type TreeNode } from '../vault/manuscript.svelte';
+  import { compilerStore } from '../compiler/compiler.svelte';
   import type { ManifestItemKind, ManifestItem } from '../tauri/bridge';
   import EncyclopediaView from '../worldbuilding/EncyclopediaView.svelte';
 
@@ -385,6 +386,16 @@
     <footer class="sidebar-footer">
       <button
         type="button"
+        class="book-parts-trigger-btn"
+        onclick={() => compilerStore.openMatterTab()}
+        title="Partes do Livro: Dedicatória, Epígrafe, Referências, Agradecimentos e Sobre o Autor"
+      >
+        <span class="parts-icon">✍️</span>
+        <span class="parts-label">Partes do Livro...</span>
+      </button>
+
+      <button
+        type="button"
         class="trash-trigger-btn"
         onclick={() => manuscript.toggleTrash(true)}
         title={t('manuscript.trash')}
@@ -755,14 +766,18 @@
     padding: 8px var(--space-md);
     background-color: var(--color-paper-base);
     border-top: 1px solid var(--color-paper-border);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
 
+  .book-parts-trigger-btn,
   .trash-trigger-btn {
     display: flex;
     align-items: center;
     gap: 6px;
     width: 100%;
-    padding: 4px 8px;
+    padding: 5px 8px;
     border: 1px solid transparent;
     background: transparent;
     border-radius: var(--radius-sm);
@@ -770,7 +785,17 @@
     color: var(--color-ink-muted);
     font-family: var(--font-ui);
     font-size: 12px;
-    transition: background-color 0.15s ease;
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  .book-parts-trigger-btn {
+    font-weight: 600;
+    color: var(--color-terracotta, #c2410c);
+  }
+
+  .book-parts-trigger-btn:hover {
+    background-color: rgba(194, 65, 12, 0.08);
+    color: var(--color-terracotta-dark, #9a3412);
   }
 
   .trash-trigger-btn:hover {
@@ -778,10 +803,12 @@
     color: var(--color-ink-charcoal);
   }
 
+  .parts-icon,
   .trash-icon {
     font-size: 13px;
   }
 
+  .parts-label,
   .trash-label {
     flex: 1;
     text-align: left;

@@ -48,6 +48,8 @@ export function createCompilerStore() {
     scene_separator: '* * *',
     page_break_after_chapter: true,
     theme_preset: 'novel',
+    only_final_scenes: false,
+    include_worldbuilding_dossier: false,
   });
 
   let compiled = $state<CompiledManuscript | null>(null);
@@ -61,6 +63,14 @@ export function createCompilerStore() {
     exportResult = null;
     await loadSettings();
     await compile();
+  }
+
+  async function openMatterTab() {
+    await openModal('matter');
+  }
+
+  async function openExportWithOptions() {
+    await openModal('export');
   }
 
   function closeModal() {
@@ -290,6 +300,8 @@ export function createCompilerStore() {
       return exportError;
     },
     openModal,
+    openMatterTab,
+    openExportWithOptions,
     closeModal,
     setActiveTab,
     loadSettings,

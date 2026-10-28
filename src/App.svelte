@@ -120,6 +120,12 @@
         listenToEvent('menu_export_txt', () => {
           if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('txt');
         }),
+        listenToEvent('menu_export_options', () => {
+          if (vault.isOpen && !vault.isLocked) void compilerStore.openExportWithOptions();
+        }),
+        listenToEvent('menu_book_parts', () => {
+          if (vault.isOpen && !vault.isLocked) void compilerStore.openMatterTab();
+        }),
         listenToEvent('menu_support', () => {
           supportStore.open();
         }),
@@ -202,7 +208,7 @@
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       e.preventDefault();
       if (vault.isOpen && !vault.isLocked) {
-        void compilerStore.quickExportDirect('docx');
+        void compilerStore.openExportWithOptions();
       }
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'T' || e.key === 't')) {

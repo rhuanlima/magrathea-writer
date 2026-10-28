@@ -103,12 +103,32 @@
       },
     },
     {
+      id: 'action-export-options',
+      category: 'action',
+      title: 'Opções de Exportação Editorial...',
+      subtitle: 'Definir escopo (tudo vs final), incluir fichas e compilar',
+      icon: '⚙️',
+      shortcut: 'Cmd+Shift+E',
+      execute: () => {
+        void compilerStore.openExportWithOptions();
+      },
+    },
+    {
+      id: 'action-book-parts',
+      category: 'action',
+      title: 'Partes do Livro (Referências, Agradecimentos, Dedicatória...)',
+      subtitle: 'Editar seções pré e pós-textuais e metadados formais',
+      icon: '✍️',
+      execute: () => {
+        void compilerStore.openMatterTab();
+      },
+    },
+    {
       id: 'action-export-docx',
       category: 'action',
       title: 'Exportar para Word (.docx)',
       subtitle: 'Gerar manuscrito pronto para editoras',
       icon: '📄',
-      shortcut: 'Cmd+Shift+E',
       execute: () => {
         void compilerStore.quickExportDirect('docx');
       },

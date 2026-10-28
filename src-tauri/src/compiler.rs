@@ -16,6 +16,7 @@ use zip::ZipWriter;
 
 /// Configurações editoriais do compilador e seções pré/pós-textuais.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct CompilerSettings {
     pub title: Option<String>,
     pub subtitle: Option<String>,
@@ -32,6 +33,10 @@ pub struct CompilerSettings {
     pub scene_separator: String,
     pub page_break_after_chapter: bool,
     pub theme_preset: String, // "novel", "essay", "poetry"
+    #[serde(default)]
+    pub only_final_scenes: bool,
+    #[serde(default)]
+    pub include_worldbuilding_dossier: bool,
 }
 
 impl Default for CompilerSettings {
@@ -52,6 +57,8 @@ impl Default for CompilerSettings {
             scene_separator: "* * *".to_string(),
             page_break_after_chapter: true,
             theme_preset: "novel".to_string(),
+            only_final_scenes: false,
+            include_worldbuilding_dossier: false,
         }
     }
 }
@@ -297,6 +304,51 @@ pub fn compile_manuscript_internal(
         }
     }
 
+    // 10. Apêndice: Fichas do Segundo Cérebro (Worldbuilding)
+    if cfg.include_worldbuilding_dossier {
+        let entities: Vec<_> = manifest
+            .items
+            .iter()
+            .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
+            .collect();
+        if !entities.is_empty() {
+            let mut dossier_content = String::new();
+            for ent in entities {
+                let kind_label = match ent.kind.as_str() {
+                    "character" => "Personagem",
+                    "location" => "Local",
+                    "item" => "Item",
+                    "lore" => "História / Conhecimento",
+                    _ => &ent.kind,
+                };
+                dossier_content.push_str(&format!("### {} ({})\n\n", ent.title, kind_label));
+                if !ent.tags.is_empty() {
+                    dossier_content.push_str(&format!("*Etiquetas:* {}\n\n", ent.tags.join(", ")));
+                }
+                if let Some(ref blob_id) = ent.blob_id {
+                    if let Ok(raw_bytes) = vault.read_blob(blob_id) {
+                        let sheet = String::from_utf8_lossy(&raw_bytes);
+                        let (_, body) = split_frontmatter(&sheet);
+                        let cleaned = clean_literary_markdown(body.trim());
+                        if !cleaned.is_empty() {
+                            dossier_content.push_str(&cleaned);
+                            dossier_content.push_str("\n\n");
+                        }
+                    }
+                }
+                dossier_content.push_str("* * *\n\n");
+            }
+            let wc = dossier_content.split_whitespace().count();
+            sections.push(CompiledSection {
+                id: "worldbuilding_dossier".to_string(),
+                title: "Apêndice: Fichas do Segundo Cérebro".to_string(),
+                kind: "backmatter".to_string(),
+                content: dossier_content,
+                word_count: wc,
+            });
+        }
+    }
+
     // Monta o texto unificado completo
     let mut full_text = String::new();
     full_text.push_str(&format!("# {}\n", book_title));
@@ -494,10 +546,11 @@ fn compile_tree_item(
                 }
             }
 
-            // 2. Cenas filhas pertencentes a este capítulo
+            // 2. Cenas filhas pertencentes a este capítulo (filtrando por status se only_final_scenes estiver ativo)
             let scenes: Vec<_> = all_items
                 .iter()
                 .filter(|i| i.parent_id.as_deref() == Some(&item.id))
+                .filter(|i| !cfg.only_final_scenes || i.status.as_deref() == Some("final"))
                 .collect();
 
             for (idx, scene) in scenes.iter().enumerate() {
@@ -528,6 +581,9 @@ fn compile_tree_item(
             });
         }
         "scene" => {
+            if cfg.only_final_scenes && item.status.as_deref() != Some("final") {
+                return Ok(());
+            }
             let mut content = String::new();
             if let Some(ref blob_id) = item.blob_id {
                 let raw_bytes = vault.read_blob(blob_id)?;
@@ -559,6 +615,7 @@ pub fn export_obsidian_markdown_internal(
         fs::create_dir_all(destination_dir).map_err(|e| VaultError::Io(e.to_string()))?;
     }
 
+    let cfg = load_compiler_settings_internal(vault).unwrap_or_default();
     let mut files_count = 0;
     let mut total_bytes = 0u64;
 
@@ -572,6 +629,10 @@ pub fn export_obsidian_markdown_internal(
         .iter()
         .filter(|i| matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
     {
+        if cfg.only_final_scenes && item.kind == "scene" && item.status.as_deref() != Some("final")
+        {
+            continue;
+        }
         if let Some(ref blob_id) = item.blob_id {
             let raw_bytes = vault.read_blob(blob_id)?;
             let content = String::from_utf8_lossy(&raw_bytes).to_string();
@@ -583,49 +644,51 @@ pub fn export_obsidian_markdown_internal(
         }
     }
 
-    // 2. Criação de Mundo (Worldbuilding)
-    let world_dir = destination_dir.join("mundo");
-    fs::create_dir_all(&world_dir).map_err(|e| VaultError::Io(e.to_string()))?;
+    // 2. Criação de Mundo (Worldbuilding - somente se habilitado nas opções)
+    if cfg.include_worldbuilding_dossier {
+        let world_dir = destination_dir.join("mundo");
+        fs::create_dir_all(&world_dir).map_err(|e| VaultError::Io(e.to_string()))?;
 
-    let entities: Vec<_> = manifest
-        .items
-        .iter()
-        .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
-        .collect();
+        let entities: Vec<_> = manifest
+            .items
+            .iter()
+            .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
+            .collect();
 
-    for ent in entities {
-        let content = if let Some(ref blob_id) = ent.blob_id {
-            let raw_bytes = vault.read_blob(blob_id)?;
-            String::from_utf8_lossy(&raw_bytes).to_string()
-        } else {
-            String::new()
-        };
-        let file_name = format!("{}.md", sanitize_filename(&ent.title));
-        let file_path = world_dir.join(file_name);
-        fs::write(&file_path, &content).map_err(|e| VaultError::Io(e.to_string()))?;
-        files_count += 1;
-        total_bytes += content.len() as u64;
-    }
+        for ent in entities {
+            let content = if let Some(ref blob_id) = ent.blob_id {
+                let raw_bytes = vault.read_blob(blob_id)?;
+                String::from_utf8_lossy(&raw_bytes).to_string()
+            } else {
+                String::new()
+            };
+            let file_name = format!("{}.md", sanitize_filename(&ent.title));
+            let file_path = world_dir.join(file_name);
+            fs::write(&file_path, &content).map_err(|e| VaultError::Io(e.to_string()))?;
+            files_count += 1;
+            total_bytes += content.len() as u64;
+        }
 
-    // 3. Imagens da Galeria (Anexos descriptografados)
-    let attach_dir = destination_dir.join("anexos");
-    let images_index = crate::worldbuilding::load_images_index(vault)?;
-    let all_images: Vec<_> = images_index.values().flat_map(|list| list.iter()).collect();
+        // 3. Imagens da Galeria (Anexos descriptografados)
+        let attach_dir = destination_dir.join("anexos");
+        let images_index = crate::worldbuilding::load_images_index(vault)?;
+        let all_images: Vec<_> = images_index.values().flat_map(|list| list.iter()).collect();
 
-    if !all_images.is_empty() {
-        fs::create_dir_all(&attach_dir).map_err(|e| VaultError::Io(e.to_string()))?;
-        for img in all_images {
-            if let Ok(data) = crate::worldbuilding::load_entity_image_bytes(vault, &img.id) {
-                let file_path = attach_dir.join(&img.file_name);
-                fs::write(&file_path, &data).map_err(|e| VaultError::Io(e.to_string()))?;
-                files_count += 1;
-                total_bytes += data.len() as u64;
+        if !all_images.is_empty() {
+            fs::create_dir_all(&attach_dir).map_err(|e| VaultError::Io(e.to_string()))?;
+            for img in all_images {
+                if let Ok(data) = crate::worldbuilding::load_entity_image_bytes(vault, &img.id) {
+                    let file_path = attach_dir.join(&img.file_name);
+                    fs::write(&file_path, &data).map_err(|e| VaultError::Io(e.to_string()))?;
+                    files_count += 1;
+                    total_bytes += data.len() as u64;
+                }
             }
         }
     }
 
     // 4. Livro Completo Compilado
-    let compiled = compile_manuscript_internal(vault, None)?;
+    let compiled = compile_manuscript_internal(vault, Some(cfg))?;
     let book_file = destination_dir.join("LIVRO_COMPILADO.md");
     fs::write(&book_file, &compiled.full_text).map_err(|e| VaultError::Io(e.to_string()))?;
     files_count += 1;
@@ -1145,34 +1208,36 @@ pub fn export_txt_dossier_internal(
     let main_txt = destination_dir.join("manuscrito_completo.txt");
     fs::write(&main_txt, &compiled.full_text).map_err(|e| VaultError::Io(e.to_string()))?;
 
-    // Gera dossiê literário em txt com notas de mundo
-    let mut dossier = String::from(
-        "DOSSIÊ DE CRIAÇÃO DE MUNDO & PERSONAGENS\n=========================================\n\n",
-    );
-    let manifest = vault.manifest()?;
-    let entities: Vec<_> = manifest
-        .items
-        .iter()
-        .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
-        .collect();
+    // Gera dossiê literário em txt com notas de mundo (apenas se habilitado)
+    if compiled.settings.include_worldbuilding_dossier {
+        let mut dossier = String::from(
+            "DOSSIÊ DE CRIAÇÃO DE MUNDO & PERSONAGENS\n=========================================\n\n",
+        );
+        let manifest = vault.manifest()?;
+        let entities: Vec<_> = manifest
+            .items
+            .iter()
+            .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
+            .collect();
 
-    for ent in entities {
-        dossier.push_str(&format!("### {} [{}]\n", ent.title, ent.kind));
-        if !ent.tags.is_empty() {
-            dossier.push_str(&format!("Tags: {}\n", ent.tags.join(", ")));
-        }
-        if let Some(ref blob_id) = ent.blob_id {
-            if let Ok(raw_bytes) = vault.read_blob(blob_id) {
-                let sheet = String::from_utf8_lossy(&raw_bytes);
-                let (_, body) = split_frontmatter(&sheet);
-                dossier.push_str(body.trim());
+        for ent in entities {
+            dossier.push_str(&format!("### {} [{}]\n", ent.title, ent.kind));
+            if !ent.tags.is_empty() {
+                dossier.push_str(&format!("Tags: {}\n", ent.tags.join(", ")));
             }
+            if let Some(ref blob_id) = ent.blob_id {
+                if let Ok(raw_bytes) = vault.read_blob(blob_id) {
+                    let sheet = String::from_utf8_lossy(&raw_bytes);
+                    let (_, body) = split_frontmatter(&sheet);
+                    dossier.push_str(body.trim());
+                }
+            }
+            dossier.push_str("\n\n-----------------------------------------\n\n");
         }
-        dossier.push_str("\n\n-----------------------------------------\n\n");
-    }
 
-    let dossier_txt = destination_dir.join("dossie_de_criacao.txt");
-    fs::write(&dossier_txt, &dossier).map_err(|e| VaultError::Io(e.to_string()))?;
+        let dossier_txt = destination_dir.join("dossie_de_criacao.txt");
+        fs::write(&dossier_txt, &dossier).map_err(|e| VaultError::Io(e.to_string()))?;
+    }
 
     let meta = fs::metadata(&main_txt).map_err(|e| VaultError::Io(e.to_string()))?;
     Ok(ExportDocumentResult {
@@ -1221,5 +1286,23 @@ mod tests {
         let input = "Consulte [este link](https://example.com) para mais informações.";
         let cleaned = clean_literary_markdown(input);
         assert_eq!(cleaned, input);
+    }
+
+    #[test]
+    fn test_compiler_settings_defaults_and_serde() {
+        let def = CompilerSettings::default();
+        assert!(!def.only_final_scenes);
+        assert!(!def.include_worldbuilding_dossier);
+
+        let json = r#"{"title":"Meu Livro"}"#;
+        let parsed: CompilerSettings = serde_json::from_str(json).unwrap();
+        assert_eq!(parsed.title.as_deref(), Some("Meu Livro"));
+        assert!(!parsed.only_final_scenes);
+        assert!(!parsed.include_worldbuilding_dossier);
+
+        let custom_json = r#"{"only_final_scenes":true,"include_worldbuilding_dossier":true}"#;
+        let custom: CompilerSettings = serde_json::from_str(custom_json).unwrap();
+        assert!(custom.only_final_scenes);
+        assert!(custom.include_worldbuilding_dossier);
     }
 }

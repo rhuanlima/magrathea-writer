@@ -316,6 +316,8 @@ export interface CompilerSettings {
   scene_separator: string;
   page_break_after_chapter: boolean;
   theme_preset: string; // 'novel' | 'essay' | 'poetry'
+  only_final_scenes?: boolean;
+  include_worldbuilding_dossier?: boolean;
 }
 
 export interface CompiledSection {
@@ -590,6 +592,8 @@ let mockCompilerSettings: CompilerSettings = {
   scene_separator: '* * *',
   page_break_after_chapter: true,
   theme_preset: 'novel',
+  only_final_scenes: false,
+  include_worldbuilding_dossier: false,
 };
 const mockSceneBlobs: Record<string, string> = {
   'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',

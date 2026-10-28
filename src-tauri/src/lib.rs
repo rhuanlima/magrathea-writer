@@ -216,10 +216,25 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         &[
             &MenuItem::with_id(
                 handle,
+                "menu_export_options",
+                "Opções de Exportação Editorial...",
+                true,
+                Some("CmdOrCtrl+Shift+E"),
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "menu_book_parts",
+                "Partes do Livro (Referências, Agradecimentos...)",
+                true,
+                None::<&str>,
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(
+                handle,
                 "menu_export_docx",
                 "Exportar para Word (.docx)...",
                 true,
-                Some("CmdOrCtrl+Shift+E"),
+                None::<&str>,
             )?,
             &MenuItem::with_id(
                 handle,

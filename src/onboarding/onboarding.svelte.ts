@@ -26,8 +26,8 @@ export const COURSE_LESSONS: CourseLesson[] = [
     bullets: [
       {
         icon: '🛡️',
-        title: 'Criptografia em Nível Militar',
-        desc: 'Seu cofre literário é protegido com XChaCha20-Poly1305 (256 bits) e KDF Argon2id. Tudo é cifrado antes de tocar o disco.',
+        title: 'Criptografia em Nível Burocracia Vogon',
+        desc: 'Seu cofre literário é protegido com XChaCha20-Poly1305 (256 bits) e KDF Argon2id. Nem os burocratas mais obstinados de Vogsphere conseguiriam violar seus rascunhos antes de tocar o disco.',
       },
       {
         icon: '🚫',
@@ -127,28 +127,28 @@ export const COURSE_LESSONS: CourseLesson[] = [
     id: 5,
     badge: 'Módulo 5 de 5',
     icon: '📖',
-    title: 'Compilação Editorial em 1 Clique',
+    title: 'Compilação Editorial & Partes do Livro',
     subtitle: 'Do primeiro rascunho ao livro publicado em formatos profissionais.',
     bullets: [
       {
+        icon: '⚙️',
+        title: 'Opções de Escopo & Fichas do Mundo',
+        desc: 'Ao exportar, escolha entre compilar todo o manuscrito ou apenas cenas marcadas como "Final". Você também decide se anexa ou não as fichas do Segundo Cérebro como apêndice.',
+      },
+      {
+        icon: '✍️',
+        title: 'Partes do Livro: Referências, Agradecimentos e Dedicatória',
+        desc: 'Adicione partes editoriais formais clicando em "Partes do Livro..." no rodapé da barra lateral ou no compilador: dedicatória, epígrafe, prefácio, posfácio, agradecimentos e referências bibliográficas.',
+      },
+      {
         icon: '📄',
-        title: 'Microsoft Word (.docx)',
-        desc: 'Formatação editorial limpa com títulos em estilos nativos, pronta para envio a editoras e agentes literários.',
-      },
-      {
-        icon: '📱',
-        title: 'Livro Digital (.epub)',
-        desc: 'E-book padrão com índice navegável para Apple Books, Kobo e leitores digitais.',
-      },
-      {
-        icon: '🖨️',
-        title: 'Leitura & Impressão (.pdf / .html)',
-        desc: 'Design tipográfico refinado com serifas proporcionais para revisão física em papel ou PDF.',
+        title: 'Formatos Prontos para Editoras e Leitores',
+        desc: 'Exporte para Microsoft Word (.docx), Livro Digital (.epub) com índice navegável, e impressão/leitura tipográfica (.pdf / .html).',
       },
       {
         icon: '💎',
-        title: 'Cofres Abertos (.md & .txt)',
-        desc: 'Exportação com total fidelidade para cofres Obsidian ou texto consolidado com dossiê de worldbuilding.',
+        title: 'Cofres Abertos e Texto Puro (.md & .txt)',
+        desc: 'Exporte com fidelidade para o Obsidian Markdown com links ou em texto consolidado com dossiê de criação.',
       },
     ],
   },

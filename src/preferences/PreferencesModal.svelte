@@ -366,7 +366,7 @@
             <div class="vault-status-badge">
               <span class="shield-icon">🛡️</span>
               <div class="status-texts">
-                <strong>Cofre Protegido com Criptografia de Nível Militar</strong>
+                <strong>Cofre Protegido com Criptografia em Nível Burocracia Vogon</strong>
                 <span>Algoritmo: XChaCha20-Poly1305 (256 bits) • KDF: Argon2id (64 MiB, 3 passes)</span>
               </div>
             </div>
