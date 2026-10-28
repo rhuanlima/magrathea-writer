@@ -12,6 +12,8 @@
   import TrashDrawer from './manuscript/TrashDrawer.svelte';
   import InspectorPanel from './inspector/InspectorPanel.svelte';
   import RenameRefactorModal from './vault/RenameRefactorModal.svelte';
+  import ProductivityDashboardModal from './productivity/ProductivityDashboardModal.svelte';
+  import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
@@ -25,6 +27,7 @@
       await vault.refreshStatus();
       if (vault.isOpen && !vault.isLocked) {
         await manuscript.refreshTree();
+        await editorViewState.refreshProductivity();
       }
     })();
 
@@ -57,10 +60,32 @@
       currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
     }
     await manuscript.refreshTree();
+    await editorViewState.refreshProductivity();
+  }
+
+  function handleGlobalKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && editorViewState.isZenMode) {
+      editorViewState.exitZen();
+    }
   }
 </script>
 
-<main class="app-shell">
+<svelte:window onkeydown={handleGlobalKeydown} />
+
+<main class="app-shell" class:zen-active={editorViewState.isZenMode}>
+  {#if editorViewState.isZenMode}
+    <div class="zen-exit-zone" role="region" aria-label={t('editor.exitZen')}>
+      <button
+        type="button"
+        class="zen-exit-button"
+        onclick={() => editorViewState.exitZen()}
+        title={t('editor.exitZen')}
+      >
+        ✕ {t('editor.exitZen')} (Esc)
+      </button>
+    </div>
+  {/if}
+
   <header class="app-header">
     <div class="brand">
       <button
@@ -95,6 +120,15 @@
         <button
           type="button"
           class="action-button"
+          onclick={() => editorViewState.openProductivityDashboard()}
+          title={t('productivity.dashboardTitle')}
+        >
+          📊 {t('productivity.goalsButton')}
+        </button>
+
+        <button
+          type="button"
+          class="action-button"
           onclick={() => vault.toggleSecurityModal(true)}
           title={t('vault.security.modalTitle')}
         >
@@ -125,9 +159,15 @@
         type="button"
         class="action-button"
         onclick={() => theme.toggleTheme()}
-        title="Toggle Theme (Light / Dark / System)"
+        title={t('theme.toggle')}
       >
-        {theme.mode.toUpperCase()}
+        {#if theme.mode === 'light'}
+          ☀️ {t('theme.light')}
+        {:else if theme.mode === 'dark'}
+          🌙 {t('theme.dark')}
+        {:else}
+          💻 {t('theme.system')}
+        {/if}
       </button>
 
       <button
@@ -164,6 +204,8 @@
 
   <RenameRefactorModal />
 
+  <ProductivityDashboardModal />
+
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />
   {/if}
@@ -186,6 +228,61 @@
     height: 100vh;
     box-sizing: border-box;
     background-color: var(--color-paper-base);
+    transition: background-color var(--transition-focus);
+  }
+
+  /* Estilos do Modo Zen */
+  .zen-exit-zone {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 20px;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+  }
+
+  .zen-exit-button {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-8px);
+    transition: opacity 200ms ease, transform 200ms ease;
+    background-color: var(--color-paper-elevated);
+    border: 1px solid var(--color-paper-border);
+    color: var(--color-ink-muted);
+    font-size: 11px;
+    font-weight: 500;
+    font-family: var(--font-ui);
+    border-radius: var(--rounded-full);
+    padding: 4px 14px;
+    margin-top: 6px;
+    box-shadow: var(--shadow-hud);
+    cursor: pointer;
+  }
+
+  .zen-exit-zone:hover .zen-exit-button {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+
+  .zen-exit-button:hover {
+    color: var(--color-ink-charcoal);
+    border-color: var(--color-olive);
+    background-color: var(--color-paper-hover);
+  }
+
+  .app-shell.zen-active .app-header {
+    display: none;
+  }
+
+  .app-shell.zen-active :global(.sidebar-container),
+  .app-shell.zen-active :global(.inspector-panel),
+  .app-shell.zen-active :global(.editor-footer),
+  .app-shell.zen-active :global(.scene-header) {
+    display: none !important;
   }
 
   .app-header {

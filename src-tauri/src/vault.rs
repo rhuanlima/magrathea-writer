@@ -736,7 +736,31 @@ impl UnlockedVault {
         let new_manifest_bytes = manifest_mut.encrypt(&new_dek)?;
         atomic_write(&manifest_path, &new_manifest_bytes)?;
 
-        // 3. Atualiza chave DEK em memória
+        // 3. Recifra `productivity.blob` caso exista
+        let prod_path = self.root_path.join("productivity.blob");
+        if prod_path.exists() {
+            let old_prod_bytes = fs::read(&prod_path).map_err(|e| VaultError::Io(e.to_string()))?;
+            if old_prod_bytes.len() >= NONCE_LEN {
+                let mut nonce_bytes = [0u8; NONCE_LEN];
+                nonce_bytes.copy_from_slice(&old_prod_bytes[..NONCE_LEN]);
+                let old_nonce = Nonce::new(nonce_bytes);
+                let ciphertext = &old_prod_bytes[NONCE_LEN..];
+                let prod_aad = format!("MAGRATHEA-V1:productivity:{}", self.header.vault_id);
+                if let Ok(plaintext) =
+                    decrypt_payload(old_dek, &old_nonce, prod_aad.as_bytes(), ciphertext)
+                {
+                    let new_nonce = Nonce::generate();
+                    let new_ciphertext =
+                        encrypt_payload(&new_dek, &new_nonce, prod_aad.as_bytes(), &plaintext)?;
+                    let mut new_prod_blob = Vec::with_capacity(NONCE_LEN + new_ciphertext.len());
+                    new_prod_blob.extend_from_slice(new_nonce.as_bytes());
+                    new_prod_blob.extend_from_slice(&new_ciphertext);
+                    atomic_write(&prod_path, &new_prod_blob)?;
+                }
+            }
+        }
+
+        // 4. Atualiza chave DEK em memória
         self.dek = Some(new_dek);
 
         Ok(())

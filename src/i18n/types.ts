@@ -25,6 +25,9 @@ export interface TranslationSchema {
     unsavedChanges: string;
     saved: string;
     saving: string;
+    focusModeToggle: string;
+    zenModeToggle: string;
+    exitZen: string;
   };
   vault: {
     status: {
@@ -114,7 +117,44 @@ export interface TranslationSchema {
     cancel: string;
     confirm: string;
     save: string;
+    saving: string;
     close: string;
+  };
+  theme: {
+    toggle: string;
+    light: string;
+    dark: string;
+    system: string;
+  };
+  hud: {
+    title: string;
+    toggle: string;
+    minimize: string;
+    expand: string;
+    sceneWords: string;
+    sessionWords: string;
+    sessionTime: string;
+    dailyGoal: string;
+  };
+  productivity: {
+    dashboardTitle: string;
+    goalsButton: string;
+    projectTarget: string;
+    todayGoal: string;
+    sevenDaysAvg: string;
+    estimatedFinish: string;
+    completed: string;
+    wordsPerDay: string;
+    daysRemaining: string;
+    wordsRemaining: string;
+    goalReached: string;
+    last7DaysChart: string;
+    configureTargets: string;
+    projectTargetWords: string;
+    dailyTargetWords: string;
+    deadlineOptional: string;
+    saveTargetsButton: string;
+    savedSuccess: string;
   };
   sidebar: {
     toggle: string;

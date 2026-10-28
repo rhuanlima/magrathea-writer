@@ -1500,6 +1500,121 @@ pub fn rollback_rename_refactor_internal(
     Ok(())
 }
 
+/// Obtém visão geral das métricas de produtividade literária.
+#[tauri::command]
+pub fn get_productivity_overview(
+    state: tauri::State<'_, AppState>,
+    today_date_iso: String,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    get_productivity_overview_internal(&state, &today_date_iso)
+}
+
+/// Lógica interna para consulta de visão geral de produtividade.
+pub fn get_productivity_overview_internal(
+    state: &AppState,
+    today_date_iso: &str,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::productivity::get_productivity_overview(vault, today_date_iso)
+        .map_err(|e| format!("Falha ao obter métricas de produtividade: {e}"))
+}
+
+/// Atualiza as metas de escrita literária do autor (projeto, prazo e diária).
+#[tauri::command]
+pub fn update_productivity_targets(
+    state: tauri::State<'_, AppState>,
+    project_target: u32,
+    deadline: Option<String>,
+    daily_target: u32,
+    today_date_iso: String,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    update_productivity_targets_internal(
+        &state,
+        project_target,
+        deadline,
+        daily_target,
+        &today_date_iso,
+    )
+}
+
+/// Lógica interna para atualização das metas de escrita literária.
+pub fn update_productivity_targets_internal(
+    state: &AppState,
+    project_target: u32,
+    deadline: Option<String>,
+    daily_target: u32,
+    today_date_iso: &str,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::productivity::update_productivity_targets(
+        vault,
+        project_target,
+        deadline,
+        daily_target,
+        today_date_iso,
+    )
+    .map_err(|e| format!("Falha ao atualizar metas de produtividade: {e}"))
+}
+
+/// Registra progresso incremental da sessão atual (palavras escritas e tempo de digitação).
+#[tauri::command]
+pub fn record_productivity_session(
+    state: tauri::State<'_, AppState>,
+    date_iso: String,
+    words_delta: u32,
+    session_seconds: u32,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    record_productivity_session_internal(&state, &date_iso, words_delta, session_seconds)
+}
+
+/// Lógica interna para gravação incremental do log diário de escrita.
+pub fn record_productivity_session_internal(
+    state: &AppState,
+    date_iso: &str,
+    words_delta: u32,
+    session_seconds: u32,
+) -> Result<crate::productivity::ProductivityOverview, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::productivity::record_productivity_session(vault, date_iso, words_delta, session_seconds)
+        .map_err(|e| format!("Falha ao registrar sessão de produtividade: {e}"))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
