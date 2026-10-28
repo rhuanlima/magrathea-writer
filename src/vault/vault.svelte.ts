@@ -36,7 +36,7 @@ class VaultStore {
   indexOverview = $state<IndexOverviewResponse | null>(null);
   activeBacklinks = $state<BacklinkEntry[]>([]);
   isInspectorOpen = $state(false);
-  activeInspectorTab = $state<'metadata' | 'backlinks'>('metadata');
+  activeInspectorTab = $state<'metadata' | 'backlinks' | 'appearances' | 'gallery'>('metadata');
   isLoadingIndex = $state(false);
   isLoadingBacklinks = $state(false);
 
@@ -391,9 +391,9 @@ class VaultStore {
   }
 
   /**
-   * Define a aba ativa no painel Inspetor ('metadata' ou 'backlinks').
+   * Define a aba ativa no painel Inspetor ('metadata', 'backlinks', 'appearances' ou 'gallery').
    */
-  setInspectorTab(tab: 'metadata' | 'backlinks') {
+  setInspectorTab(tab: 'metadata' | 'backlinks' | 'appearances' | 'gallery') {
     this.activeInspectorTab = tab;
   }
 

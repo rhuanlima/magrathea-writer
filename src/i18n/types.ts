@@ -119,6 +119,8 @@ export interface TranslationSchema {
     save: string;
     saving: string;
     close: string;
+    add: string;
+    delete: string;
   };
   theme: {
     toggle: string;
@@ -226,6 +228,47 @@ export interface TranslationSchema {
     rollingBack: string;
     rollbackSuccess: string;
     refactorAction: string;
+  };
+  worldbuilding: {
+    tabTitle: string;
+    tabAppearances: string;
+    tabGallery: string;
+    searchPlaceholder: string;
+    newEntity: string;
+    filterAll: string;
+    noEntitiesFound: string;
+    createFirstEntity: string;
+    createModalTitle: string;
+    selectType: string;
+    entityTitle: string;
+    entityTitlePlaceholder: string;
+    tagsLabel: string;
+    tagsPlaceholder: string;
+    createButton: string;
+    errorTitleRequired: string;
+    appearancesTitle: string;
+    noAppearancesYet: string;
+    appearancesHint: string;
+    openScene: string;
+    citedAs: string;
+    galleryTitle: string;
+    uploadImage: string;
+    noImagesYet: string;
+    imagesFormatHint: string;
+    imageTooLarge: string;
+    confirmDeleteImage: string;
+    types: {
+      character: string;
+      characterDesc: string;
+      location: string;
+      locationDesc: string;
+      item: string;
+      itemDesc: string;
+      faction: string;
+      factionDesc: string;
+      lore: string;
+      loreDesc: string;
+    };
   };
 }
 
