@@ -2,6 +2,7 @@ export type ThemeMode = 'light' | 'dark' | 'system';
 
 class ThemeManager {
   private _mode = $state<ThemeMode>('system');
+  private _systemPrefersDark = $state(false);
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -9,12 +10,27 @@ class ThemeManager {
       if (stored === 'light' || stored === 'dark' || stored === 'system') {
         this._mode = stored;
       }
+
+      if (window.matchMedia) {
+        const query = window.matchMedia('(prefers-color-scheme: dark)');
+        this._systemPrefersDark = query.matches;
+        query.addEventListener('change', (e) => {
+          this._systemPrefersDark = e.matches;
+        });
+      }
+
       this.applyTheme();
     }
   }
 
   get mode(): ThemeMode {
     return this._mode;
+  }
+
+  get isDark(): boolean {
+    if (this._mode === 'dark') return true;
+    if (this._mode === 'light') return false;
+    return this._systemPrefersDark;
   }
 
   setMode(mode: ThemeMode): void {
