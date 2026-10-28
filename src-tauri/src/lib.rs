@@ -1,5 +1,6 @@
 //! Core library module for Magrathea Writer desktop application.
 
+pub mod backup;
 pub mod commands;
 pub mod crypto;
 pub mod document;
@@ -7,6 +8,8 @@ pub mod index;
 pub mod keychain;
 pub mod productivity;
 pub mod refactor;
+pub mod search_replace;
+pub mod snapshots;
 pub mod state;
 pub mod vault;
 pub mod worldbuilding;
@@ -57,6 +60,17 @@ pub fn run() {
             commands::delete_entity_image,
             commands::list_entity_images,
             commands::get_entity_appearances,
+            commands::create_scene_snapshot,
+            commands::list_scene_snapshots,
+            commands::get_scene_snapshot_content,
+            commands::compare_snapshot_with_current,
+            commands::restore_scene_snapshot,
+            commands::global_search,
+            commands::preview_global_replace,
+            commands::apply_global_replace,
+            commands::rollback_global_replace,
+            commands::create_vault_backup,
+            commands::list_vault_backups,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");

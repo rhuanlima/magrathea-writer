@@ -215,6 +215,128 @@ export interface EntityAppearance {
   alias: string | null;
 }
 
+export interface SnapshotMeta {
+  id: string;
+  scene_id: string;
+  timestamp: string;
+  label: string;
+  trigger: string;
+  word_count: number;
+  byte_size: number;
+}
+
+export interface DiffLine {
+  kind: 'equal' | 'added' | 'removed';
+  content: string;
+}
+
+export interface SnapshotDiff {
+  snapshot_id: string;
+  snapshot_timestamp: string;
+  current_word_count: number;
+  snapshot_word_count: number;
+  lines: DiffLine[];
+}
+
+export interface RestoreSnapshotResult {
+  restored_content: string;
+  safety_snapshot: SnapshotMeta;
+}
+
+export interface SearchOccurrence {
+  line_number: number;
+  snippet: string;
+  match_start: number;
+  match_end: number;
+}
+
+export interface DocumentSearchResult {
+  item_id: string;
+  title: string;
+  kind: string;
+  match_count: number;
+  occurrences: SearchOccurrence[];
+}
+
+export interface GlobalSearchResponse {
+  query: string;
+  match_case: boolean;
+  total_matches: number;
+  documents: DocumentSearchResult[];
+}
+
+export interface ReplacePreviewItem {
+  item_id: string;
+  title: string;
+  kind: string;
+  occurrences_count: number;
+  before_snippet: string;
+  after_snippet: string;
+}
+
+export interface GlobalReplacePreview {
+  query: string;
+  replacement: string;
+  match_case: boolean;
+  total_affected_docs: number;
+  total_occurrences: number;
+  items: ReplacePreviewItem[];
+}
+
+export interface ApplyGlobalReplaceResult {
+  query: string;
+  replacement: string;
+  modified_docs_count: number;
+  total_occurrences_replaced: number;
+  rollback_snapshot_id: string;
+}
+
+export interface BackupInfo {
+  file_name: string;
+  file_path: string;
+  timestamp: string;
+  byte_size: number;
+  is_same_disk: boolean;
+}
+
+export interface BackupResult {
+  backup_file: string;
+  destination_dir: string;
+  byte_size: number;
+  timestamp: string;
+  is_same_disk: boolean;
+  rotated_count: number;
+}
+
+const mockSnapshots: Record<string, { meta: SnapshotMeta; content: string }[]> = {
+  'mock-scene-1': [
+    {
+      meta: {
+        id: 'snap-mock-init-1',
+        scene_id: 'mock-scene-1',
+        timestamp: new Date(Date.now() - 3600000).toISOString(),
+        label: 'Rascunho Inicial',
+        trigger: 'manual',
+        word_count: 42,
+        byte_size: 210,
+      },
+      content: 'No princípio era a névoa cobrindo as colinas de Magrathea.',
+    },
+  ],
+};
+
+const mockGlobalRollbackContent: Record<string, string> = {};
+
+const mockBackups: BackupInfo[] = [
+  {
+    file_name: 'Romance_backup_20261027_210000.magrathea_backup',
+    file_path: '/Documents/backups/Romance_backup_20261027_210000.magrathea_backup',
+    timestamp: new Date(Date.now() - 7200000).toISOString(),
+    byte_size: 154200,
+    is_same_disk: true,
+  },
+];
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -749,6 +871,184 @@ export async function safeInvoke<T>(
         ] as T;
       }
       return [] as T;
+    }
+    if (cmd === 'create_scene_snapshot') {
+      const payload = args as unknown as {
+        scene_id: string;
+        label: string;
+        trigger: string;
+        current_content?: string;
+      };
+      const text = payload.current_content || 'Texto da cena para snapshot';
+      const meta: SnapshotMeta = {
+        id: `mock-snap-${Date.now()}`,
+        scene_id: payload.scene_id,
+        timestamp: new Date().toISOString(),
+        label: payload.label || 'Snapshot Manual',
+        trigger: payload.trigger || 'manual',
+        word_count: text.split(/\s+/).filter(Boolean).length,
+        byte_size: text.length,
+      };
+      const list = mockSnapshots[payload.scene_id] || [];
+      list.unshift({ meta, content: text });
+      mockSnapshots[payload.scene_id] = list;
+      return meta as T;
+    }
+    if (cmd === 'list_scene_snapshots') {
+      const payload = args as unknown as { scene_id: string };
+      const list = mockSnapshots[payload.scene_id] || [];
+      return list.map((item) => item.meta) as T;
+    }
+    if (cmd === 'get_scene_snapshot_content') {
+      const payload = args as unknown as { scene_id: string; snapshot_id: string };
+      const list = mockSnapshots[payload.scene_id] || [];
+      const item = list.find((s) => s.meta.id === payload.snapshot_id);
+      return (item ? item.content : 'Conteúdo do snapshot mock') as T;
+    }
+    if (cmd === 'compare_snapshot_with_current') {
+      const payload = args as unknown as {
+        scene_id: string;
+        snapshot_id: string;
+        current_content: string;
+      };
+      return {
+        snapshot_id: payload.snapshot_id,
+        snapshot_timestamp: new Date().toISOString(),
+        current_word_count: 50,
+        snapshot_word_count: 42,
+        lines: [
+          { kind: 'equal', content: 'No princípio era a névoa.' },
+          { kind: 'removed', content: 'O vento soprava frio.' },
+          { kind: 'added', content: 'O vento uivava nas colinas.' },
+        ],
+      } as T;
+    }
+    if (cmd === 'restore_scene_snapshot') {
+      const payload = args as unknown as {
+        scene_id: string;
+        snapshot_id: string;
+        current_content: string;
+      };
+      const list = mockSnapshots[payload.scene_id] || [];
+      const target = list.find((s) => s.meta.id === payload.snapshot_id);
+      const safetySnapshot: SnapshotMeta = {
+        id: `mock-snap-safety-${Date.now()}`,
+        scene_id: payload.scene_id,
+        timestamp: new Date().toISOString(),
+        label: 'Snapshot automático de segurança',
+        trigger: 'auto',
+        word_count: payload.current_content.split(/\s+/).filter(Boolean).length,
+        byte_size: payload.current_content.length,
+      };
+      list.unshift({ meta: safetySnapshot, content: payload.current_content });
+      mockSnapshots[payload.scene_id] = list;
+      return {
+        restored_content: target ? target.content : 'Conteúdo restaurado mock',
+        safety_snapshot: safetySnapshot,
+      } as T;
+    }
+    if (cmd === 'global_search') {
+      const payload = args as unknown as { query: string; match_case: boolean };
+      if (!payload.query.trim()) {
+        return {
+          query: payload.query,
+          match_case: payload.match_case,
+          total_matches: 0,
+          documents: [],
+        } as T;
+      }
+      return {
+        query: payload.query,
+        match_case: payload.match_case,
+        total_matches: 2,
+        documents: [
+          {
+            item_id: 'mock-scene-1',
+            title: 'Cena 1: A Névoa da Manhã',
+            kind: 'scene',
+            match_count: 2,
+            occurrences: [
+              {
+                line_number: 1,
+                snippet: `...olhou para [[Jaci]] e disse: Olá...`,
+                match_start: 15,
+                match_end: 23,
+              },
+              {
+                line_number: 3,
+                snippet: `...depois [[Jaci]] sorriu discretamente...`,
+                match_start: 10,
+                match_end: 18,
+              },
+            ],
+          },
+        ],
+      } as T;
+    }
+    if (cmd === 'preview_global_replace') {
+      const payload = args as unknown as {
+        query: string;
+        replacement: string;
+        match_case: boolean;
+      };
+      return {
+        query: payload.query,
+        replacement: payload.replacement,
+        match_case: payload.match_case,
+        total_affected_docs: 1,
+        total_occurrences: 2,
+        items: [
+          {
+            item_id: 'mock-scene-1',
+            title: 'Cena 1: A Névoa da Manhã',
+            kind: 'scene',
+            occurrences_count: 2,
+            before_snippet: `...olhou para [[Jaci]] e disse...`,
+            after_snippet: `...olhou para [[Iara]] e disse...`,
+          },
+        ],
+      } as T;
+    }
+    if (cmd === 'apply_global_replace') {
+      const payload = args as unknown as {
+        query: string;
+        replacement: string;
+        match_case: boolean;
+      };
+      const snapId = `mock-rollback-${Date.now()}`;
+      mockGlobalRollbackContent[snapId] = 'conteúdo original salvo';
+      return {
+        query: payload.query,
+        replacement: payload.replacement,
+        modified_docs_count: 1,
+        total_occurrences_replaced: 2,
+        rollback_snapshot_id: snapId,
+      } as T;
+    }
+    if (cmd === 'rollback_global_replace') {
+      return undefined as T;
+    }
+    if (cmd === 'create_vault_backup') {
+      const payload = args as unknown as { destination_dir: string; max_backups?: number };
+      const backupResult: BackupResult = {
+        backup_file: `Romance_backup_${Date.now()}.magrathea_backup`,
+        destination_dir: payload.destination_dir || '/backups',
+        byte_size: 204800,
+        timestamp: new Date().toISOString(),
+        is_same_disk: true,
+        rotated_count: 0,
+      };
+      mockBackups.unshift({
+        file_name: backupResult.backup_file,
+        file_path: `${backupResult.destination_dir}/${backupResult.backup_file}`,
+        timestamp: backupResult.timestamp,
+        byte_size: backupResult.byte_size,
+        is_same_disk: backupResult.is_same_disk,
+      });
+      return backupResult as T;
+    }
+    if (cmd === 'list_vault_backups') {
+      return mockBackups as T;
     }
   }
 

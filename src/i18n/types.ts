@@ -199,6 +199,7 @@ export interface TranslationSchema {
     selectItemToInspect: string;
     tabMetadata: string;
     tabBacklinks: string;
+    tabSnapshots: string;
     singleMention: string;
     multipleMentions: string;
     noBacklinksFound: string;
@@ -269,6 +270,50 @@ export interface TranslationSchema {
       lore: string;
       loreDesc: string;
     };
+  };
+  snapshots: {
+    tabTitle: string;
+    createSnapshotButton: string;
+    newSnapshotPrompt: string;
+    labelPlaceholder: string;
+    saveSnapshot: string;
+    noSnapshotsYet: string;
+    diffTitle: string;
+    compareWithCurrent: string;
+    restoreButton: string;
+    confirmRestore: string;
+    manualTag: string;
+    autoTag: string;
+    wordsCount: string;
+    closeDiff: string;
+  };
+  search: {
+    modalTitle: string;
+    searchTab: string;
+    replaceTab: string;
+    queryPlaceholder: string;
+    replacementPlaceholder: string;
+    matchCaseLabel: string;
+    searchButton: string;
+    previewButton: string;
+    replaceAllButton: string;
+    undoButton: string;
+    noResults: string;
+    resultsCount: string;
+    occurrencesCount: string;
+    linePrefix: string;
+  };
+  backup: {
+    modalTitle: string;
+    destinationLabel: string;
+    destinationPlaceholder: string;
+    rotationLabel: string;
+    runBackupButton: string;
+    sameDiskWarning: string;
+    sameDiskTip: string;
+    recentBackupsTitle: string;
+    noBackupsYet: string;
+    backupSuccess: string;
   };
 }
 

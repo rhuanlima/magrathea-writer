@@ -14,6 +14,10 @@
   import RenameRefactorModal from './vault/RenameRefactorModal.svelte';
   import ProductivityDashboardModal from './productivity/ProductivityDashboardModal.svelte';
   import CreateEntityModal from './worldbuilding/CreateEntityModal.svelte';
+  import GlobalSearchModal from './search/GlobalSearchModal.svelte';
+  import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
+  import { searchStore } from './search/search.svelte';
+  import { backupStore } from './backup/backup.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
@@ -68,6 +72,12 @@
     if (e.key === 'Escape' && editorViewState.isZenMode) {
       editorViewState.exitZen();
     }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
+      e.preventDefault();
+      if (vault.isOpen && !vault.isLocked) {
+        searchStore.openModal();
+      }
+    }
   }
 </script>
 
@@ -118,6 +128,24 @@
           + {t('vault.status.newVaultButton')}
         </button>
       {:else}
+        <button
+          type="button"
+          class="action-button"
+          onclick={() => searchStore.openModal()}
+          title={t('search.modalTitle')}
+        >
+          🔍 {t('search.searchTab')}
+        </button>
+
+        <button
+          type="button"
+          class="action-button"
+          onclick={() => backupStore.openModal()}
+          title={t('backup.modalTitle')}
+        >
+          💾 {t('backup.modalTitle')}
+        </button>
+
         <button
           type="button"
           class="action-button"
@@ -187,7 +215,12 @@
     <section class="editor-workspace">
       <Editor initialContent={currentContent} onChange={handleContentChange} />
     </section>
-    <InspectorPanel />
+    <InspectorPanel
+      {currentContent}
+      onRestoreContent={(restored) => {
+        currentContent = restored;
+      }}
+    />
   </div>
 
   <CreateVaultModal
@@ -208,6 +241,10 @@
   <ProductivityDashboardModal />
 
   <CreateEntityModal />
+
+  <GlobalSearchModal />
+
+  <BackupSettingsModal />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />

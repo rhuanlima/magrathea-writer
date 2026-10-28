@@ -12,6 +12,14 @@
   import { worldbuilding } from '../worldbuilding/worldbuilding.svelte';
   import EntityAppearancesPanel from '../worldbuilding/EntityAppearancesPanel.svelte';
   import EntityGallery from '../worldbuilding/EntityGallery.svelte';
+  import SnapshotsPanel from '../snapshots/SnapshotsPanel.svelte';
+
+  interface Props {
+    currentContent?: string;
+    onRestoreContent?: (newContent: string) => void;
+  }
+
+  let { currentContent = '', onRestoreContent }: Props = $props();
 
   let activeItem = $derived(
     manuscript.items.find((it) => it.id === manuscript.activeSceneId) || null
@@ -101,6 +109,13 @@
           <span class="count-pill">{worldbuilding.images.length}</span>
         {/if}
       </button>
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'snapshots'}
+        onclick={() => vault.setInspectorTab('snapshots')}
+      >
+        🕒 {t('snapshots.tabTitle')}
+      </button>
     </div>
 
     <!-- Conteúdo da Aba Ativa -->
@@ -176,6 +191,8 @@
         <EntityAppearancesPanel appearances={worldbuilding.appearances} />
       {:else if vault.activeInspectorTab === 'gallery'}
         <EntityGallery entityId={activeItem.id} />
+      {:else if vault.activeInspectorTab === 'snapshots'}
+        <SnapshotsPanel {currentContent} {onRestoreContent} />
       {/if}
     </div>
   </aside>
