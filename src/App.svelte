@@ -28,6 +28,7 @@
   import { graphStore } from './graph/graph.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
+  import { listenToEvent } from './tauri/bridge';
 
   let isCreateModalOpen = $state(false);
   let isOpenVaultModalOpen = $state(false);
@@ -36,6 +37,7 @@
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
   );
   let tracker: InactivityTracker | null = null;
+  let unlistenMenuEvents: Array<() => void> = [];
 
   function handleOpenVaultAction(path?: string) {
     prefilledVaultPath = path;
@@ -48,6 +50,74 @@
       if (vault.isOpen && !vault.isLocked) {
         await manuscript.refreshTree();
         await editorViewState.refreshProductivity();
+      }
+    })();
+
+    // Registra os ouvintes para as opções da Barra de Menus Nativa do SO
+    void (async () => {
+      const registrations = [
+        listenToEvent('menu_new_world', () => {
+          isCreateModalOpen = true;
+        }),
+        listenToEvent('menu_open_world', () => {
+          handleOpenVaultAction();
+        }),
+        listenToEvent('menu_backup', () => {
+          if (vault.isOpen && !vault.isLocked) backupStore.openModal();
+        }),
+        listenToEvent('menu_lock_world', () => {
+          if (vault.isOpen && !vault.isLocked) void vault.lockVault();
+        }),
+        listenToEvent('menu_find', () => {
+          if (vault.isOpen && !vault.isLocked) searchStore.openModal();
+        }),
+        listenToEvent('menu_toggle_sidebar', () => {
+          manuscript.toggleSidebar();
+        }),
+        listenToEvent('menu_toggle_inspector', () => {
+          vault.toggleInspector();
+        }),
+        listenToEvent('menu_zen_mode', () => {
+          editorViewState.toggleZen();
+        }),
+        listenToEvent('menu_toggle_theme', () => {
+          theme.toggleTheme();
+        }),
+        listenToEvent('menu_timeline', () => {
+          if (vault.isOpen && !vault.isLocked) void timelineStore.openModal();
+        }),
+        listenToEvent('menu_graph', () => {
+          if (vault.isOpen && !vault.isLocked) graphStore.openModal();
+        }),
+        listenToEvent('menu_productivity', () => {
+          if (vault.isOpen && !vault.isLocked) editorViewState.openProductivityDashboard();
+        }),
+        listenToEvent('menu_security', () => {
+          if (vault.isOpen && !vault.isLocked) vault.toggleSecurityModal(true);
+        }),
+        listenToEvent('menu_export_panel', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+        listenToEvent('menu_export_docx', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+        listenToEvent('menu_export_epub', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+        listenToEvent('menu_export_pdf', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+        listenToEvent('menu_export_obsidian', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+        listenToEvent('menu_export_txt', () => {
+          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+        }),
+      ];
+
+      for (const regPromise of registrations) {
+        const unlisten = await regPromise;
+        unlistenMenuEvents.push(unlisten);
       }
     })();
 
@@ -64,6 +134,9 @@
 
   onDestroy(() => {
     tracker?.stop();
+    for (const unlisten of unlistenMenuEvents) {
+      unlisten();
+    }
   });
 
   function handleContentChange(updated: string) {
@@ -160,7 +233,7 @@
       <span class="brand-title">{t('app.title')}</span>
       {#if vault.isOpen && vault.projectTitle}
         <span class="vault-pill" title={vault.vaultPath || ''}>
-          🔒 {vault.projectTitle}
+          🌍 {vault.projectTitle}
         </span>
       {:else}
         <span class="brand-tagline">{t('app.tagline')}</span>
@@ -185,113 +258,29 @@
         >
           + {t('vault.status.newVaultButton')}
         </button>
-      {:else}
         <button
           type="button"
           class="action-button"
-          onclick={() => searchStore.openModal()}
-          title={t('search.modalTitle')}
+          onclick={() => theme.toggleTheme()}
+          title={t('theme.toggle')}
         >
-          🔍 {t('search.searchTab')}
+          {#if theme.mode === 'light'}
+            ☀️ {t('theme.light')}
+          {:else if theme.mode === 'dark'}
+            🌙 {t('theme.dark')}
+          {:else}
+            💻 {t('theme.system')}
+          {/if}
         </button>
-
         <button
           type="button"
           class="action-button"
-          onclick={() => backupStore.openModal()}
-          title={t('backup.modalTitle')}
+          onclick={toggleLanguage}
+          title={t('app.switchLanguage')}
         >
-          💾 {t('backup.modalTitle')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          onclick={() => editorViewState.openProductivityDashboard()}
-          title={t('productivity.dashboardTitle')}
-        >
-          📊 {t('productivity.goalsButton')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          onclick={() => vault.toggleSecurityModal(true)}
-          title={t('vault.security.modalTitle')}
-        >
-          🛡️ {t('vault.security.tabChangePassphrase')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          class:active-action={vault.isInspectorOpen}
-          onclick={() => vault.toggleInspector()}
-          title={t('inspector.title')}
-        >
-          ℹ️ {t('inspector.title')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          onclick={() => compilerStore.openModal()}
-          title={t('compiler.modalTitle')}
-        >
-          📖 {t('compiler.modalTitle')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          onclick={() => timelineStore.openModal()}
-          title={t('timeline.modalTitle')}
-        >
-          ⏳ {t('timeline.modalTitle')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button"
-          onclick={() => graphStore.openModal()}
-          title={t('graph.modalTitle')}
-        >
-          🕸️ {t('graph.modalTitle')}
-        </button>
-
-        <button
-          type="button"
-          class="action-button lock-action"
-          onclick={() => vault.lockVault()}
-          title={t('vault.status.lockButton')}
-        >
-          🔒 {t('vault.status.lockButton')}
+          {i18n.locale === 'pt-BR' ? 'EN' : 'PT'}
         </button>
       {/if}
-
-      <button
-        type="button"
-        class="action-button"
-        onclick={() => theme.toggleTheme()}
-        title={t('theme.toggle')}
-      >
-        {#if theme.mode === 'light'}
-          ☀️ {t('theme.light')}
-        {:else if theme.mode === 'dark'}
-          🌙 {t('theme.dark')}
-        {:else}
-          💻 {t('theme.system')}
-        {/if}
-      </button>
-
-      <button
-        type="button"
-        class="action-button"
-        onclick={toggleLanguage}
-        title={t('app.switchLanguage')}
-      >
-        {i18n.locale === 'pt-BR' ? 'EN' : 'PT'}
-      </button>
     </div>
   </header>
 
@@ -531,17 +520,6 @@
   .action-button.primary-action:hover {
     background-color: var(--color-olive-hover);
     border-color: var(--color-olive-hover);
-  }
-
-  .action-button.lock-action {
-    color: var(--color-error);
-    border-color: var(--color-paper-border);
-    font-family: var(--font-ui);
-  }
-
-  .action-button.lock-action:hover {
-    background-color: #fdf2f2;
-    border-color: var(--color-error);
   }
 
   .action-button:focus-visible {

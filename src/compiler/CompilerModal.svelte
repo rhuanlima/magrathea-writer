@@ -140,87 +140,91 @@
 <svelte:window onkeydown={handleKeydown} />
 
 {#if compilerStore.isOpen}
-  <!-- Backdrop -->
+  <!-- Backdrop sutil para focar a atenção sem bloquear a visão do autor -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
-    class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
+    onclick={() => compilerStore.closeModal()}
+  ></div>
+
+  <!-- Drawer Lateral à Direita (Painel Editorial) -->
+  <div
+    class="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-[560px] lg:w-[620px] bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-2xl flex flex-col h-full overflow-hidden text-stone-900 dark:text-stone-100"
     role="dialog"
     aria-modal="true"
     aria-labelledby="compiler-modal-title"
   >
-    <!-- Modal Container -->
+    <!-- Header do Painel -->
     <div
-      class="bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden text-stone-900 dark:text-stone-100"
+      class="flex items-center justify-between px-5 py-3.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/80"
     >
-      <!-- Header -->
-      <div
-        class="flex items-center justify-between px-6 py-4 border-b border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50"
-      >
-        <div class="flex items-center gap-3">
-          <div
-            class="text-2xl p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400"
-          >
-            📖
-          </div>
-          <div>
-            <h2 id="compiler-modal-title" class="text-xl font-bold tracking-tight">
-              {t('compiler.modalTitle')}
-            </h2>
-            {#if compilerStore.compiled}
-              <div class="flex items-center gap-3 text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                <span>{t('compiler.statsWords', { count: compilerStore.compiled.total_words })}</span>
-                <span>•</span>
-                <span>{t('compiler.statsChars', { count: compilerStore.compiled.total_characters })}</span>
-                <span>•</span>
-                <span>{t('compiler.statsSections', { count: compilerStore.compiled.sections.length })}</span>
-              </div>
-            {/if}
-          </div>
+      <div class="flex items-center gap-2.5">
+        <div
+          class="text-xl p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400"
+        >
+          📖
         </div>
-
-        <button
-          onclick={() => compilerStore.closeModal()}
-          class="p-2 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors font-bold text-lg"
-          aria-label="Fechar"
-        >
-          ✕
-        </button>
+        <div>
+          <h2 id="compiler-modal-title" class="text-base font-bold tracking-tight">
+            {t('compiler.modalTitle')}
+          </h2>
+          {#if compilerStore.compiled}
+            <div class="flex items-center gap-2 text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+              <span>{t('compiler.statsWords', { count: compilerStore.compiled.total_words })}</span>
+              <span>•</span>
+              <span>{t('compiler.statsChars', { count: compilerStore.compiled.total_characters })}</span>
+              <span>•</span>
+              <span>{t('compiler.statsSections', { count: compilerStore.compiled.sections.length })}</span>
+            </div>
+          {/if}
+        </div>
       </div>
 
-      <!-- Abas de Navegação -->
-      <div
-        class="flex border-b border-stone-200 dark:border-stone-800 px-6 gap-2 bg-stone-100/50 dark:bg-stone-950/30"
+      <button
+        onclick={() => compilerStore.closeModal()}
+        class="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors font-bold text-base"
+        aria-label="Fechar"
       >
-        <button
-          onclick={() => compilerStore.setActiveTab('preview')}
-          class="flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors {compilerStore.activeTab === 'preview' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
-        >
-          📄 {t('compiler.tabPreview')}
-        </button>
+        ✕
+      </button>
+    </div>
 
-        <button
-          onclick={() => compilerStore.setActiveTab('matter')}
-          class="flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors {compilerStore.activeTab === 'matter' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
-        >
-          ✍️ {t('compiler.tabMatter')}
-        </button>
+    <!-- Abas de Navegação -->
+    <div
+      class="flex border-b border-stone-200 dark:border-stone-800 px-4 sm:px-5 gap-1 bg-stone-100/50 dark:bg-stone-950/30 overflow-x-auto"
+    >
+      <button
+        onclick={() => compilerStore.setActiveTab('export')}
+        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'export' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+      >
+        💾 {t('compiler.tabExport')}
+      </button>
 
-        <button
-          onclick={() => compilerStore.setActiveTab('design')}
-          class="flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors {compilerStore.activeTab === 'design' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
-        >
-          ⚙️ {t('compiler.tabDesign')}
-        </button>
+      <button
+        onclick={() => compilerStore.setActiveTab('preview')}
+        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'preview' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+      >
+        📄 {t('compiler.tabPreview')}
+      </button>
 
-        <button
-          onclick={() => compilerStore.setActiveTab('export')}
-          class="flex items-center gap-2 py-3 px-4 border-b-2 font-medium text-sm transition-colors {compilerStore.activeTab === 'export' ? 'border-amber-500 text-amber-600 dark:text-amber-400' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
-        >
-          💾 {t('compiler.tabExport')}
-        </button>
-      </div>
+      <button
+        onclick={() => compilerStore.setActiveTab('matter')}
+        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'matter' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+      >
+        ✍️ {t('compiler.tabMatter')}
+      </button>
 
-      <!-- Corpo da Aba Ativa -->
-      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+      <button
+        onclick={() => compilerStore.setActiveTab('design')}
+        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'design' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+      >
+        ⚙️ {t('compiler.tabDesign')}
+      </button>
+    </div>
+
+    <!-- Corpo da Aba Ativa -->
+    <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
         <!-- Aba 1: Pré-visualização do Manuscrito Unificado -->
         {#if compilerStore.activeTab === 'preview'}
           <div class="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
@@ -592,15 +596,15 @@
             {/if}
 
             <!-- Galeria de Cards de Formato Editorial -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div class="grid grid-cols-1 gap-3">
               <!-- DOCX -->
               <div
-                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-blue-500/50 hover:shadow-md transition-all group"
+                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-blue-500/50 hover:shadow-md transition-all group"
               >
                 <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl font-bold">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">
                         📄
                       </div>
                       <div>
@@ -609,7 +613,7 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
                     {t('compiler.exportDocxDesc')} Inclui estilos de parágrafo, quebras automáticas de capítulo e notas.
                   </p>
                 </div>
@@ -618,7 +622,7 @@
                   type="button"
                   disabled={compilerStore.isExporting}
                   onclick={() => handleQuickExport('docx')}
-                  class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  class="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
                   <span>💾 Salvar como DOCX...</span>
                 </button>
@@ -626,12 +630,12 @@
 
               <!-- EPUB -->
               <div
-                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
               >
                 <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl font-bold">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg font-bold">
                         📱
                       </div>
                       <div>
@@ -640,7 +644,7 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
                     {t('compiler.exportEpubDesc')} Pronto para Apple Books, Kobo, Kindle e lojas de e-books com metadados.
                   </p>
                 </div>
@@ -649,7 +653,7 @@
                   type="button"
                   disabled={compilerStore.isExporting}
                   onclick={() => handleQuickExport('epub')}
-                  class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
                   <span>💾 Salvar como EPUB...</span>
                 </button>
@@ -657,12 +661,12 @@
 
               <!-- PDF / HTML -->
               <div
-                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-rose-500/50 hover:shadow-md transition-all group"
+                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-rose-500/50 hover:shadow-md transition-all group"
               >
                 <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl font-bold">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg font-bold">
                         🖨️
                       </div>
                       <div>
@@ -671,7 +675,7 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
                     {t('compiler.exportPdfDesc')} Layout limpo e tipografia selecionada pronto para imprimir ou gerar PDF direto no navegador.
                   </p>
                 </div>
@@ -680,7 +684,7 @@
                   type="button"
                   disabled={compilerStore.isExporting}
                   onclick={() => handleQuickExport('pdf')}
-                  class="w-full py-2.5 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  class="w-full py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
                   <span>💾 Salvar HTML / PDF...</span>
                 </button>
@@ -688,12 +692,12 @@
 
               <!-- Obsidian Markdown -->
               <div
-                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-purple-500/50 hover:shadow-md transition-all group"
+                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-purple-500/50 hover:shadow-md transition-all group"
               >
                 <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl font-bold">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg font-bold">
                         📁
                       </div>
                       <div>
@@ -702,7 +706,7 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
                     {t('compiler.exportObsidianDesc')} Transforma todo o Mundo em notas com ligações bidirecionais, personagens e locais.
                   </p>
                 </div>
@@ -711,20 +715,20 @@
                   type="button"
                   disabled={compilerStore.isExporting}
                   onclick={() => handleQuickExport('obsidian')}
-                  class="w-full py-2.5 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  class="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
                 >
                   <span>💾 Exportar para Pasta Obsidian...</span>
                 </button>
               </div>
 
-              <!-- TXT + Dossiê (Ocupa 2 colunas em telas maiores) -->
+              <!-- TXT + Dossiê -->
               <div
-                class="md:col-span-2 flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-stone-400 hover:shadow-md transition-all group"
+                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-stone-400 hover:shadow-md transition-all group"
               >
                 <div>
-                  <div class="flex items-center justify-between mb-3">
-                    <div class="flex items-center gap-3">
-                      <div class="w-10 h-10 rounded-xl bg-stone-500/10 text-stone-600 dark:text-stone-400 flex items-center justify-center text-xl font-bold">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-stone-500/10 text-stone-600 dark:text-stone-400 flex items-center justify-center text-lg font-bold">
                         📝
                       </div>
                       <div>
@@ -733,26 +737,24 @@
                       </div>
                     </div>
                   </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
                     {t('compiler.exportTxtDesc')} Salva o manuscrito consolidado em texto puro sem formatações complexas, perfeito para arquivamento ou processamentos de texto.
                   </p>
                 </div>
 
-                <div class="flex justify-end">
-                  <button
-                    type="button"
-                    disabled={compilerStore.isExporting}
-                    onclick={() => handleQuickExport('txt')}
-                    class="py-2.5 px-6 rounded-lg bg-stone-700 hover:bg-stone-800 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                  >
-                    <span>💾 Salvar TXT + Dossiê em Pasta...</span>
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  disabled={compilerStore.isExporting}
+                  onclick={() => handleQuickExport('txt')}
+                  class="w-full py-2 px-3 rounded-lg bg-stone-700 hover:bg-stone-800 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>💾 Salvar TXT + Dossiê em Pasta...</span>
+                </button>
               </div>
             </div>
 
             <!-- Opções Avançadas de Destino Manual (Colapsável) -->
-            <div class="border-t border-stone-200 dark:border-stone-800 pt-4">
+            <div class="border-t border-stone-200 dark:border-stone-800 pt-3">
               <button
                 type="button"
                 onclick={() => (showAdvancedPath = !showAdvancedPath)}
@@ -763,25 +765,25 @@
               </button>
 
               {#if showAdvancedPath}
-                <div class="mt-3 p-4 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
+                <div class="mt-2.5 p-3.5 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 space-y-2.5">
                   <label for="export-dest" class="block text-xs font-semibold text-stone-600 dark:text-stone-400">
                     Caminho Completo do Arquivo ou Diretório de Destino:
                   </label>
-                  <div class="flex gap-2">
+                  <div class="flex flex-col sm:flex-row gap-2">
                     <input
                       id="export-dest"
                       type="text"
                       bind:value={exportPathInput}
                       placeholder="/Users/seu-usuario/Documents/meu_livro.docx"
-                      class="flex-1 px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs"
+                      class="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
                     />
                     <button
                       type="button"
                       onclick={handleExport}
                       disabled={compilerStore.isExporting || !exportPathInput.trim()}
-                      class="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors flex items-center gap-2"
+                      class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
                     >
-                      Exportar no Caminho Digitado
+                      Exportar
                     </button>
                   </div>
                 </div>
@@ -791,18 +793,17 @@
         {/if}
       </div>
 
-      <!-- Footer -->
+      <!-- Footer do Painel -->
       <div
-        class="flex items-center justify-between px-6 py-4 border-t border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 text-xs text-stone-500"
+        class="flex items-center justify-between px-5 py-3 border-t border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/80 text-xs text-stone-500"
       >
-        <span>Magrathea Writer • Compilador Offline de Alta Fidelidade</span>
+        <span>Compilador Editorial Offline</span>
         <button
           onclick={() => compilerStore.closeModal()}
-          class="px-4 py-2 rounded-lg bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-medium transition-colors"
+          class="px-3.5 py-1.5 rounded-lg bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-medium transition-colors"
         >
           Fechar
         </button>
       </div>
     </div>
-  </div>
 {/if}
