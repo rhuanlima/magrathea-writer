@@ -14,6 +14,8 @@
   import { externalLinksPlugin } from './external-links';
   import { focusModeExtension } from './focus-mode';
   import { editorViewState } from './editor-view-state.svelte';
+  import { theme } from '../design';
+  import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import LiteraryBar from './LiteraryBar.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
@@ -89,37 +91,7 @@
         externalLinksPlugin,
         focusModeExtension,
         updateListener,
-        EditorView.theme({
-          '&': {
-            height: '100%',
-            fontSize: '19px',
-            lineHeight: '32px',
-            fontFamily: 'var(--font-literary)',
-            backgroundColor: 'var(--color-paper-base)',
-            color: 'var(--color-ink-charcoal)',
-          },
-          '.cm-scroller': {
-            overflow: 'auto',
-            padding: 'var(--space-lg) var(--space-md)',
-          },
-          '.cm-content': {
-            maxWidth: '720px',
-            margin: '0 auto',
-            caretColor: 'var(--color-olive)',
-          },
-          '.cm-cursor': {
-            borderLeftColor: 'var(--color-olive)',
-            borderLeftWidth: '2px',
-          },
-          '.cm-selectionBackground, ::selection': {
-            backgroundColor: 'rgba(94, 111, 69, 0.2) !important',
-          },
-          '.cm-gutters': {
-            backgroundColor: 'var(--color-paper-base)',
-            borderColor: 'var(--color-paper-border)',
-            color: 'var(--color-ink-faded)',
-          },
-        }),
+        editorThemeCompartment.of(getEditorThemeExtension(theme.isDark)),
       ],
     });
 
@@ -128,6 +100,16 @@
       parent: editorElement,
     });
     editorViewState.applyInitialFocus(view);
+  });
+
+  // Reconfigura instantaneamente o tema e o syntax highlighting do editor ao alternar claro/escuro
+  $effect(() => {
+    const isDark = theme.isDark;
+    if (view) {
+      view.dispatch({
+        effects: editorThemeCompartment.reconfigure(getEditorThemeExtension(isDark)),
+      });
+    }
   });
 
   function handleKeydown(e: KeyboardEvent) {
