@@ -22,6 +22,8 @@
   import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
   import CommandPalette from './commands/CommandPalette.svelte';
   import SupportModal from './support/SupportModal.svelte';
+  import PreferencesModal from './preferences/PreferencesModal.svelte';
+  import { preferences } from './preferences/preferences.svelte';
   import { commandPaletteStore } from './commands/palette.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
@@ -119,6 +121,9 @@
         listenToEvent('menu_support', () => {
           supportStore.open();
         }),
+        listenToEvent('menu_preferences', () => {
+          preferences.open();
+        }),
       ];
 
       for (const regPromise of registrations) {
@@ -206,6 +211,10 @@
       if (vault.isOpen && !vault.isLocked) {
         graphStore.openModal();
       }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+      e.preventDefault();
+      preferences.open();
     }
   }
 </script>
@@ -348,6 +357,8 @@
   <CommandPalette />
 
   <SupportModal />
+
+  <PreferencesModal />
 
   {#if compilerStore.toastMessage}
     <aside class="export-toast-notification" role="status" aria-live="polite">

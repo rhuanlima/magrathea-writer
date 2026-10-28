@@ -33,6 +33,14 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         &[
             &PredefinedMenuItem::about(handle, Some("Sobre o Magrathea Writer"), None)?,
             &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(
+                handle,
+                "menu_preferences",
+                "Preferências...",
+                true,
+                Some("CmdOrCtrl+,"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
             &PredefinedMenuItem::hide(handle, Some("Ocultar Magrathea Writer"))?,
             &PredefinedMenuItem::hide_others(handle, Some("Ocultar Outros"))?,
             &PredefinedMenuItem::show_all(handle, Some("Mostrar Todos"))?,
@@ -177,6 +185,13 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
                 Some("CmdOrCtrl+Shift+P"),
             )?,
             &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(
+                handle,
+                "menu_preferences",
+                "Preferências do Sistema & Editor...",
+                true,
+                Some("CmdOrCtrl+,"),
+            )?,
             &MenuItem::with_id(
                 handle,
                 "menu_security",

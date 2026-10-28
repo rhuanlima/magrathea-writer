@@ -22,7 +22,7 @@
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
-  import EditorPreferencesModal from './EditorPreferencesModal.svelte';
+  import { preferences } from '../preferences/preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
 
@@ -276,7 +276,8 @@
           onclick={() => (isLiteraryMenuOpen = !isLiteraryMenuOpen)}
           title="Pontuação Literária (—, «», …, ***)"
         >
-          ✍️
+          <span class="btn-icon">✍️</span>
+          <span class="btn-tag">Pontuação</span>
         </button>
 
         {#if isLiteraryMenuOpen}
@@ -357,7 +358,8 @@
           onclick={() => (isExportMenuOpen = !isExportMenuOpen)}
           title="Exportar Manuscrito (Word, EPUB, PDF...)"
         >
-          📖
+          <span class="btn-icon">📖</span>
+          <span class="btn-tag">Exportar</span>
         </button>
 
         {#if isExportMenuOpen}
@@ -440,16 +442,18 @@
         onclick={() => vault.toggleInspector()}
         title="Inspetor de Fichas e Personagens (Cmd+I)"
       >
-        ℹ️
+        <span class="btn-icon">ℹ️</span>
+        <span class="btn-tag">Inspetor</span>
       </button>
 
       <button
         type="button"
         class="quick-action-btn"
-        onclick={() => editorPreferences.openModal()}
-        title="Preferências do Editor (Fonte, Linhas, Espaçamento)"
+        onclick={() => preferences.open('editor')}
+        title="Preferências do Sistema & Editor (Cmd+,)"
       >
-        ⚙️
+        <span class="btn-icon">⚙️</span>
+        <span class="btn-tag">Preferências</span>
       </button>
 
       <button
@@ -458,13 +462,16 @@
         onclick={() => theme.toggleTheme()}
         title="Alternar Tema Claro / Escuro"
       >
-        {#if theme.mode === 'light'}
-          ☀️
-        {:else if theme.mode === 'dark'}
-          🌙
-        {:else}
-          💻
-        {/if}
+        <span class="btn-icon">
+          {#if theme.mode === 'light'}
+            ☀️
+          {:else if theme.mode === 'dark'}
+            🌙
+          {:else}
+            💻
+          {/if}
+        </span>
+        <span class="btn-tag">Tema</span>
       </button>
 
       <button
@@ -473,7 +480,8 @@
         onclick={() => vault.lockVault()}
         title="Trancar Mundo (Cmd+L)"
       >
-        🔒
+        <span class="btn-icon">🔒</span>
+        <span class="btn-tag">Trancar</span>
       </button>
     </div>
 
@@ -493,8 +501,6 @@
       {/if}
     </div>
   </footer>
-
-  <EditorPreferencesModal />
 </div>
 
 <style>
@@ -541,28 +547,40 @@
   .quick-status-actions {
     display: flex;
     align-items: center;
-    gap: 2px;
+    gap: 4px;
   }
 
   .quick-action-btn {
     background: transparent;
-    border: none;
+    border: 1px solid transparent;
     border-radius: 4px;
-    padding: 2px 6px;
+    padding: 2px 7px;
     font-size: 11px;
     cursor: pointer;
     color: var(--color-ink-muted);
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: all 0.15s ease;
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
     line-height: 1;
     user-select: none;
+    font-family: var(--font-ui);
   }
 
   .quick-action-btn:hover {
     background-color: var(--color-paper-border);
+    border-color: var(--color-paper-border);
     color: var(--color-ink-primary);
+  }
+
+  .btn-icon {
+    font-size: 11px;
+    line-height: 1;
+  }
+
+  .btn-tag {
+    font-size: 10.5px;
+    font-weight: 500;
   }
 
   .quick-action-btn.active {
