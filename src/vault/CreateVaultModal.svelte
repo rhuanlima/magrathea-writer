@@ -1,7 +1,7 @@
 <script lang="ts">
   import { t } from '../i18n';
   import { assessPasswordStrength } from '../crypto/password-strength';
-  import { safeInvoke } from '../tauri/bridge';
+  import { pickDirectory, safeInvoke } from '../tauri/bridge';
   import { vault } from './vault.svelte';
 
   interface Props {
@@ -48,6 +48,17 @@
         });
     }
   });
+
+  async function handleBrowseDirectory() {
+    try {
+      const selected = await pickDirectory('Escolha a pasta onde o Mundo será criado');
+      if (selected) {
+        dirPath = selected;
+      }
+    } catch (err) {
+      localError = String(err);
+    }
+  }
 
   async function handleCreateVault(e: SubmitEvent) {
     e.preventDefault();
@@ -144,18 +155,37 @@
           </div>
 
           <div class="form-group">
-            <label for="vault-dir" class="field-label">
-              {t('vault.create.vaultDirLabel')}
-            </label>
-            <input
-              id="vault-dir"
-              type="text"
-              class="text-input"
-              bind:value={dirPath}
-              placeholder={t('vault.create.vaultDirPlaceholder')}
-              required
-              disabled={vault.isCreating}
-            />
+            <div class="label-row">
+              <label for="vault-dir" class="field-label">
+                {t('vault.create.vaultDirLabel')}
+              </label>
+              <button
+                type="button"
+                class="browse-inline-btn"
+                onclick={handleBrowseDirectory}
+              >
+                📁 Escolher Pasta...
+              </button>
+            </div>
+            <div class="input-with-action">
+              <input
+                id="vault-dir"
+                type="text"
+                class="text-input"
+                bind:value={dirPath}
+                placeholder={t('vault.create.vaultDirPlaceholder')}
+                required
+                disabled={vault.isCreating}
+              />
+              <button
+                type="button"
+                class="btn-input-browse"
+                onclick={handleBrowseDirectory}
+                title="Escolher pasta no computador"
+              >
+                🔍
+              </button>
+            </div>
           </div>
 
           <!-- Modo de Proteção: Com ou Sem Senha -->
@@ -170,7 +200,7 @@
                   onchange={() => (isPasswordless = true)}
                 />
                 <div class="mode-info">
-                  <strong>🔓 Cofre Livre (Sem Senha)</strong>
+                  <strong>🔓 Mundo Livre (Sem Senha)</strong>
                   <p>Abertura direta em 1 clique sem exigir senha nem bloqueio por inatividade.</p>
                 </div>
               </label>
@@ -183,7 +213,7 @@
                   onchange={() => (isPasswordless = false)}
                 />
                 <div class="mode-info">
-                  <strong>🔒 Cofre Protegido (Senha Mestra)</strong>
+                  <strong>🔒 Mundo Protegido (Senha Mestra)</strong>
                   <p>Cifragem rígida local com Argon2id para proteção máxima de dados confidenciais.</p>
                 </div>
               </label>
@@ -470,6 +500,53 @@
     font-size: 13px;
     font-weight: 600;
     color: var(--color-ink-charcoal);
+  }
+
+  .label-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .browse-inline-btn {
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-olive, #5E6F45);
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .browse-inline-btn:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+  }
+
+  .input-with-action {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .input-with-action .text-input {
+    flex: 1;
+  }
+
+  .btn-input-browse {
+    padding: 8px 12px;
+    background-color: var(--color-paper-surface, #F8F4EC);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn-input-browse:hover {
+    background-color: var(--color-paper-hover, #F4EFE6);
+    border-color: var(--color-olive, #5E6F45);
   }
 
   .text-input {

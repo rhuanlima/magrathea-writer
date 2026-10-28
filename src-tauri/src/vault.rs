@@ -958,6 +958,9 @@ impl VaultStorage {
         let blobs_dir = dir.join("blobs");
         fs::create_dir_all(&blobs_dir).map_err(|e| VaultError::Io(e.to_string()))?;
 
+        // No macOS, marca como pacote atômico (bundle bit) para exibição como arquivo único no Finder
+        mark_as_macos_bundle(dir);
+
         let vault_id = format!(
             "{:08x}-{:04x}-4{:03x}-{:04x}-{:012x}",
             rand::random::<u32>(),
@@ -1015,6 +1018,8 @@ impl VaultStorage {
         let manifest_bytes = fs::read(&manifest_path).map_err(|e| VaultError::Io(e.to_string()))?;
         let manifest = VaultManifest::decrypt(&dek, &header.vault_id, &manifest_bytes)?;
 
+        mark_as_macos_bundle(dir);
+
         Ok(UnlockedVault::new(dir.to_path_buf(), header, dek, manifest))
     }
 
@@ -1042,6 +1047,25 @@ impl VaultStorage {
         let manifest_bytes = fs::read(&manifest_path).map_err(|e| VaultError::Io(e.to_string()))?;
         let manifest = VaultManifest::decrypt(&dek, &header.vault_id, &manifest_bytes)?;
 
+        mark_as_macos_bundle(dir);
+
         Ok(UnlockedVault::new(dir.to_path_buf(), header, dek, manifest))
+    }
+}
+
+/// No macOS, marca o diretório com o atributo de pacote (HasBundle bit) para que o Finder
+/// exiba o .magrathea como um arquivo/documento único opaco e não como uma pasta comum.
+pub fn mark_as_macos_bundle(path: &Path) {
+    #[cfg(target_os = "macos")]
+    {
+        let _ = std::process::Command::new("/usr/bin/SetFile")
+            .arg("-a")
+            .arg("B")
+            .arg(path)
+            .status();
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = path;
     }
 }

@@ -83,6 +83,9 @@ pub fn run() {
             commands::export_pdf_html,
             commands::export_txt_dossier,
             commands::get_vault_timeline,
+            commands::pick_vault_path,
+            commands::pick_directory,
+            commands::pick_save_export_path,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
