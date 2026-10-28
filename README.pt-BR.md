@@ -79,4 +79,10 @@ npm run tauri build
 
 Consulte o arquivo [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md) e o nosso [Código de Conduta](CODE_OF_CONDUCT.md). Contribuições de desenvolvedores humanos exigem DCO sign-off (`git commit -s`).
 
-Para atribuições e licenças de componentes de terceiros, consulte [NOTICE](NOTICE).
+Para atribuições e licenças de componentes de terceiros, consulte [NOTICE](NOTICE). Para diretrizes de uso da marca, consulte [TRADEMARK.pt-BR.md](TRADEMARK.pt-BR.md).
+
+---
+
+## Beta Fechado para Autores
+
+Está participando do nosso programa de testes para autores convidados? Consulte o nosso [Guia do Beta Fechado](BETA_GUIDE.pt-BR.md).

@@ -79,4 +79,10 @@ npm run tauri build
 
 Please review [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md). All human contributions require a DCO sign-off (`git commit -s`).
 
-For third-party licenses and attribution notice, see [NOTICE](NOTICE).
+For third-party licenses and attribution notice, see [NOTICE](NOTICE). For brand policy, see [TRADEMARK.md](TRADEMARK.md).
+
+---
+
+## Closed Beta for Authors
+
+Are you testing Magrathea Writer as an invited author? Please read our [Closed Beta Welcome Guide](BETA_GUIDE.md).
