@@ -62,6 +62,21 @@ npm run tauri build
 
 ---
 
+## Key Features
+
+- 🔒 **Encrypted World Vaults**: Full local envelope encryption (XChaCha20-Poly1305 + Argon2id). Pure zero-knowledge, zero-telemetry, 100% offline.
+- ✍️ **Distraction-Free Literary Editor**: Dynamic line focus, Zen mode, pure white clean interface, status and words HUD, custom typography (EB Garamond).
+- 🌳 **Manuscript Hierarchy**: Organize by Parts, Chapters and Scenes, with direct narrative text composition support on every level.
+- ⚡ **Global Command Palette (`Cmd+K` / `Ctrl+K`)**: Instant search and navigation across manuscript scenes and world dossiers, with full keyboard operation.
+- 🧠 **Literary Second Brain & Worldbuilding**: Character arcs, places, items, lore dossiers, bidirectional `[[wikilinks]]`, and in-memory backlink index.
+- ⏳ **Timeline & Chronology**: Event sequencing, chronological vs. narrative ordering, analepsis/prolepsis tracking and chapter pacing analysis.
+- 🕸️ **Narrative Graph & JSON Canvas**: Visual relationship graph with force simulation, orphan detection, and infinite mind-map canvas compatible with the open JSON Canvas standard.
+- 📖 **Direct Native Export**: Export seamlessly to Microsoft Word (.docx), EPUB3 e-book, printable PDF/HTML, Obsidian Markdown vault (.md), and plain text with dossiers.
+
+---
+
 ## Contributing
 
-Contributions require a DCO sign-off (`git commit -s`) by the human contributor. All development follows branch-based workflows with squash-merged Pull Requests.
+Please review [CONTRIBUTING.md](CONTRIBUTING.md) and our [Code of Conduct](CODE_OF_CONDUCT.md). All human contributions require a DCO sign-off (`git commit -s`).
+
+For third-party licenses and attribution notice, see [NOTICE](NOTICE).

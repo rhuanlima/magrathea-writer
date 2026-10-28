@@ -62,6 +62,21 @@ npm run tauri build
 
 ---
 
+## Principais Funcionalidades
+
+- 🔒 **Mundos Literários Cifrados**: Cifragem de envelope local (XChaCha20-Poly1305 + Argon2id). Modelo zero-knowledge, zero telemetria e 100% offline.
+- ✍️ **Editor Literário Imersivo**: Foco dinâmico por parágrafo, Modo Zen com distração zero, tema Branco Puro limpo, barra literária e tipografia clássica (EB Garamond).
+- 🌳 **Árvore do Manuscrito**: Organização em Partes, Capítulos e Cenas com suporte a composição direta de narrativa em todos os níveis.
+- ⚡ **Paleta de Comandos Global (`Cmd+K` / `Ctrl+K`)**: Busca instantânea e navegação por teclado em todo o manuscrito e fichas de entidades.
+- 🧠 **Segundo Cérebro Literário & Worldbuilding**: Fichas guiadas de personagens, arcos dramáticos, lugares, itens, facções, conexões bidirecionais `[[wikilinks]]` e índice em memória.
+- ⏳ **Linha do Tempo e Cronologia**: Ordenação cronológica vs. narrativa do livro, detecção de analepses (flashbacks) e prolepses, e análise de ritmo de leitura.
+- 🕸️ **Grafo Narrativo & Canvas Infinito**: Visualização de relacionamentos com física de forças, detecção de órfãos e canvas de mapa mental compatível com o padrão aberto JSON Canvas.
+- 📖 **Exportação Nativa Direta**: Geração em um clique de arquivos Word (.docx), EPUB3, PDF/HTML diagramado, cofre Obsidian (.md) e texto puro consolidado.
+
+---
+
 ## Contribuição
 
-Contribuições exigem DCO sign-off (`git commit -s`) do colaborador humano. Todo o desenvolvimento adota fluxo baseado em branches e Pull Requests com merge via squash.
+Consulte o arquivo [CONTRIBUTING.pt-BR.md](CONTRIBUTING.pt-BR.md) e o nosso [Código de Conduta](CODE_OF_CONDUCT.md). Contribuições de desenvolvedores humanos exigem DCO sign-off (`git commit -s`).
+
+Para atribuições e licenças de componentes de terceiros, consulte [NOTICE](NOTICE).

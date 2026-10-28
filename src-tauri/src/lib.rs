@@ -232,6 +232,20 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         ],
     )?;
 
+    // Menu Ajuda & Apoio
+    let help_menu = Submenu::with_items(
+        handle,
+        "Ajuda",
+        true,
+        &[&MenuItem::with_id(
+            handle,
+            "menu_support",
+            "Apoie o Magrathea Writer...",
+            true,
+            None::<&str>,
+        )?],
+    )?;
+
     let menu = Menu::with_items(
         handle,
         &[
@@ -241,6 +255,7 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
             &view_menu,
             &tools_menu,
             &export_menu,
+            &help_menu,
         ],
     )?;
 

@@ -17,6 +17,7 @@
   import { backupStore } from '../backup/backup.svelte';
   import { compilerStore } from '../compiler/compiler.svelte';
   import { searchStore } from '../search/search.svelte';
+  import { supportStore } from '../support/support.svelte';
 
   interface PaletteEntry {
     id: string;
@@ -158,6 +159,16 @@
       icon: '💾',
       execute: () => {
         backupStore.openModal();
+      },
+    },
+    {
+      id: 'action-support',
+      category: 'action',
+      title: 'Apoie o Magrathea Writer',
+      subtitle: 'Informações de apoio e contribuição voluntária para o projeto livre',
+      icon: '☕',
+      execute: () => {
+        supportStore.open();
       },
     },
     {

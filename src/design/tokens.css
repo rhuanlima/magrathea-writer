@@ -66,6 +66,27 @@
   --focus-ring: 2px solid var(--color-olive);
   --focus-offset: 2px;
   --transition-focus: 200ms ease;
+  --motion-duration-fast: 150ms;
+  --motion-duration-normal: 250ms;
+  --motion-ease: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Accessible focus ring for keyboard navigation */
+:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-offset);
+}
+
+/* Reduced Motion: honor user preference for vestibulocochlear / sensitivity needs */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* System Dark Mode fallback */

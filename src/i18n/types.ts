@@ -452,6 +452,29 @@ export interface TranslationSchema {
     viewDetails: string;
     selectEntityPlaceholder: string;
   };
+  commands: {
+    title: string;
+    placeholder: string;
+    empty: string;
+    navigateHint: string;
+    selectHint: string;
+    closeHint: string;
+    categoryAction: string;
+    categoryNavigation: string;
+    openPalette: string;
+  };
+  support: {
+    modalTitle: string;
+    subtitle: string;
+    description: string;
+    qrAlt: string;
+    pixKeyLabel: string;
+    copyPixButton: string;
+    copied: string;
+    cryptoLabel: string;
+    offlineNotice: string;
+    closeButton: string;
+  };
 }
 
 /**

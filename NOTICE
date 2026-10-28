@@ -1,0 +1,26 @@
+Magrathea Writer
+Copyright (C) 2026 Rhuan Lima <rhuan.lima@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU Affero General Public License for more details.
+
+Under Section 7 of the GNU Affero General Public License (AGPLv3),
+modifications and distributions of this software must preserve:
+1. Legal notices and author attribution to Rhuan Lima.
+2. The interactive "About" / "Apoie o Projeto" attribution notice.
+3. Any prominent display of source code availability upon network use.
+
+---
+
+Third-Party Acknowledgements & OFL Fonts:
+- EB Garamond: SIL Open Font License, Version 1.1 (Georg Duffner, Octavio Pardo)
+- JetBrains Mono: SIL Open Font License, Version 1.1 (JetBrains s.r.o.)
+- Plus Jakarta Sans: SIL Open Font License, Version 1.1 (Tokotype, Gumpita Rahayu)
+- Rust crates and NPM packages: Retain their respective MIT / Apache-2.0 / BSD / MPL-2.0 notices as indicated in cargo/package manifests.
