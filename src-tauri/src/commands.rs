@@ -1827,6 +1827,431 @@ pub fn get_entity_appearances_internal(
     ))
 }
 
+// ============================================================================
+// COMANDOS DE SNAPSHOTS E VERSÕES (M5-01, M5-02)
+// ============================================================================
+
+/// Resposta da operação de restauração de snapshot.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct RestoreSnapshotResult {
+    pub restored_content: String,
+    pub safety_snapshot: crate::snapshots::SnapshotMeta,
+}
+
+/// Cria um snapshot da cena ativa no cofre cifrado.
+#[tauri::command]
+pub fn create_scene_snapshot(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+    label: String,
+    trigger: String,
+    current_content: Option<String>,
+) -> Result<crate::snapshots::SnapshotMeta, String> {
+    create_scene_snapshot_internal(
+        &state,
+        &scene_id,
+        &label,
+        &trigger,
+        current_content.as_deref(),
+    )
+}
+
+pub fn create_scene_snapshot_internal(
+    state: &AppState,
+    scene_id: &str,
+    label: &str,
+    trigger: &str,
+    current_content: Option<&str>,
+) -> Result<crate::snapshots::SnapshotMeta, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let content_to_snapshot = match current_content {
+        Some(c) => c.to_string(),
+        None => {
+            let bytes = vault.read_blob(scene_id).map_err(|e| e.to_string())?;
+            String::from_utf8(bytes).map_err(|e| e.to_string())?
+        }
+    };
+
+    crate::snapshots::create_scene_snapshot_internal(
+        vault,
+        scene_id,
+        &content_to_snapshot,
+        label,
+        trigger,
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// Lista todos os snapshots de uma cena no cofre.
+#[tauri::command]
+pub fn list_scene_snapshots(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+) -> Result<Vec<crate::snapshots::SnapshotMeta>, String> {
+    list_scene_snapshots_internal(&state, &scene_id)
+}
+
+pub fn list_scene_snapshots_internal(
+    state: &AppState,
+    scene_id: &str,
+) -> Result<Vec<crate::snapshots::SnapshotMeta>, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::snapshots::list_scene_snapshots_internal(vault, scene_id).map_err(|e| e.to_string())
+}
+
+/// Carrega e decifra o conteúdo de um snapshot específico.
+#[tauri::command]
+pub fn get_scene_snapshot_content(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+    snapshot_id: String,
+) -> Result<String, String> {
+    get_scene_snapshot_content_internal(&state, &scene_id, &snapshot_id)
+}
+
+pub fn get_scene_snapshot_content_internal(
+    state: &AppState,
+    scene_id: &str,
+    snapshot_id: &str,
+) -> Result<String, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::snapshots::get_scene_snapshot_content_internal(vault, scene_id, snapshot_id)
+        .map_err(|e| e.to_string())
+}
+
+/// Compara um snapshot com o conteúdo atual da cena (diff).
+#[tauri::command]
+pub fn compare_snapshot_with_current(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+    snapshot_id: String,
+    current_content: String,
+) -> Result<crate::snapshots::SnapshotDiff, String> {
+    compare_snapshot_with_current_internal(&state, &scene_id, &snapshot_id, &current_content)
+}
+
+pub fn compare_snapshot_with_current_internal(
+    state: &AppState,
+    scene_id: &str,
+    snapshot_id: &str,
+    current_content: &str,
+) -> Result<crate::snapshots::SnapshotDiff, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::snapshots::compare_snapshot_with_current_internal(
+        vault,
+        scene_id,
+        snapshot_id,
+        current_content,
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// Restaura o conteúdo de um snapshot para a cena ativa.
+#[tauri::command]
+pub fn restore_scene_snapshot(
+    state: tauri::State<'_, AppState>,
+    scene_id: String,
+    snapshot_id: String,
+    current_content: String,
+) -> Result<RestoreSnapshotResult, String> {
+    restore_scene_snapshot_internal(&state, &scene_id, &snapshot_id, &current_content)
+}
+
+pub fn restore_scene_snapshot_internal(
+    state: &AppState,
+    scene_id: &str,
+    snapshot_id: &str,
+    current_content: &str,
+) -> Result<RestoreSnapshotResult, String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let (restored, safety_meta) = crate::snapshots::restore_scene_snapshot_internal(
+        vault,
+        scene_id,
+        snapshot_id,
+        current_content,
+    )
+    .map_err(|e| e.to_string())?;
+
+    // Salva o conteúdo restaurado no blob principal da cena
+    vault
+        .write_blob(scene_id, restored.as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    // Reindexa no índice em memória
+    if let Ok(mut idx_guard) = state.index.lock() {
+        if let Some(index) = idx_guard.as_mut() {
+            let (title, kind) = if let Ok(manifest) = vault.manifest() {
+                manifest
+                    .items
+                    .iter()
+                    .find(|i| i.id == scene_id)
+                    .map(|i| (i.title.clone(), i.kind.clone()))
+                    .unwrap_or_else(|| ("Cena".to_string(), "scene".to_string()))
+            } else {
+                ("Cena".to_string(), "scene".to_string())
+            };
+            index.index_document_content(scene_id, &title, &kind, &restored);
+        }
+    }
+
+    Ok(RestoreSnapshotResult {
+        restored_content: restored,
+        safety_snapshot: safety_meta,
+    })
+}
+
+// ============================================================================
+// COMANDOS DE BUSCA E SUBSTITUIÇÃO GLOBAL (M5-03, M5-04)
+// ============================================================================
+
+/// Executa busca textual rápida em memória em todo o cofre.
+#[tauri::command]
+pub fn global_search(
+    state: tauri::State<'_, AppState>,
+    query: String,
+    match_case: bool,
+) -> Result<crate::search_replace::GlobalSearchResponse, String> {
+    global_search_internal(&state, &query, match_case)
+}
+
+pub fn global_search_internal(
+    state: &AppState,
+    query: &str,
+    match_case: bool,
+) -> Result<crate::search_replace::GlobalSearchResponse, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::search_replace::execute_global_search(vault, query, match_case)
+        .map_err(|e| e.to_string())
+}
+
+/// Gera pré-visualização de substituição global antes de ser aplicada.
+#[tauri::command]
+pub fn preview_global_replace(
+    state: tauri::State<'_, AppState>,
+    query: String,
+    replacement: String,
+    match_case: bool,
+) -> Result<crate::search_replace::GlobalReplacePreview, String> {
+    preview_global_replace_internal(&state, &query, &replacement, match_case)
+}
+
+pub fn preview_global_replace_internal(
+    state: &AppState,
+    query: &str,
+    replacement: &str,
+    match_case: bool,
+) -> Result<crate::search_replace::GlobalReplacePreview, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::search_replace::preview_global_replace_internal(vault, query, replacement, match_case)
+        .map_err(|e| e.to_string())
+}
+
+/// Aplica substituição global atômica em todo o projeto.
+#[tauri::command]
+pub fn apply_global_replace(
+    state: tauri::State<'_, AppState>,
+    query: String,
+    replacement: String,
+    match_case: bool,
+) -> Result<crate::search_replace::ApplyGlobalReplaceResult, String> {
+    apply_global_replace_internal(&state, &query, &replacement, match_case)
+}
+
+pub fn apply_global_replace_internal(
+    state: &AppState,
+    query: &str,
+    replacement: &str,
+    match_case: bool,
+) -> Result<crate::search_replace::ApplyGlobalReplaceResult, String> {
+    let mut vault_guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = vault_guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let mut idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_mut()
+        .ok_or_else(|| "Índice indisponível em memória.".to_string())?;
+
+    crate::search_replace::apply_global_replace_internal(
+        vault,
+        index,
+        query,
+        replacement,
+        match_case,
+    )
+    .map_err(|e| e.to_string())
+}
+
+/// Reverte as alterações de uma substituição global a partir do snapshot de rollback.
+#[tauri::command]
+pub fn rollback_global_replace(
+    state: tauri::State<'_, AppState>,
+    snapshot_id: String,
+) -> Result<(), String> {
+    rollback_global_replace_internal(&state, &snapshot_id)
+}
+
+pub fn rollback_global_replace_internal(state: &AppState, snapshot_id: &str) -> Result<(), String> {
+    let mut vault_guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = vault_guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let mut idx_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = idx_guard
+        .as_mut()
+        .ok_or_else(|| "Índice indisponível em memória.".to_string())?;
+
+    crate::search_replace::rollback_global_replace_internal(vault, index, snapshot_id)
+        .map_err(|e| e.to_string())
+}
+
+// ============================================================================
+// COMANDOS DE BACKUP CIFRADO ROTATIVO (M5-05)
+// ============================================================================
+
+/// Executa backup integral cifrado do cofre literário com rotação.
+#[tauri::command]
+pub fn create_vault_backup(
+    state: tauri::State<'_, AppState>,
+    destination_dir: String,
+    max_backups: Option<usize>,
+) -> Result<crate::backup::BackupResult, String> {
+    create_vault_backup_internal(&state, &destination_dir, max_backups.unwrap_or(5))
+}
+
+pub fn create_vault_backup_internal(
+    state: &AppState,
+    destination_dir: &str,
+    max_backups: usize,
+) -> Result<crate::backup::BackupResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_dir.trim());
+    let title = vault
+        .manifest()
+        .map(|m| m.project_title.clone())
+        .unwrap_or_else(|_| "Romance".to_string());
+
+    crate::backup::create_encrypted_backup_internal(
+        vault.root_path(),
+        &dest_path,
+        &title,
+        max_backups,
+    )
+}
+
+/// Lista backups existentes na pasta de destino informada.
+#[tauri::command]
+pub fn list_vault_backups(
+    state: tauri::State<'_, AppState>,
+    destination_dir: String,
+) -> Result<Vec<crate::backup::BackupInfo>, String> {
+    list_vault_backups_internal(&state, &destination_dir)
+}
+
+pub fn list_vault_backups_internal(
+    state: &AppState,
+    destination_dir: &str,
+) -> Result<Vec<crate::backup::BackupInfo>, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_dir.trim());
+    let title = vault
+        .manifest()
+        .map(|m| m.project_title.clone())
+        .unwrap_or_else(|_| "Romance".to_string());
+
+    crate::backup::list_backups_internal(vault.root_path(), &dest_path, &title)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
