@@ -19,9 +19,11 @@
   import GlobalSearchModal from './search/GlobalSearchModal.svelte';
   import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
   import CompilerModal from './compiler/CompilerModal.svelte';
+  import TimelineModal from './timeline/TimelineModal.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
   import { compilerStore } from './compiler/compiler.svelte';
+  import { timelineStore } from './timeline/timeline.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
@@ -109,6 +111,12 @@
       e.preventDefault();
       if (vault.isOpen && !vault.isLocked) {
         compilerStore.openModal();
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'T' || e.key === 't')) {
+      e.preventDefault();
+      if (vault.isOpen && !vault.isLocked) {
+        void timelineStore.openModal();
       }
     }
   }
@@ -227,6 +235,15 @@
 
         <button
           type="button"
+          class="action-button"
+          onclick={() => timelineStore.openModal()}
+          title={t('timeline.modalTitle')}
+        >
+          ⏳ {t('timeline.modalTitle')}
+        </button>
+
+        <button
+          type="button"
           class="action-button lock-action"
           onclick={() => vault.lockVault()}
           title={t('vault.status.lockButton')}
@@ -312,6 +329,8 @@
   <BackupSettingsModal />
 
   <CompilerModal />
+
+  <TimelineModal />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />

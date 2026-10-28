@@ -2496,6 +2496,33 @@ pub fn export_txt_dossier_internal(
         .map_err(|e| e.to_string())
 }
 
+#[tauri::command]
+pub fn get_vault_timeline(
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::timeline::VaultTimeline, String> {
+    get_vault_timeline_internal(&state)
+}
+
+pub fn get_vault_timeline_internal(
+    state: &AppState,
+) -> Result<crate::timeline::VaultTimeline, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let index_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    crate::timeline::build_vault_timeline(vault, index_guard.as_ref()).map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -12,6 +12,7 @@ pub mod refactor;
 pub mod search_replace;
 pub mod snapshots;
 pub mod state;
+pub mod timeline;
 pub mod vault;
 pub mod worldbuilding;
 
@@ -81,6 +82,7 @@ pub fn run() {
             commands::export_epub,
             commands::export_pdf_html,
             commands::export_txt_dossier,
+            commands::get_vault_timeline,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
