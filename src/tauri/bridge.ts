@@ -403,6 +403,86 @@ export interface BackupResult {
   rotated_count: number;
 }
 
+export interface GraphNode {
+  id: string;
+  title: string;
+  kind: string;
+  summary: string | null;
+  tags: string[];
+  status: string | null;
+  mention_count: number;
+  connections_count: number;
+  is_orphan: boolean;
+}
+
+export interface GraphEdge {
+  source: string;
+  target: string;
+  label?: string | null;
+  weight: number;
+}
+
+export interface GraphData {
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  total_nodes: number;
+  total_edges: number;
+  orphan_nodes_count: number;
+}
+
+export interface LocalGraphData {
+  center_node_id: string;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  depth: number;
+}
+
+export type CanvasNodeType = 'text' | 'file' | 'link' | 'group';
+
+export interface CanvasNode {
+  id: string;
+  type: CanvasNodeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  color?: string | null;
+  text?: string | null;
+  file?: string | null;
+  url?: string | null;
+  label?: string | null;
+  entity_kind?: string | null;
+  entity_summary?: string | null;
+}
+
+export interface CanvasEdge {
+  id: string;
+  fromNode: string;
+  fromSide?: string | null;
+  fromEnd?: string | null;
+  toNode: string;
+  toSide?: string | null;
+  toEnd?: string | null;
+  label?: string | null;
+  color?: string | null;
+}
+
+export interface CanvasDocument {
+  id: string;
+  name: string;
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
+  updated_at: string;
+}
+
+export interface CanvasSummary {
+  id: string;
+  name: string;
+  nodes_count: number;
+  edges_count: number;
+  updated_at: string;
+}
+
 const mockSnapshots: Record<string, { meta: SnapshotMeta; content: string }[]> = {
   'mock-scene-1': [
     {
@@ -1360,6 +1440,103 @@ export async function safeInvoke<T>(
       const name = payload?.default_filename || `livro.${ext}`;
       return `/mock/exports/${name}` as T;
     }
+    if (cmd === 'get_vault_graph') {
+      const nodes: GraphNode[] = mockItems.map((item, idx) => ({
+        id: item.id,
+        title: item.title,
+        kind: item.kind,
+        summary: item.kind === 'character' ? 'Personagem do mundo' : null,
+        tags: item.tags,
+        status: item.status,
+        mention_count: idx === 0 ? 3 : 1,
+        connections_count: idx < 2 ? 1 : 0,
+        is_orphan: idx >= 2,
+      }));
+      const edges: GraphEdge[] = [
+        {
+          source: 'mock-scene-1',
+          target: 'mock-char-1',
+          label: 'cita',
+          weight: 1,
+        },
+      ];
+      return {
+        nodes,
+        edges,
+        total_nodes: nodes.length,
+        total_edges: edges.length,
+        orphan_nodes_count: nodes.filter((n) => n.is_orphan).length,
+      } as T;
+    }
+    if (cmd === 'get_local_graph') {
+      const payload = args as unknown as { center_node_id: string; depth?: number };
+      const centerId = payload?.center_node_id || 'mock-char-1';
+      const nodes: GraphNode[] = mockItems
+        .filter((i) => i.id === centerId || i.id === 'mock-scene-1')
+        .map((item) => ({
+          id: item.id,
+          title: item.title,
+          kind: item.kind,
+          summary: null,
+          tags: item.tags,
+          status: item.status,
+          mention_count: 1,
+          connections_count: 1,
+          is_orphan: false,
+        }));
+      const edges: GraphEdge[] = [
+        {
+          source: 'mock-scene-1',
+          target: centerId,
+          label: 'cita',
+          weight: 1,
+        },
+      ];
+      return {
+        center_node_id: centerId,
+        nodes,
+        edges,
+        depth: payload?.depth || 1,
+      } as T;
+    }
+    if (cmd === 'load_canvas') {
+      return {
+        id: 'main',
+        name: 'Quadro Principal',
+        nodes: [
+          {
+            id: 'n-1',
+            type: 'text',
+            x: 100,
+            y: 100,
+            width: 250,
+            height: 120,
+            color: '1',
+            text: 'Ideia inicial de enredo',
+          },
+        ],
+        edges: [],
+        updated_at: '1700000000',
+      } as T;
+    }
+    if (cmd === 'save_canvas') {
+      const payload = args as unknown as { canvas: CanvasDocument };
+      return (payload?.canvas?.id || 'main') as T;
+    }
+    if (cmd === 'list_canvases') {
+      return [
+        {
+          id: 'main',
+          name: 'Quadro Principal',
+          nodes_count: 1,
+          edges_count: 0,
+          updated_at: '1700000000',
+        },
+      ] as T;
+    }
+    if (cmd === 'delete_canvas') {
+      return true as T;
+    }
   }
 
   return await tauriInvoke<T>(cmd, normalizedArgs);
@@ -1463,4 +1640,46 @@ export async function pickSaveExportPath(
     default_filename: defaultFilename,
     format_extension: formatExtension,
   });
+}
+
+// ============================================================================
+// Grafo e Canvas Narrativo (PRD E4, E10 / M8-01 a M8-04)
+// ============================================================================
+
+export async function getVaultGraph(
+  filterKinds?: string[],
+  includeOrphans?: boolean
+): Promise<GraphData> {
+  return safeInvoke<GraphData>('get_vault_graph', {
+    filter_kinds: filterKinds,
+    include_orphans: includeOrphans,
+  });
+}
+
+export async function getLocalGraph(
+  centerNodeId: string,
+  depth?: number
+): Promise<LocalGraphData> {
+  return safeInvoke<LocalGraphData>('get_local_graph', {
+    center_node_id: centerNodeId,
+    depth,
+  });
+}
+
+export async function loadCanvas(canvasId?: string): Promise<CanvasDocument> {
+  return safeInvoke<CanvasDocument>('load_canvas', {
+    canvas_id: canvasId,
+  });
+}
+
+export async function saveCanvas(canvas: CanvasDocument): Promise<string> {
+  return safeInvoke<string>('save_canvas', { canvas });
+}
+
+export async function listCanvases(): Promise<CanvasSummary[]> {
+  return safeInvoke<CanvasSummary[]>('list_canvases');
+}
+
+export async function deleteCanvas(canvasId: string): Promise<boolean> {
+  return safeInvoke<boolean>('delete_canvas', { canvas_id: canvasId });
 }

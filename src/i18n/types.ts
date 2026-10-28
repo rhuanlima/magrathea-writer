@@ -415,6 +415,43 @@ export interface TranslationSchema {
     relativeTimeBadge: string;
     undatedBadge: string;
   };
+  graph: {
+    modalTitle: string;
+    tabGraph: string;
+    tabCanvas: string;
+    tabLocalGraph: string;
+    filterAll: string;
+    filterScenes: string;
+    filterCharacters: string;
+    filterLocations: string;
+    filterItems: string;
+    filterFactions: string;
+    filterLore: string;
+    toggleOrphans: string;
+    showOrphans: string;
+    hideOrphans: string;
+    searchPlaceholder: string;
+    statsNodes: string;
+    statsEdges: string;
+    statsOrphans: string;
+    localGraphDepth: string;
+    centerOnNode: string;
+    openInEditor: string;
+    inspectNode: string;
+  };
+  canvas: {
+    addPostIt: string;
+    addEntityCard: string;
+    saveCanvas: string;
+    saved: string;
+    zoomIn: string;
+    zoomOut: string;
+    fitView: string;
+    emptyCanvasHint: string;
+    deleteNode: string;
+    viewDetails: string;
+    selectEntityPlaceholder: string;
+  };
 }
 
 /**

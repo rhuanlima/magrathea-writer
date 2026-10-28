@@ -20,10 +20,12 @@
   import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
   import CompilerModal from './compiler/CompilerModal.svelte';
   import TimelineModal from './timeline/TimelineModal.svelte';
+  import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
   import { compilerStore } from './compiler/compiler.svelte';
   import { timelineStore } from './timeline/timeline.svelte';
+  import { graphStore } from './graph/graph.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
@@ -117,6 +119,12 @@
       e.preventDefault();
       if (vault.isOpen && !vault.isLocked) {
         void timelineStore.openModal();
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'G' || e.key === 'g')) {
+      e.preventDefault();
+      if (vault.isOpen && !vault.isLocked) {
+        graphStore.openModal();
       }
     }
   }
@@ -244,6 +252,15 @@
 
         <button
           type="button"
+          class="action-button"
+          onclick={() => graphStore.openModal()}
+          title={t('graph.modalTitle')}
+        >
+          🕸️ {t('graph.modalTitle')}
+        </button>
+
+        <button
+          type="button"
           class="action-button lock-action"
           onclick={() => vault.lockVault()}
           title={t('vault.status.lockButton')}
@@ -331,6 +348,8 @@
   <CompilerModal />
 
   <TimelineModal />
+
+  <GraphCanvasModal />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />

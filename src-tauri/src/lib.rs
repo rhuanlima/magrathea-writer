@@ -1,10 +1,12 @@
 //! Core library module for Magrathea Writer desktop application.
 
 pub mod backup;
+pub mod canvas;
 pub mod commands;
 pub mod compiler;
 pub mod crypto;
 pub mod document;
+pub mod graph;
 pub mod index;
 pub mod keychain;
 pub mod productivity;
@@ -86,6 +88,12 @@ pub fn run() {
             commands::pick_vault_path,
             commands::pick_directory,
             commands::pick_save_export_path,
+            commands::get_vault_graph,
+            commands::get_local_graph,
+            commands::load_canvas,
+            commands::save_canvas,
+            commands::list_canvases,
+            commands::delete_canvas,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
