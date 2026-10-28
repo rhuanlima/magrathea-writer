@@ -13,6 +13,7 @@ import {
   type RenameRefactorPreviewResponse,
   type ApplyRenameRefactorResponse,
 } from '../tauri/bridge';
+import { addRecentVault } from './recent-vaults';
 
 class VaultStore {
   isOpen = $state(false);
@@ -101,6 +102,10 @@ class VaultStore {
       this.vaultPath = response.vault_path;
       this.recoveryKeyToken = response.recovery_key_token;
 
+      if (response.vault_path) {
+        addRecentVault({ path: response.vault_path, title: response.project_title || '' });
+      }
+
       return response;
     } catch (err) {
       this.errorMessage = String(err);
@@ -134,6 +139,10 @@ class VaultStore {
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
 
+      if (response.is_open && !response.is_locked && response.vault_path) {
+        addRecentVault({ path: response.vault_path, title: response.project_title || '' });
+      }
+
       return response;
     } catch (err) {
       this.errorMessage = String(err);
@@ -166,6 +175,10 @@ class VaultStore {
       this.vaultId = response.vault_id;
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
+
+      if (response.is_open && !response.is_locked && response.vault_path) {
+        addRecentVault({ path: response.vault_path, title: response.project_title || '' });
+      }
 
       return response;
     } catch (err) {
@@ -326,6 +339,10 @@ class VaultStore {
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
       this.hasKeyringEnabled = true;
+
+      if (response.is_open && !response.is_locked && response.vault_path) {
+        addRecentVault({ path: response.vault_path, title: response.project_title || '' });
+      }
 
       return response;
     } catch (err) {
