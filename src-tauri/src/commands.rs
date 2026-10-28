@@ -12,6 +12,9 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+/// Frase-senha interna transparente utilizada para cofres no modo livre (sem senha).
+pub const PASSWORDLESS_MARKER: &str = "__MAGRATHEA_PASSWORDLESS_VAULT__";
+
 /// Resposta retornada após a criação bem-sucedida de um cofre.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct CreateVaultResponse {
@@ -82,9 +85,12 @@ pub fn create_vault_internal(
         return Err("O título do projeto não pode ser vazio.".to_string());
     }
 
-    if passphrase.is_empty() {
-        return Err("A senha mestra não pode ser vazia.".to_string());
-    }
+    let is_passwordless = passphrase.trim().is_empty();
+    let effective_passphrase = if is_passwordless {
+        PASSWORDLESS_MARKER
+    } else {
+        passphrase
+    };
 
     let raw_path = PathBuf::from(dir_path.trim());
     let target_vault_path = resolve_vault_path(&raw_path, trimmed_title);
@@ -95,11 +101,16 @@ pub fn create_vault_internal(
     let unlocked_vault = VaultStorage::create(
         &target_vault_path,
         trimmed_title,
-        passphrase.as_bytes(),
+        effective_passphrase.as_bytes(),
         &recovery_key,
         None,
     )
     .map_err(|e| format!("Falha ao criar cofre: {e}"))?;
+
+    if is_passwordless {
+        let marker_file = unlocked_vault.root_path().join("passwordless");
+        let _ = fs::write(marker_file, b"MAGRATHEA_PASSWORDLESS_VAULT");
+    }
 
     let vault_id = unlocked_vault.header().vault_id.clone();
     let final_path = target_vault_path.display().to_string();
@@ -217,18 +228,42 @@ pub fn open_vault_with_passphrase(
     open_vault_with_passphrase_internal(&state, &vault_path, &passphrase)
 }
 
+/// Verifica se um determinado cofre foi criado no modo livre (sem senha).
+#[tauri::command]
+pub fn is_vault_passwordless(vault_path: String) -> Result<bool, String> {
+    let raw_path = PathBuf::from(vault_path.trim());
+    let path = if raw_path.extension().is_some_and(|ext| ext == "magrathea") {
+        raw_path
+    } else {
+        raw_path.join(".magrathea")
+    };
+    Ok(path.join("passwordless").exists())
+}
+
 /// Lógica interna para abertura de cofre com frase-senha.
 pub fn open_vault_with_passphrase_internal(
     state: &AppState,
     vault_path: &str,
     passphrase: &str,
 ) -> Result<VaultStatusResponse, String> {
-    let path = PathBuf::from(vault_path.trim());
+    let raw_path = PathBuf::from(vault_path.trim());
+    let path = if raw_path.extension().is_some_and(|ext| ext == "magrathea") {
+        raw_path
+    } else {
+        raw_path.join(".magrathea")
+    };
     if !path.exists() {
         return Err("O caminho especificado para o cofre não foi encontrado.".to_string());
     }
 
-    let unlocked_vault = VaultStorage::open_with_passphrase(&path, passphrase.as_bytes())
+    let is_passwordless = path.join("passwordless").exists();
+    let effective_passphrase = if passphrase.trim().is_empty() && is_passwordless {
+        PASSWORDLESS_MARKER
+    } else {
+        passphrase
+    };
+
+    let unlocked_vault = VaultStorage::open_with_passphrase(&path, effective_passphrase.as_bytes())
         .map_err(|_| "Senha incorreta ou cofre corrompido.".to_string())?;
 
     let vault_id = unlocked_vault.header().vault_id.clone();
@@ -2459,6 +2494,33 @@ pub fn export_txt_dossier_internal(
     let dest_path = PathBuf::from(destination_dir.trim());
     crate::compiler::export_txt_dossier_internal(vault, &dest_path, settings)
         .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn get_vault_timeline(
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::timeline::VaultTimeline, String> {
+    get_vault_timeline_internal(&state)
+}
+
+pub fn get_vault_timeline_internal(
+    state: &AppState,
+) -> Result<crate::timeline::VaultTimeline, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let index_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    crate::timeline::build_vault_timeline(vault, index_guard.as_ref()).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

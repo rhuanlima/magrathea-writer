@@ -391,6 +391,30 @@ export interface TranslationSchema {
     exportSuccess: string;
     exportError: string;
   };
+  timeline: {
+    modalTitle: string;
+    bookOrderTab: string;
+    chronologicalTab: string;
+    totalEvents: string;
+    datedEvents: string;
+    flashbacksCount: string;
+    flashforwardsCount: string;
+    allCharacters: string;
+    allLocations: string;
+    searchPlaceholder: string;
+    togglePacing: string;
+    pacingPanelTitle: string;
+    densityLabel: string;
+    wordsLabel: string;
+    scenesLabel: string;
+    goToSceneButton: string;
+    noEventsFound: string;
+    flashbackBadge: string;
+    flashforwardBadge: string;
+    realDateBadge: string;
+    relativeTimeBadge: string;
+    undatedBadge: string;
+  };
 }
 
 /**

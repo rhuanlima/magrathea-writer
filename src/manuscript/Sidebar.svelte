@@ -57,6 +57,8 @@
   let editingItemId = $state<string | null>(null);
   let editingTitle = $state('');
 
+  let showStructureGuide = $state<boolean>(false);
+
   function startEditing(id: string, currentTitle: string) {
     editingItemId = id;
     editingTitle = currentTitle;
@@ -105,13 +107,11 @@
     <div
       class="node-main"
       onclick={() => {
-        if (item.kind === 'scene') {
-          manuscript.selectScene(item.id);
-        }
+        manuscript.selectScene(item.id);
       }}
       ondblclick={() => startEditing(item.id, item.title)}
       onkeydown={(e) => {
-        if (e.key === 'Enter' && item.kind === 'scene') {
+        if (e.key === 'Enter') {
           manuscript.selectScene(item.id);
         }
       }}
@@ -120,11 +120,11 @@
     >
       <span class="kind-icon" title={item.kind}>
         {#if item.kind === 'part'}
-          §
+          📚
         {:else if item.kind === 'chapter'}
-          ¶
+          📖
         {:else}
-          •
+          🎬
         {/if}
       </span>
 
@@ -245,20 +245,49 @@
           type="button"
           class="add-root-btn"
           onclick={() => handleCreateRoot('part')}
-          title={t('manuscript.newPart')}
+          title="Nova Parte (Divisão macro)"
         >
-          + {t('manuscript.newPart')}
+          + Parte
         </button>
         <button
           type="button"
           class="add-root-btn"
           onclick={() => handleCreateRoot('chapter')}
-          title={t('manuscript.newChapter')}
+          title="Novo Capítulo"
         >
-          + {t('manuscript.newChapter')}
+          + Cap
+        </button>
+        <button
+          type="button"
+          class="add-root-btn"
+          onclick={() => handleCreateRoot('scene')}
+          title="Nova Cena solta"
+        >
+          + Cena
+        </button>
+        <button
+          type="button"
+          class="help-structure-btn"
+          onclick={() => (showStructureGuide = !showStructureGuide)}
+          title="Entenda como Parte > Capítulo > Cena compõem o livro"
+        >
+          💡
         </button>
       </div>
     </header>
+
+    {#if showStructureGuide}
+      <div class="structure-guide-card">
+        <div class="guide-header">
+          <strong>Como compor seu livro:</strong>
+          <button type="button" class="close-guide-btn" onclick={() => (showStructureGuide = false)}>✕</button>
+        </div>
+        <p class="guide-item"><strong>📚 Parte:</strong> Grande ato ou arco narrativo do livro.</p>
+        <p class="guide-item"><strong>📖 Capítulo:</strong> Agrupa as cenas de um momento.</p>
+        <p class="guide-item"><strong>🎬 Cena:</strong> Onde a ação acontece. Na compilação final, as cenas são unidas pelo separador (* * *) formando o capítulo contínuo.</p>
+        <p class="guide-tip"><em>Dica:</em> Você pode clicar em qualquer item para escrever notas, sinopses ou o texto da história!</p>
+      </div>
+    {/if}
 
     <div class="tree-content">
       {#if manuscript.tree.length === 0}
@@ -408,6 +437,59 @@
   .header-buttons {
     display: flex;
     gap: 4px;
+  }
+
+  .help-structure-btn {
+    padding: 3px 6px;
+    background-color: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11px;
+    transition: background-color 0.15s ease;
+  }
+
+  .help-structure-btn:hover {
+    background-color: var(--color-paper-hover);
+  }
+
+  .structure-guide-card {
+    margin: 8px;
+    padding: 10px;
+    background-color: var(--color-paper-surface);
+    border: 1px solid var(--color-bronze);
+    border-radius: var(--radius-sm);
+    font-family: var(--font-ui);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--color-ink-charcoal);
+  }
+
+  .guide-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+    color: var(--color-bronze);
+  }
+
+  .close-guide-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--color-ink-muted);
+  }
+
+  .guide-item {
+    margin: 3px 0;
+  }
+
+  .guide-tip {
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--color-paper-border);
+    color: var(--color-ink-muted);
   }
 
   .add-root-btn {

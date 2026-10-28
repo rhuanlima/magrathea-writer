@@ -346,6 +346,54 @@ export interface ExportDocumentResult {
   byte_size: number;
 }
 
+export interface TimelineEvent {
+  id: string;
+  scene_title: string;
+  chapter_id: string | null;
+  chapter_title: string | null;
+  part_id: string | null;
+  part_title: string | null;
+  book_order: number;
+  raw_time: string | null;
+  time_type: 'real_date' | 'relative' | 'undated';
+  chronological_rank: number;
+  chronological_order: number;
+  is_flashback: boolean;
+  is_flashforward: boolean;
+  summary: string | null;
+  characters: string[];
+  locations: string[];
+  status: string | null;
+  word_count: number;
+}
+
+export interface ChapterPacing {
+  chapter_id: string;
+  chapter_title: string;
+  part_title: string | null;
+  scene_count: number;
+  word_count: number;
+  start_time: string | null;
+  end_time: string | null;
+  event_density: number;
+  characters: string[];
+  locations: string[];
+  pacing_note: string | null;
+}
+
+export interface VaultTimelineResponse {
+  events: TimelineEvent[];
+  narrative_order: string[];
+  chronological_order: string[];
+  chapter_pacing: ChapterPacing[];
+  all_characters: string[];
+  all_locations: string[];
+  total_events: number;
+  dated_events_count: number;
+  total_flashbacks: number;
+  total_flashforwards: number;
+}
+
 export interface BackupResult {
   backup_file: string;
   destination_dir: string;
@@ -556,6 +604,10 @@ export async function safeInvoke<T>(
           '00000000-00000000-00000000-00000000-00000000-00000000-00000000-00000000',
         vault_path: `${payload?.dir_path || '/home/author/Documents'}/${payload?.project_title || 'Romance'}.magrathea`,
       } as T;
+    }
+    if (cmd === 'is_vault_passwordless') {
+      const payload = args as unknown as { vault_path?: string };
+      return (payload?.vault_path?.includes('passwordless') || false) as T;
     }
     if (cmd === 'open_vault_with_passphrase') {
       const payload = args as unknown as OpenVaultPayload;
@@ -1204,6 +1256,98 @@ export async function safeInvoke<T>(
         byte_size: 8900,
       } as T;
     }
+    if (cmd === 'get_vault_timeline') {
+      const mockEvents: TimelineEvent[] = [
+        {
+          id: 'mock-scene-1',
+          scene_title: 'Cena 1: A Descoberta',
+          chapter_id: 'mock-chap-1',
+          chapter_title: 'Capítulo 1: O Começo',
+          part_id: 'mock-part-1',
+          part_title: 'Parte 1: A Jornada',
+          book_order: 0,
+          raw_time: '2026-10-01',
+          time_type: 'real_date',
+          chronological_rank: 2026100100000,
+          chronological_order: 1,
+          is_flashback: false,
+          is_flashforward: false,
+          summary: 'Arthur e Ford encontram o guia no pub local.',
+          characters: ['Arthur Dent', 'Ford Prefect'],
+          locations: ['Pub Local'],
+          status: 'draft',
+          word_count: 350,
+        },
+        {
+          id: 'mock-scene-2',
+          scene_title: 'Cena 2: Lembranças da Terra',
+          chapter_id: 'mock-chap-1',
+          chapter_title: 'Capítulo 1: O Começo',
+          part_id: 'mock-part-1',
+          part_title: 'Parte 1: A Jornada',
+          book_order: 1,
+          raw_time: '1998-04-12',
+          time_type: 'real_date',
+          chronological_rank: 1998041200000,
+          chronological_order: 0,
+          is_flashback: true,
+          is_flashforward: false,
+          summary: 'Anos antes da demolição da casa de Arthur.',
+          characters: ['Arthur Dent'],
+          locations: ['Inglaterra'],
+          status: 'revised',
+          word_count: 220,
+        },
+        {
+          id: 'mock-scene-3',
+          scene_title: 'Cena 3: A Chegada à Vogon',
+          chapter_id: 'mock-chap-1',
+          chapter_title: 'Capítulo 1: O Começo',
+          part_id: 'mock-part-1',
+          part_title: 'Parte 1: A Jornada',
+          book_order: 2,
+          raw_time: '2026-10-02',
+          time_type: 'real_date',
+          chronological_rank: 2026100200000,
+          chronological_order: 2,
+          is_flashback: false,
+          is_flashforward: false,
+          summary: 'A nave vogon surge nos céus.',
+          characters: ['Ford Prefect', 'Prostetnic Vogon Jeltz'],
+          locations: ['Espaço Próximo'],
+          status: 'draft',
+          word_count: 480,
+        },
+      ];
+
+      const res: VaultTimelineResponse = {
+        events: mockEvents,
+        narrative_order: ['mock-scene-1', 'mock-scene-2', 'mock-scene-3'],
+        chronological_order: ['mock-scene-2', 'mock-scene-1', 'mock-scene-3'],
+        chapter_pacing: [
+          {
+            chapter_id: 'mock-chap-1',
+            chapter_title: 'Capítulo 1: O Começo',
+            part_title: 'Parte 1: A Jornada',
+            scene_count: 3,
+            word_count: 1050,
+            start_time: '1998-04-12',
+            end_time: '2026-10-02',
+            event_density: 2.85,
+            characters: ['Arthur Dent', 'Ford Prefect', 'Prostetnic Vogon Jeltz'],
+            locations: ['Pub Local', 'Inglaterra', 'Espaço Próximo'],
+            pacing_note: 'Ritmo acelerado (alta densidade de eventos por palavra).',
+          },
+        ],
+        all_characters: ['Arthur Dent', 'Ford Prefect', 'Prostetnic Vogon Jeltz'],
+        all_locations: ['Inglaterra', 'Pub Local', 'Espaço Próximo'],
+        total_events: 3,
+        dated_events_count: 3,
+        total_flashbacks: 1,
+        total_flashforwards: 0,
+      };
+      return res as T;
+    }
   }
 
   return await tauriInvoke<T>(cmd, normalizedArgs);
@@ -1275,4 +1419,12 @@ export async function exportTxtDossier(
     destination_dir: destinationDir,
     settings,
   });
+}
+
+// ============================================================================
+// Funções Utilitárias para a Linha do Tempo Literária (M7)
+// ============================================================================
+
+export async function getVaultTimeline(): Promise<VaultTimelineResponse> {
+  return safeInvoke<VaultTimelineResponse>('get_vault_timeline');
 }

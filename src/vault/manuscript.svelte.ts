@@ -27,11 +27,16 @@ class ManuscriptStore {
   errorMessage = $state<string | null>(null);
 
   /**
-   * Cena atualmente selecionada para edição.
+   * Item atualmente selecionado para edição (cena, capítulo, parte ou ficha).
    */
-  activeScene = $derived(
-    this.items.find((it) => it.id === this.activeSceneId && it.kind === 'scene') || null
+  activeItem = $derived(
+    this.items.find((it) => it.id === this.activeSceneId) || null
   );
+
+  /**
+   * Mantém retrocompatibilidade para componentes que consomem activeScene.
+   */
+  activeScene = $derived(this.activeItem);
 
   /**
    * Quantidade de itens descartados na lixeira interna.
