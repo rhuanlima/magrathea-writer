@@ -19,6 +19,7 @@
   import { searchStore } from '../search/search.svelte';
   import { supportStore } from '../support/support.svelte';
   import { preferences } from '../preferences/preferences.svelte';
+  import { onboardingStore } from '../onboarding/onboarding.svelte';
 
   interface PaletteEntry {
     id: string;
@@ -170,6 +171,16 @@
       icon: '☕',
       execute: () => {
         supportStore.open();
+      },
+    },
+    {
+      id: 'action-onboarding-course',
+      category: 'action',
+      title: 'Curso & Guia do Autor (Sobre)',
+      subtitle: 'Aprenda o básico do aplicativo: cofre, manuscrito, segundo cérebro e publicação',
+      icon: '🎓',
+      execute: () => {
+        onboardingStore.open();
       },
     },
     {

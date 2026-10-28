@@ -2,10 +2,26 @@
   import { t } from '../i18n';
   import { manuscript } from '../vault/manuscript.svelte';
 
-  function handleEmptyTrash() {
-    if (confirm(t('manuscript.confirmEmptyTrash'))) {
-      void manuscript.emptyTrash();
+  let isConfirming = $state(false);
+  let isClearing = $state(false);
+  let errorMessage = $state<string | null>(null);
+
+  async function handleConfirmEmpty() {
+    isClearing = true;
+    errorMessage = null;
+    try {
+      await manuscript.emptyTrash();
+      isConfirming = false;
+    } catch (err) {
+      errorMessage = String(err);
+    } finally {
+      isClearing = false;
     }
+  }
+
+  function handleCancel() {
+    isConfirming = false;
+    errorMessage = null;
   }
 </script>
 
@@ -42,9 +58,15 @@
       </header>
 
       <div class="trash-body">
+        {#if errorMessage}
+          <div class="trash-error">⚠️ {errorMessage}</div>
+        {/if}
+
         {#if manuscript.trash.length === 0}
           <div class="empty-state">
+            <span class="empty-icon">🍃</span>
             <p>{t('manuscript.noTrashItems')}</p>
+            <span class="empty-hint">Nenhum capítulo ou cena descartada no momento.</span>
           </div>
         {:else}
           <ul class="trash-list">
@@ -70,13 +92,37 @@
 
       {#if manuscript.trash.length > 0}
         <footer class="trash-footer">
-          <button
-            type="button"
-            class="empty-trash-btn"
-            onclick={handleEmptyTrash}
-          >
-            {t('manuscript.emptyTrash')}
-          </button>
+          {#if isConfirming}
+            <div class="confirm-box">
+              <span class="confirm-text">⚠️ Deseja apagar permanentemente todos os {manuscript.trashCount} itens da lixeira?</span>
+              <div class="confirm-actions">
+                <button
+                  type="button"
+                  class="confirm-danger-btn"
+                  onclick={handleConfirmEmpty}
+                  disabled={isClearing}
+                >
+                  {isClearing ? 'Esvaziando...' : 'Sim, Esvaziar Tudo'}
+                </button>
+                <button
+                  type="button"
+                  class="cancel-btn"
+                  onclick={handleCancel}
+                  disabled={isClearing}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          {:else}
+            <button
+              type="button"
+              class="empty-trash-btn"
+              onclick={() => (isConfirming = true)}
+            >
+              🗑️ {t('manuscript.emptyTrash')}
+            </button>
+          {/if}
         </footer>
       {/if}
     </div>
@@ -95,7 +141,7 @@
   }
 
   .trash-drawer {
-    width: 360px;
+    width: 380px;
     max-width: 90vw;
     height: 100%;
     background-color: var(--color-paper-base);
@@ -127,54 +173,81 @@
   .title-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--space-xs);
   }
 
-  .title-group h3 {
+  .trash-icon {
+    font-size: 16px;
+  }
+
+  .trash-header h3 {
     margin: 0;
-    font-family: var(--font-ui);
     font-size: 14px;
+    font-family: var(--font-ui);
     font-weight: 600;
     color: var(--color-ink-charcoal);
   }
 
   .count-badge {
     background-color: var(--color-paper-border);
-    color: var(--color-ink-muted);
+    color: var(--color-ink-faded);
     font-size: 11px;
-    font-weight: 600;
+    font-family: var(--font-mono);
     padding: 1px 6px;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
   }
 
   .close-btn {
     border: none;
     background: transparent;
     font-size: 20px;
-    line-height: 1;
+    color: var(--color-ink-faded);
     cursor: pointer;
-    color: var(--color-ink-muted);
+    padding: 0 4px;
+    line-height: 1;
+    border-radius: var(--radius-sm);
   }
 
   .close-btn:hover {
     color: var(--color-ink-charcoal);
+    background-color: var(--color-paper-hover);
   }
 
   .trash-body {
     flex: 1;
     overflow-y: auto;
-    padding: var(--space-md);
+    padding: var(--space-sm);
+  }
+
+  .trash-error {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 0.6rem 0.8rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    margin-bottom: 0.75rem;
   }
 
   .empty-state {
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 200px;
+    height: 60%;
     color: var(--color-ink-muted);
     font-family: var(--font-ui);
     font-size: 13px;
     text-align: center;
+    gap: 0.5rem;
+  }
+
+  .empty-icon {
+    font-size: 2rem;
+  }
+
+  .empty-hint {
+    font-size: 0.78rem;
+    color: var(--color-ink-faded);
   }
 
   .trash-list {
@@ -183,7 +256,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--space-xs);
   }
 
   .trash-item {
@@ -191,10 +264,10 @@
     align-items: center;
     justify-content: space-between;
     padding: 8px 10px;
+    border-radius: var(--radius-sm);
     background-color: var(--color-paper-surface);
     border: 1px solid var(--color-paper-border);
-    border-radius: var(--radius-sm);
-    gap: 8px;
+    gap: var(--space-xs);
   }
 
   .item-meta {
@@ -256,10 +329,65 @@
     border: 1px solid rgba(184, 51, 42, 0.2);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    transition: all 0.15s ease;
   }
 
   .empty-trash-btn:hover {
     background-color: rgba(184, 51, 42, 0.2);
+  }
+
+  .confirm-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 0.5rem;
+    background: var(--color-paper-base);
+    border: 1px solid var(--color-paper-border);
+    border-radius: 6px;
+  }
+
+  .confirm-text {
+    font-size: 0.78rem;
+    color: var(--color-error);
+    font-family: var(--font-ui);
+    line-height: 1.35;
+  }
+
+  .confirm-actions {
+    display: flex;
+    gap: 0.4rem;
+  }
+
+  .confirm-danger-btn {
+    flex: 1;
+    padding: 6px;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 600;
+    background-color: #b8332a;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .confirm-danger-btn:hover {
+    background-color: #991b1b;
+  }
+
+  .cancel-btn {
+    padding: 6px 12px;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    background: transparent;
+    color: var(--color-ink-muted);
+    border: 1px solid var(--color-paper-border);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  .cancel-btn:hover {
+    background: var(--color-paper-hover);
+    color: var(--color-ink-charcoal);
   }
 </style>
