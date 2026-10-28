@@ -114,39 +114,70 @@
       </button>
     </div>
 
-    <!-- Navegação por Abas -->
-    <div class="pref-nav-tabs">
+    <!-- Navegação por Guias (Tabs) de Sistema -->
+    <div class="pref-tab-bar" aria-label="Guias de Preferências" role="tablist">
       <button
         type="button"
-        class="tab-btn"
+        role="tab"
+        id="tab-editor"
+        aria-selected={preferences.activeTab === 'editor'}
+        class="tab-guide-btn"
         class:active={preferences.activeTab === 'editor'}
         onclick={() => preferences.setTab('editor')}
       >
-        ✍️ Editor & Tipografia
+        <span class="tab-guide-icon">✍️</span>
+        <div class="tab-guide-texts">
+          <span class="tab-guide-title">Editor Literário</span>
+          <span class="tab-guide-sub">Fontes & Layout</span>
+        </div>
       </button>
+
       <button
         type="button"
-        class="tab-btn"
+        role="tab"
+        id="tab-security"
+        aria-selected={preferences.activeTab === 'security'}
+        class="tab-guide-btn"
         class:active={preferences.activeTab === 'security'}
         onclick={() => preferences.setTab('security')}
       >
-        🛡️ Segurança do Mundo
+        <span class="tab-guide-icon">🛡️</span>
+        <div class="tab-guide-texts">
+          <span class="tab-guide-title">Segurança</span>
+          <span class="tab-guide-sub">Senha & DEK</span>
+        </div>
       </button>
+
       <button
         type="button"
-        class="tab-btn"
+        role="tab"
+        id="tab-focus"
+        aria-selected={preferences.activeTab === 'focus'}
+        class="tab-guide-btn"
         class:active={preferences.activeTab === 'focus'}
         onclick={() => preferences.setTab('focus')}
       >
-        🎯 Foco & Produtividade
+        <span class="tab-guide-icon">🎯</span>
+        <div class="tab-guide-texts">
+          <span class="tab-guide-title">Foco & Pausas</span>
+          <span class="tab-guide-sub">Bloqueio & Atalhos</span>
+        </div>
       </button>
+
       <button
         type="button"
-        class="tab-btn"
+        role="tab"
+        id="tab-system"
+        aria-selected={preferences.activeTab === 'system'}
+        class="tab-guide-btn"
         class:active={preferences.activeTab === 'system'}
         onclick={() => preferences.setTab('system')}
       >
-        🎨 Aparência & Sistema
+        <span class="tab-guide-icon">🎨</span>
+        <div class="tab-guide-texts">
+          <span class="tab-guide-title">Sistema</span>
+          <span class="tab-guide-sub">Tema & Idioma</span>
+        </div>
       </button>
     </div>
 
@@ -607,37 +638,85 @@
     background: var(--color-paper-hover);
   }
 
-  .pref-nav-tabs {
-    display: flex;
-    gap: 0.35rem;
-    padding: 0.5rem 1.5rem 0;
+  .pref-tab-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    padding: 8px 16px 0;
     background: var(--color-paper-surface);
-    border-bottom: 1px solid var(--color-paper-border);
-    overflow-x: auto;
+    border-bottom: 2px solid var(--color-paper-border);
   }
 
-  .tab-btn {
-    padding: 0.5rem 0.85rem;
-    font-family: var(--font-ui);
-    font-size: 0.82rem;
-    font-weight: 500;
+  .tab-guide-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
     background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
     color: var(--color-ink-muted);
     cursor: pointer;
-    transition: all 120ms ease;
-    white-space: nowrap;
+    transition: all 140ms ease;
+    text-align: left;
+    position: relative;
+    bottom: -2px;
   }
 
-  .tab-btn:hover {
+  .tab-guide-btn:hover {
+    background: var(--color-paper-hover);
     color: var(--color-ink-charcoal);
   }
 
-  .tab-btn.active {
-    color: var(--color-olive);
-    border-bottom-color: var(--color-olive);
+  .tab-guide-btn.active {
+    background: var(--color-paper-base);
+    color: var(--color-ink-charcoal);
+    border-color: var(--color-paper-border);
+    border-top: 3px solid var(--color-terracotta);
+    border-bottom: 2px solid var(--color-paper-base);
+    box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.03);
+    z-index: 2;
+  }
+
+  .tab-guide-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .tab-guide-texts {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    overflow: hidden;
+  }
+
+  .tab-guide-title {
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
     font-weight: 600;
+    color: inherit;
+    white-space: nowrap;
+  }
+
+  .tab-guide-sub {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    color: var(--color-ink-faded);
+    white-space: nowrap;
+  }
+
+  .tab-guide-btn.active .tab-guide-sub {
+    color: var(--color-terracotta);
+    font-weight: 500;
+  }
+
+  @media (max-width: 620px) {
+    .pref-tab-bar {
+      grid-template-columns: repeat(2, 1fr);
+      padding: 6px 8px 0;
+    }
   }
 
   .pref-body {

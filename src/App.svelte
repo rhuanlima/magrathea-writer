@@ -24,6 +24,8 @@
   import SupportModal from './support/SupportModal.svelte';
   import PreferencesModal from './preferences/PreferencesModal.svelte';
   import { preferences } from './preferences/preferences.svelte';
+  import OnboardingModal from './onboarding/OnboardingModal.svelte';
+  import { onboardingStore } from './onboarding/onboarding.svelte';
   import { commandPaletteStore } from './commands/palette.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
@@ -123,6 +125,9 @@
         }),
         listenToEvent('menu_preferences', () => {
           preferences.open();
+        }),
+        listenToEvent('menu_about', () => {
+          onboardingStore.open();
         }),
       ];
 
@@ -291,6 +296,14 @@
         <button
           type="button"
           class="action-button"
+          onclick={() => onboardingStore.open()}
+          title="Curso & Guia do Autor (Sobre)"
+        >
+          🎓 Guia
+        </button>
+        <button
+          type="button"
+          class="action-button"
           onclick={toggleLanguage}
           title={t('app.switchLanguage')}
         >
@@ -359,6 +372,8 @@
   <SupportModal />
 
   <PreferencesModal />
+
+  <OnboardingModal />
 
   {#if compilerStore.toastMessage}
     <aside class="export-toast-notification" role="status" aria-live="polite">

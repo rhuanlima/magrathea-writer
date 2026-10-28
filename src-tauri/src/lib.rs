@@ -31,7 +31,13 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         "Magrathea Writer",
         true,
         &[
-            &PredefinedMenuItem::about(handle, Some("Sobre o Magrathea Writer"), None)?,
+            &MenuItem::with_id(
+                handle,
+                "menu_about",
+                "Sobre o Magrathea Writer...",
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(
                 handle,
@@ -252,13 +258,22 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         handle,
         "Ajuda",
         true,
-        &[&MenuItem::with_id(
-            handle,
-            "menu_support",
-            "Apoie o Magrathea Writer...",
-            true,
-            None::<&str>,
-        )?],
+        &[
+            &MenuItem::with_id(
+                handle,
+                "menu_about",
+                "Curso & Guia do Autor (Sobre)...",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "menu_support",
+                "Apoie o Magrathea Writer...",
+                true,
+                None::<&str>,
+            )?,
+        ],
     )?;
 
     let menu = Menu::with_items(

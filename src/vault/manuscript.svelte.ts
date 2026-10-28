@@ -194,6 +194,7 @@ class ManuscriptStore {
   async emptyTrash(): Promise<void> {
     try {
       await safeInvoke('empty_trash');
+      this.trash = [];
       await this.refreshTree();
     } catch (err) {
       this.errorMessage = String(err);
