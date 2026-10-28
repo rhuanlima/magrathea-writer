@@ -7,7 +7,7 @@
    */
 
   import { t } from '../i18n';
-  import { safeInvoke } from '../tauri/bridge';
+  import { pickVaultPath, safeInvoke } from '../tauri/bridge';
   import { vault } from './vault.svelte';
   import { getRecentVaults, type RecentVault } from './recent-vaults';
 
@@ -45,6 +45,28 @@
   function selectRecent(item: RecentVault) {
     targetPath = item.path;
     localError = null;
+  }
+
+  async function handleBrowseVault() {
+    localError = null;
+    try {
+      const selected = await pickVaultPath();
+      if (!selected) return;
+      targetPath = selected;
+
+      // Se o mundo for sem senha, abre imediatamente em 1 clique
+      const isPasswordless = await safeInvoke<boolean>('is_vault_passwordless', {
+        vault_path: selected,
+      }).catch(() => false);
+
+      if (isPasswordless) {
+        await vault.openWithPassphrase('', selected);
+        onSuccess?.();
+        onClose();
+      }
+    } catch (err) {
+      localError = String(err);
+    }
   }
 
   function handleKeydown(e: KeyboardEvent) {
@@ -158,21 +180,40 @@
       {/if}
 
       <form onsubmit={handleOpenVault} class="vault-form">
-        <!-- Caminho da Pasta -->
+        <!-- Caminho da Pasta / Arquivo .magrathea -->
         <div class="form-group">
-          <label for="open-vault-path" class="form-label">
-            {t('vault.open.vaultPathLabel')}
-          </label>
-          <input
-            id="open-vault-path"
-            type="text"
-            class="form-input code-input"
-            placeholder={t('vault.open.vaultPathPlaceholder')}
-            bind:value={targetPath}
-            required
-            autocomplete="off"
-            spellcheck="false"
-          />
+          <div class="label-row">
+            <label for="open-vault-path" class="form-label">
+              {t('vault.open.vaultPathLabel')}
+            </label>
+            <button
+              type="button"
+              class="browse-inline-btn"
+              onclick={handleBrowseVault}
+            >
+              📁 Procurar no Computador...
+            </button>
+          </div>
+          <div class="input-with-action">
+            <input
+              id="open-vault-path"
+              type="text"
+              class="form-input code-input"
+              placeholder={t('vault.open.vaultPathPlaceholder')}
+              bind:value={targetPath}
+              required
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <button
+              type="button"
+              class="btn-input-browse"
+              onclick={handleBrowseVault}
+              title="Procurar arquivo de Mundo (.magrathea)"
+            >
+              🔍
+            </button>
+          </div>
         </div>
 
         <!-- Lista de Recentes Rápidos -->
@@ -374,6 +415,47 @@
     font-size: 12px;
     font-weight: 600;
     color: var(--color-ink-charcoal, #1E231D);
+  }
+
+  .browse-inline-btn {
+    background: transparent;
+    border: none;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--color-olive, #5E6F45);
+    cursor: pointer;
+    padding: 0;
+    transition: opacity 0.15s ease;
+  }
+
+  .browse-inline-btn:hover {
+    text-decoration: underline;
+    opacity: 0.85;
+  }
+
+  .input-with-action {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+
+  .input-with-action .form-input {
+    flex: 1;
+  }
+
+  .btn-input-browse {
+    padding: 8px 12px;
+    background-color: var(--color-paper-surface, #F8F4EC);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: var(--rounded-default, 4px);
+    cursor: pointer;
+    font-size: 13px;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+  }
+
+  .btn-input-browse:hover {
+    background-color: var(--color-paper-hover, #F4EFE6);
+    border-color: var(--color-olive, #5E6F45);
   }
 
   .toggle-show-btn {

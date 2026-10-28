@@ -1348,6 +1348,18 @@ export async function safeInvoke<T>(
       };
       return res as T;
     }
+    if (cmd === 'pick_vault_path') {
+      return '/mock/path/meu_mundo.magrathea' as T;
+    }
+    if (cmd === 'pick_directory') {
+      return '/mock/path/mundos' as T;
+    }
+    if (cmd === 'pick_save_export_path') {
+      const payload = args as unknown as { default_filename?: string; format_extension?: string };
+      const ext = payload?.format_extension || 'docx';
+      const name = payload?.default_filename || `livro.${ext}`;
+      return `/mock/exports/${name}` as T;
+    }
   }
 
   return await tauriInvoke<T>(cmd, normalizedArgs);
@@ -1427,4 +1439,28 @@ export async function exportTxtDossier(
 
 export async function getVaultTimeline(): Promise<VaultTimelineResponse> {
   return safeInvoke<VaultTimelineResponse>('get_vault_timeline');
+}
+
+// ============================================================================
+// Diálogos Nativos do Sistema Operacional (Finder / Explorer)
+// ============================================================================
+
+export async function pickVaultPath(): Promise<string | null> {
+  return safeInvoke<string | null>('pick_vault_path');
+}
+
+export async function pickDirectory(title?: string): Promise<string | null> {
+  return safeInvoke<string | null>('pick_directory', { title });
+}
+
+export async function pickSaveExportPath(
+  title?: string,
+  defaultFilename?: string,
+  formatExtension?: string
+): Promise<string | null> {
+  return safeInvoke<string | null>('pick_save_export_path', {
+    title,
+    default_filename: defaultFilename,
+    format_extension: formatExtension,
+  });
 }

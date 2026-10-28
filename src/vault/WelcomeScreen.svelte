@@ -50,10 +50,10 @@
         class="action-card primary"
         onclick={() => onOpenVault()}
       >
-        <span class="card-icon">📂</span>
+        <span class="card-icon">🌍</span>
         <div class="card-texts">
           <strong class="card-title">{t('vault.open.welcomeOpenButton')}</strong>
-          <span class="card-desc">Abra um cofre existente (.magrathea) com sua senha mestra</span>
+          <span class="card-desc">Abra um mundo existente (.magrathea) no seu computador</span>
         </div>
       </button>
 
@@ -65,7 +65,7 @@
         <span class="card-icon">✨</span>
         <div class="card-texts">
           <strong class="card-title">{t('vault.open.welcomeCreateButton')}</strong>
-          <span class="card-desc">Inicie uma nova obra com criptografia XChaCha20-Poly1305</span>
+          <span class="card-desc">Construa um novo mundo literário com segurança total</span>
         </div>
       </button>
     </div>

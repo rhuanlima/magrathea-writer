@@ -9,9 +9,79 @@
 
   import { compilerStore } from './compiler.svelte';
   import { t } from '../i18n';
+  import { pickSaveExportPath, pickDirectory } from '../tauri/bridge';
 
   let exportPathInput = $state<string>('');
   let selectedExportFormat = $state<'obsidian' | 'docx' | 'epub' | 'pdf' | 'txt'>('docx');
+  let lastExportedPath = $state<string | null>(null);
+  let showAdvancedPath = $state(false);
+  let copiedFeedback = $state(false);
+
+  function getSafeFilename(ext: string): string {
+    const raw = (compilerStore.settings.title || 'manuscrito')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/gi, '_');
+    return `${raw || 'livro'}.${ext}`;
+  }
+
+  async function handleQuickExport(format: 'docx' | 'epub' | 'pdf' | 'obsidian' | 'txt') {
+    selectedExportFormat = format;
+    lastExportedPath = null;
+
+    if (format === 'docx') {
+      const defaultName = getSafeFilename('docx');
+      const chosen = await pickSaveExportPath('Exportar Manuscrito Word (.docx)', defaultName, 'docx');
+      if (chosen) {
+        exportPathInput = chosen;
+        const ok = await compilerStore.runExportDocx(chosen);
+        if (ok) lastExportedPath = chosen;
+      }
+    } else if (format === 'epub') {
+      const defaultName = getSafeFilename('epub');
+      const chosen = await pickSaveExportPath('Exportar Livro Digital EPUB (.epub)', defaultName, 'epub');
+      if (chosen) {
+        exportPathInput = chosen;
+        const ok = await compilerStore.runExportEpub(chosen);
+        if (ok) lastExportedPath = chosen;
+      }
+    } else if (format === 'pdf') {
+      const defaultName = getSafeFilename('html');
+      const chosen = await pickSaveExportPath('Exportar para Impressão / PDF (.html)', defaultName, 'html');
+      if (chosen) {
+        exportPathInput = chosen;
+        const ok = await compilerStore.runExportPdf(chosen);
+        if (ok) lastExportedPath = chosen;
+      }
+    } else if (format === 'obsidian') {
+      const chosen = await pickDirectory('Escolha onde criar a pasta do Cofre Obsidian');
+      if (chosen) {
+        exportPathInput = chosen;
+        const ok = await compilerStore.runExportObsidian(chosen);
+        if (ok) lastExportedPath = chosen;
+      }
+    } else if (format === 'txt') {
+      const chosen = await pickDirectory('Escolha onde salvar o Manuscrito TXT e Dossiê');
+      if (chosen) {
+        exportPathInput = chosen;
+        const ok = await compilerStore.runExportTxt(chosen);
+        if (ok) lastExportedPath = chosen;
+      }
+    }
+  }
+
+  async function copyPathToClipboard() {
+    if (!lastExportedPath) return;
+    try {
+      await navigator.clipboard.writeText(lastExportedPath);
+      copiedFeedback = true;
+      setTimeout(() => {
+        copiedFeedback = false;
+      }, 2500);
+    } catch {
+      // Ignora erro de clipboard se ambiente não permitir
+    }
+  }
 
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
@@ -452,144 +522,268 @@
         <!-- Aba 4: Motores de Exportação Multi-Formato -->
         {:else if compilerStore.activeTab === 'export'}
           <div class="space-y-6">
-            <div>
-              <h3 class="font-semibold text-lg">Exportação Multi-Formato</h3>
-              <p class="text-xs text-stone-500 dark:text-stone-400">
-                Selecione o formato desejado para compilar e salvar o livro diretamente no disco.
-              </p>
-            </div>
-
-            <!-- Cards de Formato -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- DOCX -->
-              <button
-                type="button"
-                onclick={() => setDefaultExportPath('docx')}
-                class="p-4 rounded-xl border text-left transition-all {selectedExportFormat === 'docx' ? 'border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500' : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950'}"
-              >
-                <div class="flex items-center gap-3 mb-2">
-                  <div class="text-xl p-2 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                    📄
-                  </div>
-                  <div class="font-bold text-sm">{t('compiler.exportDocxTitle')}</div>
-                </div>
-                <p class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                  {t('compiler.exportDocxDesc')}
+            <div class="flex items-start justify-between">
+              <div>
+                <h3 class="font-semibold text-lg">Exportação Editorial Multi-Formato</h3>
+                <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+                  Escolha o formato desejado e salve diretamente no seu computador com 1 clique através do diálogo nativo.
                 </p>
-              </button>
-
-              <!-- EPUB -->
-              <button
-                type="button"
-                onclick={() => setDefaultExportPath('epub')}
-                class="p-4 rounded-xl border text-left transition-all {selectedExportFormat === 'epub' ? 'border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500' : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950'}"
-              >
-                <div class="flex items-center gap-3 mb-2">
-                  <div class="text-xl p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                    📱
-                  </div>
-                  <div class="font-bold text-sm">{t('compiler.exportEpubTitle')}</div>
-                </div>
-                <p class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                  {t('compiler.exportEpubDesc')}
-                </p>
-              </button>
-
-              <!-- PDF / HTML -->
-              <button
-                type="button"
-                onclick={() => setDefaultExportPath('pdf')}
-                class="p-4 rounded-xl border text-left transition-all {selectedExportFormat === 'pdf' ? 'border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500' : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950'}"
-              >
-                <div class="flex items-center gap-3 mb-2">
-                  <div class="text-xl p-2 rounded-lg bg-red-500/10 text-red-600 dark:text-red-400">
-                    🖨️
-                  </div>
-                  <div class="font-bold text-sm">{t('compiler.exportPdfTitle')}</div>
-                </div>
-                <p class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                  {t('compiler.exportPdfDesc')}
-                </p>
-              </button>
-
-              <!-- Obsidian Markdown -->
-              <button
-                type="button"
-                onclick={() => setDefaultExportPath('obsidian')}
-                class="p-4 rounded-xl border text-left transition-all {selectedExportFormat === 'obsidian' ? 'border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500' : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950'}"
-              >
-                <div class="flex items-center gap-3 mb-2">
-                  <div class="text-xl p-2 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400">
-                    📁
-                  </div>
-                  <div class="font-bold text-sm">{t('compiler.exportObsidianTitle')}</div>
-                </div>
-                <p class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                  {t('compiler.exportObsidianDesc')}
-                </p>
-              </button>
-
-              <!-- TXT + Dossiê -->
-              <button
-                type="button"
-                onclick={() => setDefaultExportPath('txt')}
-                class="p-4 rounded-xl border text-left transition-all {selectedExportFormat === 'txt' ? 'border-amber-500 bg-amber-50/20 dark:bg-amber-950/20 ring-1 ring-amber-500' : 'border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950'}"
-              >
-                <div class="flex items-center gap-3 mb-2">
-                  <div class="text-xl p-2 rounded-lg bg-stone-500/10 text-stone-600 dark:text-stone-400">
-                    📝
-                  </div>
-                  <div class="font-bold text-sm">{t('compiler.exportTxtTitle')}</div>
-                </div>
-                <p class="text-xs text-stone-500 dark:text-stone-400 leading-relaxed">
-                  {t('compiler.exportTxtDesc')}
-                </p>
-              </button>
-            </div>
-
-            <!-- Destino do arquivo & Disparo -->
-            <div class="p-4 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
-              <label for="export-dest" class="block text-xs font-semibold text-stone-600 dark:text-stone-400">
-                Caminho do Arquivo ou Pasta de Destino:
-              </label>
-              <div class="flex gap-2">
-                <input
-                  id="export-dest"
-                  type="text"
-                  bind:value={exportPathInput}
-                  placeholder="/caminho/do/arquivo"
-                  class="flex-1 px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <button
-                  onclick={handleExport}
-                  disabled={compilerStore.isExporting || !exportPathInput.trim()}
-                  class="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-semibold text-sm shadow-sm transition-colors flex items-center gap-2"
-                >
-                  💾 {compilerStore.isExporting ? t('compiler.exporting') : 'Exportar Agora'}
-                </button>
               </div>
+              {#if compilerStore.compiled}
+                <div class="text-right">
+                  <span class="inline-block px-2.5 py-1 text-xs font-medium rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
+                    📖 {compilerStore.compiled.total_words} palavras • {compilerStore.compiled.sections.length} seções
+                  </span>
+                </div>
+              {/if}
+            </div>
 
-              <!-- Feedback de Exportação -->
-              {#if compilerStore.exportResult}
-                <div class="flex items-center gap-2 p-3 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 text-xs border border-emerald-500/20">
-                  <span class="text-base">✅</span>
+            <!-- Feedback de Sucesso / Erro / Andamento em Destaque -->
+            {#if compilerStore.isExporting}
+              <div class="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 animate-pulse text-sm">
+                <span class="text-xl">⏳</span>
+                <div>
+                  <div class="font-bold">Gerando e compilando publicação...</div>
+                  <div class="text-xs opacity-90">Diagramando estrutura, capítulos e metadados no arquivo final.</div>
+                </div>
+              </div>
+            {:else if compilerStore.exportResult}
+              <div class="flex items-start justify-between gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-300 text-sm shadow-sm">
+                <div class="flex items-start gap-3">
+                  <span class="text-2xl">✅</span>
                   <div>
-                    <span class="font-bold">{t('compiler.exportSuccess')}</span>
+                    <div class="font-bold text-base">{t('compiler.exportSuccess')}</div>
                     {#if 'file_path' in compilerStore.exportResult}
-                      <span class="block text-stone-600 dark:text-stone-300 mt-0.5">
-                        Salvo em: {compilerStore.exportResult.file_path} ({compilerStore.exportResult.byte_size} bytes)
+                      <p class="text-xs font-mono text-stone-700 dark:text-stone-300 mt-1 break-all">
+                        {compilerStore.exportResult.file_path}
+                      </p>
+                      <span class="inline-block mt-1 text-[11px] opacity-75">
+                        Tamanho final: {(compilerStore.exportResult.byte_size / 1024).toFixed(1)} KB
                       </span>
                     {:else if 'destination_dir' in compilerStore.exportResult}
-                      <span class="block text-stone-600 dark:text-stone-300 mt-0.5">
-                        Salvo em: {compilerStore.exportResult.destination_dir} ({compilerStore.exportResult.files_count} arquivos)
+                      <p class="text-xs font-mono text-stone-700 dark:text-stone-300 mt-1 break-all">
+                        {compilerStore.exportResult.destination_dir}
+                      </p>
+                      <span class="inline-block mt-1 text-[11px] opacity-75">
+                        Total gerado: {compilerStore.exportResult.files_count} arquivos organizados
                       </span>
                     {/if}
                   </div>
                 </div>
-              {:else if compilerStore.exportError}
-                <div class="flex items-center gap-2 p-3 rounded-lg bg-red-500/10 text-red-700 dark:text-red-400 text-xs border border-red-500/20">
-                  <span class="text-base">⚠️</span>
-                  <span>{t('compiler.exportError', { error: compilerStore.exportError })}</span>
+
+                {#if lastExportedPath}
+                  <button
+                    type="button"
+                    onclick={copyPathToClipboard}
+                    class="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex-shrink-0"
+                  >
+                    {copiedFeedback ? 'Copiado! ✓' : '📋 Copiar Caminho'}
+                  </button>
+                {/if}
+              </div>
+            {:else if compilerStore.exportError}
+              <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-900 dark:text-red-300 text-sm">
+                <span class="text-xl">⚠️</span>
+                <div>
+                  <div class="font-bold">Falha ao exportar documento</div>
+                  <div class="text-xs mt-0.5">{compilerStore.exportError}</div>
+                </div>
+              </div>
+            {/if}
+
+            <!-- Galeria de Cards de Formato Editorial -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- DOCX -->
+              <div
+                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-blue-500/50 hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-xl font-bold">
+                        📄
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportDocxTitle')}</h4>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold">.docx • Word / LibreOffice</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                    {t('compiler.exportDocxDesc')} Inclui estilos de parágrafo, quebras automáticas de capítulo e notas.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={compilerStore.isExporting}
+                  onclick={() => handleQuickExport('docx')}
+                  class="w-full py-2.5 px-4 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>💾 Salvar como DOCX...</span>
+                </button>
+              </div>
+
+              <!-- EPUB -->
+              <div
+                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xl font-bold">
+                        📱
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportEpubTitle')}</h4>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">.epub • Leitores Digitais</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                    {t('compiler.exportEpubDesc')} Pronto para Apple Books, Kobo, Kindle e lojas de e-books com metadados.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={compilerStore.isExporting}
+                  onclick={() => handleQuickExport('epub')}
+                  class="w-full py-2.5 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>💾 Salvar como EPUB...</span>
+                </button>
+              </div>
+
+              <!-- PDF / HTML -->
+              <div
+                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-rose-500/50 hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-xl font-bold">
+                        🖨️
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportPdfTitle')}</h4>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400 font-semibold">.html / .pdf • Tipografia Editorial</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                    {t('compiler.exportPdfDesc')} Layout limpo e tipografia selecionada pronto para imprimir ou gerar PDF direto no navegador.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={compilerStore.isExporting}
+                  onclick={() => handleQuickExport('pdf')}
+                  class="w-full py-2.5 px-4 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>💾 Salvar HTML / PDF...</span>
+                </button>
+              </div>
+
+              <!-- Obsidian Markdown -->
+              <div
+                class="flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-purple-500/50 hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-xl font-bold">
+                        📁
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportObsidianTitle')}</h4>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-semibold">.md • Hiperlinks [[ ]]</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                    {t('compiler.exportObsidianDesc')} Transforma todo o Mundo em notas com ligações bidirecionais, personagens e locais.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  disabled={compilerStore.isExporting}
+                  onclick={() => handleQuickExport('obsidian')}
+                  class="w-full py-2.5 px-4 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                >
+                  <span>💾 Exportar para Pasta Obsidian...</span>
+                </button>
+              </div>
+
+              <!-- TXT + Dossiê (Ocupa 2 colunas em telas maiores) -->
+              <div
+                class="md:col-span-2 flex flex-col justify-between p-5 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-stone-400 hover:shadow-md transition-all group"
+              >
+                <div>
+                  <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 rounded-xl bg-stone-500/10 text-stone-600 dark:text-stone-400 flex items-center justify-center text-xl font-bold">
+                        📝
+                      </div>
+                      <div>
+                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportTxtTitle')}</h4>
+                        <span class="text-[10px] font-mono uppercase tracking-wider text-stone-500 dark:text-stone-400 font-semibold">.txt • Texto Puro & Dossiê Completo</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-4">
+                    {t('compiler.exportTxtDesc')} Salva o manuscrito consolidado em texto puro sem formatações complexas, perfeito para arquivamento ou processamentos de texto.
+                  </p>
+                </div>
+
+                <div class="flex justify-end">
+                  <button
+                    type="button"
+                    disabled={compilerStore.isExporting}
+                    onclick={() => handleQuickExport('txt')}
+                    class="py-2.5 px-6 rounded-lg bg-stone-700 hover:bg-stone-800 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
+                  >
+                    <span>💾 Salvar TXT + Dossiê em Pasta...</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Opções Avançadas de Destino Manual (Colapsável) -->
+            <div class="border-t border-stone-200 dark:border-stone-800 pt-4">
+              <button
+                type="button"
+                onclick={() => (showAdvancedPath = !showAdvancedPath)}
+                class="text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-300 font-medium flex items-center gap-1.5 transition-colors"
+              >
+                <span>{showAdvancedPath ? '▼' : '▶'}</span>
+                <span>Opções Avançadas: Especificar caminho manual no disco</span>
+              </button>
+
+              {#if showAdvancedPath}
+                <div class="mt-3 p-4 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 space-y-3">
+                  <label for="export-dest" class="block text-xs font-semibold text-stone-600 dark:text-stone-400">
+                    Caminho Completo do Arquivo ou Diretório de Destino:
+                  </label>
+                  <div class="flex gap-2">
+                    <input
+                      id="export-dest"
+                      type="text"
+                      bind:value={exportPathInput}
+                      placeholder="/Users/seu-usuario/Documents/meu_livro.docx"
+                      class="flex-1 px-3 py-2 text-sm bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono text-xs"
+                    />
+                    <button
+                      type="button"
+                      onclick={handleExport}
+                      disabled={compilerStore.isExporting || !exportPathInput.trim()}
+                      class="px-5 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors flex items-center gap-2"
+                    >
+                      Exportar no Caminho Digitado
+                    </button>
+                  </div>
                 </div>
               {/if}
             </div>

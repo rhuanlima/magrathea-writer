@@ -2523,6 +2523,67 @@ pub fn get_vault_timeline_internal(
     crate::timeline::build_vault_timeline(vault, index_guard.as_ref()).map_err(|e| e.to_string())
 }
 
+/// Abre uma caixa de diálogo nativa do sistema operacional (Finder no macOS, Explorer no Windows)
+/// para selecionar um Mundo Literário (.magrathea).
+#[tauri::command]
+pub fn pick_vault_path() -> Result<Option<String>, String> {
+    let mut dialog = rfd::FileDialog::new().set_title("Selecione o Mundo Literário (.magrathea)");
+
+    let default_dir = get_default_vault_dir();
+    if !default_dir.is_empty() {
+        dialog = dialog.set_directory(default_dir);
+    }
+
+    if let Some(folder) = dialog.pick_folder() {
+        return Ok(Some(folder.to_string_lossy().to_string()));
+    }
+
+    Ok(None)
+}
+
+/// Abre caixa de diálogo nativa para escolher diretório de criação de novos mundos ou backups.
+#[tauri::command]
+pub fn pick_directory(title: Option<String>) -> Result<Option<String>, String> {
+    let t = title.unwrap_or_else(|| "Escolha a pasta...".to_string());
+    let mut dialog = rfd::FileDialog::new().set_title(&t);
+
+    let default_dir = get_default_vault_dir();
+    if !default_dir.is_empty() {
+        dialog = dialog.set_directory(default_dir);
+    }
+
+    if let Some(folder) = dialog.pick_folder() {
+        return Ok(Some(folder.to_string_lossy().to_string()));
+    }
+
+    Ok(None)
+}
+
+/// Abre caixa de diálogo nativa "Salvar Como..." para exportar publicações (DOCX, EPUB, PDF, etc.).
+#[tauri::command]
+pub fn pick_save_export_path(
+    title: Option<String>,
+    default_filename: Option<String>,
+    format_extension: Option<String>,
+) -> Result<Option<String>, String> {
+    let t = title.unwrap_or_else(|| "Salvar Publicação Como...".to_string());
+    let mut dialog = rfd::FileDialog::new().set_title(&t);
+
+    if let Some(ref ext) = format_extension {
+        dialog = dialog.add_filter(ext, &[ext.as_str()]);
+    }
+
+    if let Some(ref name) = default_filename {
+        dialog = dialog.set_file_name(name);
+    }
+
+    if let Some(path) = dialog.save_file() {
+        return Ok(Some(path.to_string_lossy().to_string()));
+    }
+
+    Ok(None)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
