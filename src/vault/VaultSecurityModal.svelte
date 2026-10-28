@@ -42,8 +42,8 @@
       return;
     }
 
-    if (newPass.length < 10) {
-      passphraseError = t('vault.create.minRequirementsNote');
+    if (newPass.length === 0) {
+      passphraseError = t('vault.create.passwordsDoNotMatch');
       return;
     }
 

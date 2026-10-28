@@ -312,6 +312,30 @@ const mockProductivity: ProductivityOverview = {
   },
 };
 
+function toCamelCaseKey(key: string): string {
+  return key.replace(/_([a-z0-9])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Normaliza o dicionário de argumentos para suportar tanto snake_case
+ * (usado internamente em estruturas de mock e tipos legados) quanto camelCase
+ * (exigido nativamente pela macro de comandos #[tauri::command] do Tauri 2).
+ */
+export function normalizeArgsForTauri(
+  args?: Record<string, unknown>
+): Record<string, unknown> | undefined {
+  if (!args) return undefined;
+  const normalized: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(args)) {
+    normalized[key] = val;
+    const camel = toCamelCaseKey(key);
+    if (camel !== key) {
+      normalized[camel] = val;
+    }
+  }
+  return normalized;
+}
+
 /**
  * Invoca um comando Tauri ou retorna mock em testes / ambiente sem IPC nativo.
  */
@@ -319,6 +343,7 @@ export async function safeInvoke<T>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
+  const normalizedArgs = normalizeArgsForTauri(args);
   const isTauriAvailable =
     typeof window !== 'undefined' &&
     ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
@@ -727,5 +752,5 @@ export async function safeInvoke<T>(
     }
   }
 
-  return await tauriInvoke<T>(cmd, args);
+  return await tauriInvoke<T>(cmd, normalizedArgs);
 }
