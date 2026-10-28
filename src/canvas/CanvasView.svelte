@@ -146,6 +146,7 @@
   }
 </script>
 
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
   class="canvas-wrapper"
   bind:this={containerEl}
@@ -303,6 +304,7 @@
       {#each canvasStore.currentCanvas.nodes as node (node.id)}
         {#if node.type === 'text'}
           <!-- Cartão Post-it Livre -->
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
           <div
             class="canvas-card postit-card"
             class:selected={canvasStore.selectedNodeId === node.id}
@@ -347,6 +349,7 @@
           </div>
         {:else if node.type === 'file'}
           <!-- Cartão de Entidade do Mundo / Cena -->
+          <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
           <div
             class="canvas-card entity-card"
             class:selected={canvasStore.selectedNodeId === node.id}
