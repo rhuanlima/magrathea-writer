@@ -2584,6 +2584,125 @@ pub fn pick_save_export_path(
     Ok(None)
 }
 
+// ============================================================================
+// Comandos do Grafo e Canvas (PRD E4, E10 / M8-01 a M8-04)
+// ============================================================================
+
+/// Retorna o modelo consolidado do Grafo Global da obra.
+#[tauri::command]
+pub fn get_vault_graph(
+    state: tauri::State<'_, AppState>,
+    filter_kinds: Option<Vec<String>>,
+    include_orphans: Option<bool>,
+) -> Result<crate::graph::GraphData, String> {
+    let index_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = index_guard
+        .as_ref()
+        .ok_or_else(|| "Índice não está disponível ou cofre bloqueado.".to_string())?;
+
+    let kinds_slice = filter_kinds.as_deref();
+    let orphans = include_orphans.unwrap_or(true);
+
+    Ok(crate::graph::build_global_graph(
+        index,
+        kinds_slice,
+        orphans,
+    ))
+}
+
+/// Retorna o subgrafo local centrado em um nó com profundidade de 1 ou 2 graus.
+#[tauri::command]
+pub fn get_local_graph(
+    state: tauri::State<'_, AppState>,
+    center_node_id: String,
+    depth: Option<usize>,
+) -> Result<crate::graph::LocalGraphData, String> {
+    let index_guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = index_guard
+        .as_ref()
+        .ok_or_else(|| "Índice não está disponível ou cofre bloqueado.".to_string())?;
+
+    crate::graph::build_local_graph(index, &center_node_id, depth.unwrap_or(1))
+}
+
+/// Carrega um documento Canvas existente ou cria o padrão em branco.
+#[tauri::command]
+pub fn load_canvas(
+    state: tauri::State<'_, AppState>,
+    canvas_id: Option<String>,
+) -> Result<crate::canvas::CanvasDocument, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let id = canvas_id.unwrap_or_else(|| "main".to_string());
+    crate::canvas::load_canvas_file(vault.root_path(), &id)
+}
+
+/// Salva alterações em um documento Canvas no cofre.
+#[tauri::command]
+pub fn save_canvas(
+    state: tauri::State<'_, AppState>,
+    canvas: crate::canvas::CanvasDocument,
+) -> Result<String, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::canvas::save_canvas_file(vault.root_path(), &canvas)?;
+    Ok(canvas.id)
+}
+
+/// Lista todos os documentos Canvas disponíveis no cofre.
+#[tauri::command]
+pub fn list_canvases(
+    state: tauri::State<'_, AppState>,
+) -> Result<Vec<crate::canvas::CanvasSummary>, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::canvas::list_canvas_files(vault.root_path())
+}
+
+/// Exclui um documento Canvas do cofre.
+#[tauri::command]
+pub fn delete_canvas(state: tauri::State<'_, AppState>, canvas_id: String) -> Result<bool, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::canvas::delete_canvas_file(vault.root_path(), &canvas_id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

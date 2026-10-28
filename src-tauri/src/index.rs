@@ -278,6 +278,16 @@ impl VaultIndex {
         }
     }
 
+    /// Retorna uma entidade pelo seu ID único.
+    pub fn get_entity(&self, id: &str) -> Option<&EntityEntry> {
+        self.entities_by_id.get(id)
+    }
+
+    /// Retorna todas as entidades catalogadas no índice.
+    pub fn get_all_entities(&self) -> Vec<EntityEntry> {
+        self.entities_by_id.values().cloned().collect()
+    }
+
     /// Resolve um termo digitado (ex: "Jaci" ou "jaci") para a entidade correspondente.
     pub fn resolve_wikilink(&self, query: &str) -> Option<&EntityEntry> {
         let norm = Self::normalize_key(query);

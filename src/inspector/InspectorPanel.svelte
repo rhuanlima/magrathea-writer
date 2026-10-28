@@ -14,6 +14,7 @@
   import EntityGallery from '../worldbuilding/EntityGallery.svelte';
   import EntityContextPanel from '../worldbuilding/EntityContextPanel.svelte';
   import SnapshotsPanel from '../snapshots/SnapshotsPanel.svelte';
+  import LocalGraphTab from './LocalGraphTab.svelte';
 
   interface Props {
     currentContent?: string;
@@ -124,6 +125,13 @@
       >
         🕒 {t('snapshots.tabTitle')}
       </button>
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'graph'}
+        onclick={() => vault.setInspectorTab('graph')}
+      >
+        🕸️ {t('graph.tabLocalGraph')}
+      </button>
     </div>
 
     <!-- Conteúdo da Aba Ativa -->
@@ -203,6 +211,8 @@
         <SnapshotsPanel {currentContent} {onRestoreContent} />
       {:else if vault.activeInspectorTab === 'context'}
         <EntityContextPanel {currentContent} />
+      {:else if vault.activeInspectorTab === 'graph'}
+        <LocalGraphTab centerId={activeItem.id} />
       {/if}
     </div>
   </aside>
