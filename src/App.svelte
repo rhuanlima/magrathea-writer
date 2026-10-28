@@ -21,12 +21,14 @@
   import TimelineModal from './timeline/TimelineModal.svelte';
   import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
   import CommandPalette from './commands/CommandPalette.svelte';
+  import SupportModal from './support/SupportModal.svelte';
   import { commandPaletteStore } from './commands/palette.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
   import { compilerStore } from './compiler/compiler.svelte';
   import { timelineStore } from './timeline/timeline.svelte';
   import { graphStore } from './graph/graph.svelte';
+  import { supportStore } from './support/support.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
   import { listenToEvent } from './tauri/bridge';
@@ -113,6 +115,9 @@
         }),
         listenToEvent('menu_export_txt', () => {
           if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('txt');
+        }),
+        listenToEvent('menu_support', () => {
+          supportStore.open();
         }),
       ];
 
@@ -340,6 +345,8 @@
   <GraphCanvasModal />
 
   <CommandPalette />
+
+  <SupportModal />
 
   {#if compilerStore.toastMessage}
     <aside class="export-toast-notification" role="status" aria-live="polite">
