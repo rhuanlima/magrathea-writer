@@ -34,7 +34,30 @@ export interface TranslationSchema {
       noVaultOpen: string;
       vaultOpen: string;
       newVaultButton: string;
+      openVaultButton: string;
       lockButton: string;
+    };
+    open: {
+      modalTitle: string;
+      openVaultButton: string;
+      vaultPathLabel: string;
+      vaultPathPlaceholder: string;
+      recentVaultsLabel: string;
+      noRecentVaults: string;
+      passphraseLabel: string;
+      passphrasePlaceholder: string;
+      unlockButton: string;
+      useRecoveryKey: string;
+      usePassphrase: string;
+      recoveryKeyLabel: string;
+      recoveryKeyPlaceholder: string;
+      keyringButton: string;
+      openError: string;
+      welcomeTitle: string;
+      welcomeSubtitle: string;
+      welcomeOpenButton: string;
+      welcomeCreateButton: string;
+      recentSectionTitle: string;
     };
     create: {
       modalTitle: string;

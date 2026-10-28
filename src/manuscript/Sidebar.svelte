@@ -1,8 +1,57 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { t } from '../i18n';
   import { manuscript, type TreeNode } from '../vault/manuscript.svelte';
   import type { ManifestItemKind } from '../tauri/bridge';
   import EncyclopediaView from '../worldbuilding/EncyclopediaView.svelte';
+
+  const DEFAULT_WIDTH = 280;
+  const MIN_WIDTH = 220;
+  const MAX_WIDTH = 600;
+
+  let sidebarWidth = $state(DEFAULT_WIDTH);
+  let isResizing = $state(false);
+
+  onMount(() => {
+    try {
+      const saved = localStorage.getItem('magrathea_sidebar_width');
+      if (saved) {
+        const val = parseInt(saved, 10);
+        if (val >= MIN_WIDTH && val <= MAX_WIDTH) {
+          sidebarWidth = val;
+        }
+      }
+    } catch {
+      // Ignorar falha em ambientes sem localStorage
+    }
+  });
+
+  function startResize(e: PointerEvent) {
+    e.preventDefault();
+    isResizing = true;
+    const startX = e.clientX;
+    const startWidth = sidebarWidth;
+
+    function onPointerMove(ev: PointerEvent) {
+      const delta = ev.clientX - startX;
+      const newWidth = Math.min(Math.max(startWidth + delta, MIN_WIDTH), MAX_WIDTH);
+      sidebarWidth = newWidth;
+    }
+
+    function onPointerUp() {
+      isResizing = false;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      try {
+        localStorage.setItem('magrathea_sidebar_width', sidebarWidth.toString());
+      } catch {
+        // Ignorar
+      }
+    }
+
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+  }
 
   let activeSidebarTab = $state<'manuscript' | 'worldbuilding'>('manuscript');
   let editingItemId = $state<string | null>(null);
@@ -160,7 +209,12 @@
   {/if}
 {/snippet}
 
-<aside class="sidebar-container" class:collapsed={!manuscript.isSidebarOpen}>
+<aside
+  class="sidebar-container"
+  class:collapsed={!manuscript.isSidebarOpen}
+  class:is-resizing={isResizing}
+  style={manuscript.isSidebarOpen ? `width: ${sidebarWidth}px;` : 'width: 0;'}
+>
   <!-- Alternância entre Manuscrito e Worldbuilding -->
   <div class="sidebar-tabs">
     <button
@@ -237,25 +291,59 @@
   {:else}
     <EncyclopediaView />
   {/if}
+
+  {#if manuscript.isSidebarOpen}
+    <div
+      class="sidebar-resizer"
+      onpointerdown={startResize}
+      role="separator"
+      aria-orientation="vertical"
+      aria-valuenow={sidebarWidth}
+      aria-valuemin={MIN_WIDTH}
+      aria-valuemax={MAX_WIDTH}
+      tabindex="-1"
+    ></div>
+  {/if}
 </aside>
 
 <style>
   .sidebar-container {
-    width: 260px;
+    width: 280px;
     height: 100%;
+    position: relative;
     background-color: var(--color-paper-surface);
     border-right: 1px solid var(--color-paper-border);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    transition: width 0.2s ease, transform 0.2s ease;
     user-select: none;
     overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .sidebar-container:not(.is-resizing) {
+    transition: width 0.2s ease, transform 0.2s ease;
   }
 
   .sidebar-container.collapsed {
-    width: 0;
+    width: 0 !important;
     border-right: none;
+  }
+
+  .sidebar-resizer {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 50;
+    transition: background-color 0.15s ease;
+  }
+
+  .sidebar-resizer:hover,
+  .sidebar-container.is-resizing .sidebar-resizer {
+    background-color: var(--color-olive, #5E6F45);
   }
 
   .sidebar-tabs {

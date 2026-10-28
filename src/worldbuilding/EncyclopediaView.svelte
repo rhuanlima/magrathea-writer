@@ -183,16 +183,12 @@
 
   .type-filter-chips {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
     padding: 6px var(--space-sm);
-    overflow-x: auto;
     border-bottom: 1px solid var(--color-paper-border);
     background-color: var(--color-paper-base);
-  }
-
-  .type-filter-chips::-webkit-scrollbar {
-    display: none;
   }
 
   .filter-chip {

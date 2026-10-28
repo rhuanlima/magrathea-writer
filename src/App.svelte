@@ -6,6 +6,8 @@
   import { vault } from './vault/vault.svelte';
   import { manuscript } from './vault/manuscript.svelte';
   import CreateVaultModal from './vault/CreateVaultModal.svelte';
+  import OpenVaultModal from './vault/OpenVaultModal.svelte';
+  import WelcomeScreen from './vault/WelcomeScreen.svelte';
   import LockScreen from './vault/LockScreen.svelte';
   import VaultSecurityModal from './vault/VaultSecurityModal.svelte';
   import Sidebar from './manuscript/Sidebar.svelte';
@@ -22,10 +24,17 @@
   import { InactivityTracker } from './vault/inactivity';
 
   let isCreateModalOpen = $state(false);
+  let isOpenVaultModalOpen = $state(false);
+  let prefilledVaultPath = $state<string | undefined>(undefined);
   let currentContent = $state(
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
   );
   let tracker: InactivityTracker | null = null;
+
+  function handleOpenVaultAction(path?: string) {
+    prefilledVaultPath = path;
+    isOpenVaultModalOpen = true;
+  }
 
   onMount(() => {
     void (async () => {
@@ -68,9 +77,25 @@
     await editorViewState.refreshProductivity();
   }
 
+  async function handleVaultOpened() {
+    if (vault.projectTitle) {
+      currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
+    }
+    await manuscript.refreshTree();
+    await editorViewState.refreshProductivity();
+  }
+
   function handleGlobalKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && editorViewState.isZenMode) {
       editorViewState.exitZen();
+    }
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'o' || e.key === 'O')) {
+      e.preventDefault();
+      handleOpenVaultAction();
+    }
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'n' || e.key === 'N') && !vault.isOpen) {
+      e.preventDefault();
+      isCreateModalOpen = true;
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'F' || e.key === 'f')) {
       e.preventDefault();
@@ -123,7 +148,16 @@
         <button
           type="button"
           class="action-button primary-action"
+          onclick={() => handleOpenVaultAction()}
+          title={t('vault.open.modalTitle')}
+        >
+          📂 {t('vault.status.openVaultButton')}
+        </button>
+        <button
+          type="button"
+          class="action-button"
           onclick={() => (isCreateModalOpen = true)}
+          title={t('vault.status.newVaultButton')}
         >
           + {t('vault.status.newVaultButton')}
         </button>
@@ -211,17 +245,31 @@
   </header>
 
   <div class="app-workspace">
-    <Sidebar />
-    <section class="editor-workspace">
-      <Editor initialContent={currentContent} onChange={handleContentChange} />
-    </section>
-    <InspectorPanel
-      {currentContent}
-      onRestoreContent={(restored) => {
-        currentContent = restored;
-      }}
-    />
+    {#if vault.isOpen}
+      <Sidebar />
+      <section class="editor-workspace">
+        <Editor initialContent={currentContent} onChange={handleContentChange} />
+      </section>
+      <InspectorPanel
+        {currentContent}
+        onRestoreContent={(restored) => {
+          currentContent = restored;
+        }}
+      />
+    {:else}
+      <WelcomeScreen
+        onOpenVault={handleOpenVaultAction}
+        onCreateVault={() => (isCreateModalOpen = true)}
+      />
+    {/if}
   </div>
+
+  <OpenVaultModal
+    isOpen={isOpenVaultModalOpen}
+    initialPath={prefilledVaultPath}
+    onClose={() => (isOpenVaultModalOpen = false)}
+    onSuccess={handleVaultOpened}
+  />
 
   <CreateVaultModal
     isOpen={isCreateModalOpen}
