@@ -37,6 +37,29 @@
     }
   }
 
+  function handleDragOver(e: DragEvent) {
+    e.preventDefault();
+  }
+
+  async function handleDrop(e: DragEvent) {
+    e.preventDefault();
+    if (!e.dataTransfer?.files || e.dataTransfer.files.length === 0) return;
+    const file = e.dataTransfer.files[0];
+    if (file.size > 5 * 1024 * 1024) {
+      uploadError = t('worldbuilding.imageTooLarge');
+      return;
+    }
+    isUploading = true;
+    uploadError = null;
+    try {
+      await worldbuilding.importImage(entityId, file);
+    } catch (err) {
+      uploadError = String(err);
+    } finally {
+      isUploading = false;
+    }
+  }
+
   async function viewImage(imageId: string) {
     try {
       const data = await safeInvoke<EntityImageData>('load_entity_image', {
@@ -62,7 +85,13 @@
   }
 </script>
 
-<div class="gallery-container">
+<div
+  class="gallery-container"
+  role="region"
+  aria-label={t('worldbuilding.galleryTitle')}
+  ondragover={handleDragOver}
+  ondrop={handleDrop}
+>
   <header class="gallery-header">
     <div class="header-left">
       <span class="gallery-icon">🖼️</span>

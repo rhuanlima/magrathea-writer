@@ -467,6 +467,8 @@ export interface TranslationSchema {
     modalTitle: string;
     subtitle: string;
     description: string;
+    callout: string;
+    humor42: string;
     qrAlt: string;
     pixKeyLabel: string;
     copyPixButton: string;

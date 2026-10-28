@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../i18n';
+  import { vault } from '../vault/vault.svelte';
   import { worldbuilding } from './worldbuilding.svelte';
   import { ENTITY_TYPE_OPTIONS } from './templates';
 
@@ -104,6 +105,19 @@
               </div>
             {/if}
           </div>
+          <button
+            type="button"
+            class="entity-gallery-shortcut"
+            title="Abrir Galeria de Imagens da Ficha (Cifrada)"
+            onclick={(e) => {
+              e.stopPropagation();
+              worldbuilding.selectEntity(entity.id);
+              vault.toggleInspector(true);
+              vault.setInspectorTab('gallery');
+            }}
+          >
+            🖼️
+          </button>
         </div>
       {/each}
     {/if}
@@ -288,6 +302,26 @@
     flex-direction: column;
     gap: 2px;
     overflow: hidden;
+  }
+
+  .entity-gallery-shortcut {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    padding: 3px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 120ms ease;
+  }
+
+  .entity-row-card:hover .entity-gallery-shortcut {
+    opacity: 1;
+    background-color: var(--color-paper-border);
+  }
+
+  .entity-gallery-shortcut:hover {
+    transform: scale(1.15);
   }
 
   .entity-name {

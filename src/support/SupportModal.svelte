@@ -1,9 +1,10 @@
 <script lang="ts">
   /**
-   * Modal "Apoie o Projeto" (M9-07).
+   * Modal "Apoie o Projeto" (M9-07 & Ajuste 4 de UX).
    *
-   * 100% offline, sem links externos clicáveis, em total conformidade com SECURITY.md.
-   * Apresenta texto explicativo, QR Code vetorial embutido e botão de cópia direta da chave.
+   * 100% offline, em total conformidade com SECURITY.md.
+   * Apresenta texto divertido com referências ao Guia do Mochileiro das Galáxias,
+   * layout perfeitamente alinhado e responsivo, e cópia direta da chave PIX.
    */
 
   import { supportStore } from './support.svelte';
@@ -18,14 +19,14 @@
       copied = true;
       setTimeout(() => {
         copied = false;
-      }, 3000);
+      }, 3500);
     } catch {
       // Falha silenciosa ou fallback
     }
   }
 
   function handleKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
+    if (e.key === 'Escape' && supportStore.isOpen) {
       supportStore.close();
     }
   }
@@ -41,101 +42,126 @@
 
   <!-- Janela Modal -->
   <div class="support-dialog" role="dialog" aria-modal="true" aria-labelledby="support-title">
+    <!-- Cabeçalho -->
     <div class="support-header">
-      <div class="header-icon">☕</div>
-      <div>
+      <div class="header-icon-box">🪐</div>
+      <div class="header-text-col">
         <h2 id="support-title" class="support-title">{t('support.modalTitle')}</h2>
         <p class="support-subtitle">{t('support.subtitle')}</p>
       </div>
       <button
+        type="button"
         class="close-button"
         onclick={() => supportStore.close()}
-        aria-label={t('common.close') || 'Fechar'}
+        aria-label="Fechar"
       >
         ✕
       </button>
     </div>
 
+    <!-- Corpo com Rolagem Limpa -->
     <div class="support-body">
-      <p class="support-description">
-        {t('support.description')}
-      </p>
+      <!-- Mensagem Explicativa e Divertida -->
+      <div class="literary-callout">
+        <p class="callout-lead">
+          {t('support.description')}
+        </p>
+        <p class="callout-body">
+          {t('support.callout')}
+        </p>
+        <div class="hitchhiker-quote">
+          <span class="quote-star">✨</span>
+          <span>{t('support.humor42')}</span>
+        </div>
+      </div>
 
+      <!-- Sugestões Divertidas de Apoio -->
+      <div class="tier-pills">
+        <span class="tier-pill">☕ Um Café Interestelar</span>
+        <span class="tier-pill">🪐 Um Planeta Personalizado</span>
+        <span class="tier-pill highlight">🌌 A Resposta (42)</span>
+        <span class="tier-pill">❤️ Qualquer valor de coração</span>
+      </div>
+
+      <!-- Cartão Principal de Doação PIX -->
       <div class="donation-card">
-        <!-- QR Code embutido em SVG puro (sem requisições externas) -->
+        <!-- QR Code Estilizado em SVG Vetorial Puro -->
         <div class="qr-container" title={t('support.qrAlt')}>
           <svg class="qr-svg" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
-            <!-- Padrão vetorial de posicionamento estilizado para Magrathea -->
-            <rect x="5" y="5" width="25" height="25" rx="3" fill="var(--color-olive)" />
-            <rect x="10" y="10" width="15" height="15" rx="2" fill="var(--color-paper-base)" />
-            <rect x="13" y="13" width="9" height="9" rx="1" fill="var(--color-olive)" />
+            <!-- Marcadores angulares de posicionamento de precisão -->
+            <rect x="6" y="6" width="24" height="24" rx="4" fill="var(--color-olive)" />
+            <rect x="11" y="11" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
+            <rect x="14" y="14" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
 
-            <rect x="70" y="5" width="25" height="25" rx="3" fill="var(--color-olive)" />
-            <rect x="75" y="10" width="15" height="15" rx="2" fill="var(--color-paper-base)" />
-            <rect x="78" y="13" width="9" height="9" rx="1" fill="var(--color-olive)" />
+            <rect x="70" y="6" width="24" height="24" rx="4" fill="var(--color-olive)" />
+            <rect x="75" y="11" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
+            <rect x="78" y="14" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
 
-            <rect x="5" y="70" width="25" height="25" rx="3" fill="var(--color-olive)" />
-            <rect x="10" y="75" width="15" height="15" rx="2" fill="var(--color-paper-base)" />
-            <rect x="13" y="78" width="9" height="9" rx="1" fill="var(--color-olive)" />
+            <rect x="6" y="70" width="24" height="24" rx="4" fill="var(--color-olive)" />
+            <rect x="11" y="75" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
+            <rect x="14" y="78" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
 
-            <!-- Padrão de dados decorativo -->
-            <rect x="36" y="8" width="6" height="6" fill="var(--color-ink-muted)" />
-            <rect x="46" y="8" width="8" height="6" fill="var(--color-ink-muted)" />
-            <rect x="58" y="8" width="6" height="6" fill="var(--color-ink-muted)" />
+            <!-- Padrão vetorial geométrico limpo -->
+            <rect x="36" y="8" width="8" height="8" rx="1" fill="var(--color-terracotta)" />
+            <rect x="52" y="8" width="10" height="6" rx="1" fill="var(--color-ink-charcoal)" />
 
-            <rect x="36" y="20" width="8" height="6" fill="var(--color-ink-muted)" />
-            <rect x="48" y="20" width="6" height="6" fill="var(--color-ink-muted)" />
-            <rect x="58" y="20" width="8" height="6" fill="var(--color-ink-muted)" />
+            <rect x="36" y="22" width="6" height="8" rx="1" fill="var(--color-ink-charcoal)" />
+            <rect x="48" y="20" width="12" height="6" rx="1" fill="var(--color-olive)" />
 
-            <rect x="8" y="36" width="6" height="8" fill="var(--color-ink-muted)" />
-            <rect x="20" y="36" width="8" height="8" fill="var(--color-ink-muted)" />
-            <rect x="36" y="36" width="10" height="10" fill="var(--color-olive)" />
-            <rect x="52" y="36" width="12" height="12" fill="var(--color-ink-charcoal)" />
-            <rect x="70" y="36" width="8" height="6" fill="var(--color-ink-muted)" />
-            <rect x="84" y="36" width="8" height="8" fill="var(--color-ink-muted)" />
+            <rect x="8" y="38" width="8" height="8" rx="1" fill="var(--color-ink-charcoal)" />
+            <rect x="22" y="36" width="8" height="6" rx="1" fill="var(--color-olive)" />
+            <rect x="38" y="38" width="14" height="14" rx="2" fill="var(--color-terracotta)" />
+            <rect x="58" y="36" width="10" height="10" rx="1.5" fill="var(--color-olive)" />
+            <rect x="76" y="38" width="16" height="8" rx="1" fill="var(--color-ink-charcoal)" />
 
-            <rect x="36" y="54" width="8" height="8" fill="var(--color-ink-muted)" />
-            <rect x="48" y="54" width="14" height="10" fill="var(--color-olive)" />
-            <rect x="70" y="54" width="10" height="8" fill="var(--color-ink-muted)" />
-            <rect x="86" y="54" width="6" height="8" fill="var(--color-ink-muted)" />
+            <rect x="38" y="58" width="8" height="10" rx="1" fill="var(--color-ink-charcoal)" />
+            <rect x="52" y="56" width="12" height="14" rx="2" fill="var(--color-olive)" />
+            <rect x="72" y="56" width="8" height="8" rx="1" fill="var(--color-terracotta)" />
+            <rect x="86" y="56" width="8" height="12" rx="1" fill="var(--color-ink-charcoal)" />
 
-            <rect x="36" y="70" width="12" height="8" fill="var(--color-ink-muted)" />
-            <rect x="54" y="70" width="8" height="12" fill="var(--color-ink-muted)" />
-            <rect x="70" y="70" width="8" height="8" fill="var(--color-ink-charcoal)" />
-            <rect x="84" y="70" width="8" height="12" fill="var(--color-ink-muted)" />
-
-            <rect x="36" y="86" width="8" height="6" fill="var(--color-ink-muted)" />
-            <rect x="48" y="86" width="14" height="6" fill="var(--color-ink-muted)" />
-            <rect x="70" y="86" width="12" height="6" fill="var(--color-ink-muted)" />
+            <rect x="36" y="76" width="14" height="8" rx="1" fill="var(--color-olive)" />
+            <rect x="56" y="78" width="8" height="14" rx="1" fill="var(--color-ink-charcoal)" />
+            <rect x="72" y="74" width="20" height="8" rx="1" fill="var(--color-olive)" />
+            <rect x="74" y="88" width="14" height="6" rx="1" fill="var(--color-terracotta)" />
           </svg>
-          <span class="qr-caption">PIX / Apoio</span>
+          <span class="qr-caption font-mono">PIX / BRASIL</span>
         </div>
 
+        <!-- Informações e Botão de Ação -->
         <div class="donation-info">
-          <label class="info-label" for="pix-key-input">{t('support.pixKeyLabel')}</label>
-          <div class="key-field">
-            <input
-              id="pix-key-input"
-              type="text"
-              readonly
-              value={pixKey}
-              class="key-input"
-            />
-            <button class="copy-button" class:copied onclick={handleCopyPix}>
-              {copied ? t('support.copied') : t('support.copyPixButton')}
-            </button>
+          <span class="info-label">{t('support.pixKeyLabel')}</span>
+
+          <div class="pix-key-display">
+            <code class="pix-key-text">{pixKey}</code>
+            <span class="pix-type-badge">E-mail</span>
           </div>
 
-          <div class="security-badge">
-            <span class="badge-icon">🛡️</span>
-            <span class="badge-text">{t('support.offlineNotice')}</span>
-          </div>
+          <button
+            type="button"
+            class="copy-action-btn"
+            class:copied
+            onclick={handleCopyPix}
+          >
+            {#if copied}
+              <span>{t('support.copied')}</span>
+            {:else}
+              <span class="btn-copy-icon">📋</span>
+              <span>{t('support.copyPixButton')}</span>
+            {/if}
+          </button>
         </div>
+      </div>
+
+      <!-- Selo de Privacidade Estrita -->
+      <div class="offline-security-banner">
+        <span class="badge-icon">🛡️</span>
+        <span class="badge-text">{t('support.offlineNotice')}</span>
       </div>
     </div>
 
+    <!-- Rodapé -->
     <div class="support-footer">
-      <button class="done-button" onclick={() => supportStore.close()}>
+      <button type="button" class="done-button" onclick={() => supportStore.close()}>
         {t('support.closeButton')}
       </button>
     </div>
@@ -146,7 +172,7 @@
   .support-backdrop {
     position: fixed;
     inset: 0;
-    background: rgba(17, 24, 39, 0.45);
+    background: rgba(17, 24, 39, 0.52);
     backdrop-filter: blur(4px);
     z-index: 9998;
   }
@@ -156,8 +182,9 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 90%;
-    max-width: 580px;
+    width: 92%;
+    max-width: 620px;
+    max-height: 88vh;
     background: var(--color-paper-base);
     border: 1px solid var(--color-paper-border);
     border-radius: var(--rounded-xl);
@@ -170,42 +197,52 @@
 
   .support-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 1rem;
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
     border-bottom: 1px solid var(--color-paper-border);
     background: var(--color-paper-surface);
   }
 
-  .header-icon {
-    font-size: 2rem;
+  .header-icon-box {
+    font-size: 1.9rem;
     line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background: var(--color-olive-subtle);
+    border-radius: var(--rounded-lg);
+  }
+
+  .header-text-col {
+    flex: 1;
   }
 
   .support-title {
     margin: 0;
     font-family: var(--font-literary);
-    font-size: 1.4rem;
+    font-size: 1.35rem;
     font-weight: 600;
     color: var(--color-ink-charcoal);
   }
 
   .support-subtitle {
-    margin: 0.25rem 0 0;
+    margin: 0.15rem 0 0;
     font-family: var(--font-ui);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: var(--color-ink-muted);
-    line-height: 1.4;
+    line-height: 1.35;
   }
 
   .close-button {
-    margin-left: auto;
     background: transparent;
     border: none;
-    font-size: 1.1rem;
+    font-size: 1.15rem;
     color: var(--color-ink-muted);
     cursor: pointer;
-    padding: 0.25rem 0.5rem;
+    padding: 0.3rem 0.55rem;
     border-radius: var(--rounded-md);
   }
 
@@ -215,28 +252,89 @@
   }
 
   .support-body {
-    padding: 1.5rem;
+    padding: 1.4rem 1.5rem;
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    overflow-y: auto;
+    flex: 1;
   }
 
-  .support-description {
+  .literary-callout {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .callout-lead {
     margin: 0;
     font-family: var(--font-ui);
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     line-height: 1.55;
     color: var(--color-ink-charcoal);
   }
 
+  .callout-body {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    line-height: 1.5;
+    color: var(--color-ink-muted);
+  }
+
+  .hitchhiker-quote {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-olive-subtle);
+    border-left: 3px solid var(--color-olive);
+    border-radius: var(--rounded-md);
+    font-family: var(--font-literary);
+    font-size: 0.95rem;
+    color: var(--color-ink-charcoal);
+    line-height: 1.4;
+  }
+
+  .quote-star {
+    font-size: 1.1rem;
+    line-height: 1;
+  }
+
+  .tier-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+  }
+
+  .tier-pill {
+    padding: 0.3rem 0.75rem;
+    font-family: var(--font-ui);
+    font-size: 0.76rem;
+    font-weight: 500;
+    background: var(--color-paper-surface);
+    color: var(--color-ink-muted);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-full, 9999px);
+    user-select: none;
+  }
+
+  .tier-pill.highlight {
+    background: var(--color-terracotta-subtle);
+    color: var(--color-terracotta);
+    border-color: var(--color-terracotta);
+    font-weight: 600;
+  }
+
   .donation-card {
     display: flex;
+    flex-direction: row;
+    align-items: center;
     gap: 1.5rem;
-    padding: 1.25rem;
+    padding: 1.25rem 1.4rem;
     background: var(--color-paper-surface);
     border: 1px solid var(--color-paper-border);
     border-radius: var(--rounded-lg);
-    align-items: center;
   }
 
   .qr-container {
@@ -252,111 +350,145 @@
   }
 
   .qr-svg {
-    width: 110px;
-    height: 110px;
+    width: 104px;
+    height: 104px;
   }
 
   .qr-caption {
-    font-family: var(--font-mono);
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--color-olive);
+    font-size: 0.65rem;
+    color: var(--color-ink-muted);
+    letter-spacing: 0.08em;
   }
 
   .donation-info {
-    flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.65rem;
+    flex: 1;
+    min-width: 0;
   }
 
   .info-label {
     font-family: var(--font-ui);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 600;
     color: var(--color-ink-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
   }
 
-  .key-field {
+  .pix-key-display {
     display: flex;
-    gap: 0.5rem;
     align-items: center;
-  }
-
-  .key-input {
-    flex: 1;
-    padding: 0.5rem 0.75rem;
-    font-family: var(--font-mono);
-    font-size: 0.85rem;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.6rem 0.85rem;
     background: var(--color-paper-base);
     border: 1px solid var(--color-paper-border);
-    border-radius: var(--rounded-default);
-    color: var(--color-ink-charcoal);
+    border-radius: var(--rounded-md);
   }
 
-  .copy-button {
-    padding: 0.5rem 0.85rem;
+  .pix-key-text {
+    font-family: var(--font-mono);
+    font-size: 0.92rem;
+    color: var(--color-ink-charcoal);
+    font-weight: 600;
+    word-break: break-all;
+  }
+
+  .pix-type-badge {
     font-family: var(--font-ui);
-    font-size: 0.85rem;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.45rem;
+    background: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: 4px;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+  }
+
+  .copy-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.25rem;
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
     font-weight: 600;
     background: var(--color-olive);
     color: #ffffff;
     border: none;
-    border-radius: var(--rounded-default);
+    border-radius: var(--rounded-md);
     cursor: pointer;
-    white-space: nowrap;
-    transition: background 150ms ease;
+    transition: all 150ms ease;
   }
 
-  .copy-button:hover {
+  .copy-action-btn:hover {
     background: var(--color-olive-hover);
+    transform: translateY(-1px);
   }
 
-  .copy-button.copied {
-    background: var(--color-olive-hover);
+  .copy-action-btn.copied {
+    background: #166534;
   }
 
-  .security-badge {
-    margin-top: 0.5rem;
+  .btn-copy-icon {
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .offline-security-banner {
     display: flex;
-    gap: 0.5rem;
-    align-items: flex-start;
-    padding: 0.5rem 0.75rem;
-    background: var(--color-olive-subtle);
-    border-radius: var(--rounded-default);
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    background: var(--color-paper-surface);
+    border: 1px dashed var(--color-paper-border);
+    border-radius: var(--rounded-md);
     font-family: var(--font-ui);
     font-size: 0.78rem;
-    color: var(--color-ink-charcoal);
-    line-height: 1.35;
+    color: var(--color-ink-muted);
+    line-height: 1.4;
   }
 
   .badge-icon {
-    font-size: 0.95rem;
+    font-size: 1.15rem;
+    flex-shrink: 0;
   }
 
   .support-footer {
+    display: flex;
+    justify-content: flex-end;
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--color-paper-border);
     background: var(--color-paper-surface);
-    display: flex;
-    justify-content: flex-end;
   }
 
   .done-button {
-    padding: 0.5rem 1.25rem;
+    padding: 0.55rem 1.4rem;
     font-family: var(--font-ui);
-    font-size: 0.9rem;
+    font-size: 0.88rem;
     font-weight: 600;
-    background: var(--color-paper-base);
-    color: var(--color-ink-charcoal);
-    border: 1px solid var(--color-paper-border);
+    background: var(--color-terracotta);
+    color: #ffffff;
+    border: none;
     border-radius: var(--rounded-default);
     cursor: pointer;
+    transition: background-color 150ms ease;
   }
 
   .done-button:hover {
-    background: var(--color-paper-hover);
+    background: var(--color-terracotta-hover);
+  }
+
+  @media (max-width: 540px) {
+    .donation-card {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    .qr-container {
+      align-self: center;
+    }
   }
 </style>
