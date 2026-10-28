@@ -6,6 +6,7 @@
  */
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+import { listen as tauriListen } from '@tauri-apps/api/event';
 
 export interface CreateVaultPayload {
   dir_path: string;
@@ -1682,4 +1683,35 @@ export async function listCanvases(): Promise<CanvasSummary[]> {
 
 export async function deleteCanvas(canvasId: string): Promise<boolean> {
   return safeInvoke<boolean>('delete_canvas', { canvas_id: canvasId });
+}
+
+// ============================================================================
+// Eventos do Sistema Operacional (macOS Menu Bar / Atalhos Nativos)
+// ============================================================================
+
+/**
+ * Escuta eventos disparados pelo menu nativo do sistema operacional ou atalhos Tauri.
+ * Retorna uma função de cancelamento seguro para desinscrever no teardown do componente.
+ */
+export async function listenToEvent(
+  event: string,
+  handler: () => void
+): Promise<() => void> {
+  const isTauriAvailable =
+    typeof window !== 'undefined' &&
+    ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
+
+  if (!isTauriAvailable) {
+    return () => {};
+  }
+
+  try {
+    const unlisten = await tauriListen(event, () => {
+      handler();
+    });
+    return unlisten;
+  } catch (err) {
+    console.warn(`[Tauri] Falha ao registrar ouvinte para o evento '${event}':`, err);
+    return () => {};
+  }
 }

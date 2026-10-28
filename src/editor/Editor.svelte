@@ -14,6 +14,10 @@
   import { externalLinksPlugin } from './external-links';
   import { focusModeExtension } from './focus-mode';
   import { editorViewState } from './editor-view-state.svelte';
+  import { searchStore } from '../search/search.svelte';
+  import { timelineStore } from '../timeline/timeline.svelte';
+  import { graphStore } from '../graph/graph.svelte';
+  import { compilerStore } from '../compiler/compiler.svelte';
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import LiteraryBar from './LiteraryBar.svelte';
@@ -193,6 +197,88 @@
       <span class="dot">·</span>
       <span>{t('editor.charactersCount', { count: charsCount })}</span>
     </div>
+
+    <div class="quick-status-actions" role="toolbar" aria-label="Ações Rápidas">
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => searchStore.openModal()}
+        title="Busca Global no Projeto (Cmd+Shift+F)"
+      >
+        🔍
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => timelineStore.openModal()}
+        title="Linha do Tempo Literária (Cmd+Shift+T)"
+      >
+        ⏳
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => graphStore.openModal()}
+        title="Grafo Narrativo & Canvas (Cmd+Shift+G)"
+      >
+        🕸️
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => editorViewState.openProductivityDashboard()}
+        title="Metas de Escrita & Ritmo (Cmd+Shift+P)"
+      >
+        📊
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => compilerStore.openModal('export')}
+        title="Exportação Editorial & Publicação (Cmd+Shift+E)"
+      >
+        📖
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        class:active={vault.isInspectorOpen}
+        onclick={() => vault.toggleInspector()}
+        title="Inspetor de Fichas e Personagens (Cmd+I)"
+      >
+        ℹ️
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => theme.toggleTheme()}
+        title="Alternar Tema Claro / Escuro"
+      >
+        {#if theme.mode === 'light'}
+          ☀️
+        {:else if theme.mode === 'dark'}
+          🌙
+        {:else}
+          💻
+        {/if}
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn lock-btn"
+        onclick={() => vault.lockVault()}
+        title="Trancar Mundo (Cmd+L)"
+      >
+        🔒
+      </button>
+    </div>
+
     <div class="save-status" class:saving={autosaveStatus === 'saving'} class:error={autosaveStatus === 'error'}>
       {#if autosaveStatus === 'saving'}
         <span class="status-indicator saving">●</span>
@@ -246,6 +332,43 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+
+  .quick-status-actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .quick-action-btn {
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--color-ink-muted);
+    transition: background-color 0.15s ease, color 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    user-select: none;
+  }
+
+  .quick-action-btn:hover {
+    background-color: var(--color-paper-border);
+    color: var(--color-ink-primary);
+  }
+
+  .quick-action-btn.active {
+    background-color: var(--color-paper-border);
+    color: var(--color-terracotta);
+    font-weight: 600;
+  }
+
+  .quick-action-btn.lock-btn:hover {
+    color: #e11d48;
   }
 
   .dot {
