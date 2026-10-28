@@ -13,6 +13,7 @@
   import InspectorPanel from './inspector/InspectorPanel.svelte';
   import RenameRefactorModal from './vault/RenameRefactorModal.svelte';
   import ProductivityDashboardModal from './productivity/ProductivityDashboardModal.svelte';
+  import CreateEntityModal from './worldbuilding/CreateEntityModal.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
 
@@ -205,6 +206,8 @@
   <RenameRefactorModal />
 
   <ProductivityDashboardModal />
+
+  <CreateEntityModal />
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />

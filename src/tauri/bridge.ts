@@ -52,7 +52,16 @@ export interface VaultStatusResponse {
   vault_path: string | null;
 }
 
-export type ManifestItemKind = 'part' | 'chapter' | 'scene';
+export type ManifestItemKind =
+  | 'part'
+  | 'chapter'
+  | 'scene'
+  | 'character'
+  | 'location'
+  | 'item'
+  | 'faction'
+  | 'lore'
+  | 'entity';
 
 export interface ManifestItem {
   id: string;
@@ -184,6 +193,28 @@ export interface ProductivityOverview {
   daily_logs: Record<string, DailyLogEntry>;
 }
 
+export interface EntityImageMeta {
+  id: string;
+  entity_id: string;
+  file_name: string;
+  mime_type: string;
+  byte_size: number;
+  created_at: string;
+}
+
+export interface EntityImageData {
+  meta: EntityImageMeta;
+  base64_data: string;
+}
+
+export interface EntityAppearance {
+  scene_id: string;
+  scene_title: string;
+  line_number: number;
+  snippet: string;
+  alias: string | null;
+}
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -219,12 +250,49 @@ let mockItems: ManifestItem[] = [
     tags: ['protagonista', 'abertura'],
     status: 'draft',
   },
+  {
+    id: 'mock-char-1',
+    kind: 'character',
+    parent_id: null,
+    title: 'Jaci',
+    slug: 'jaci',
+    blob_id: 'mock-char-1',
+    order: 0,
+    tags: ['protagonista', 'navegadora'],
+    status: 'draft',
+  },
+  {
+    id: 'mock-loc-1',
+    kind: 'location',
+    parent_id: null,
+    title: 'Praia das Conchas',
+    slug: 'praia-das-conchas',
+    blob_id: 'mock-loc-1',
+    order: 1,
+    tags: ['costa', 'mistério'],
+    status: 'draft',
+  },
 ];
 
 let mockTrash: ManifestItem[] = [];
 let mockKeyringStatus = false;
 const mockSceneBlobs: Record<string, string> = {
   'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',
+  'mock-char-1': '---\ntitle: "Jaci"\ntype: character\nrole: Protagonista\n---\n\n## Presença & Descrição Física\nNavegadora destemida dos mares do sul.',
+  'mock-loc-1': '---\ntitle: "Praia das Conchas"\ntype: location\n---\n\n## Geografia & Sensações\nAreias alvas e vento salgado.',
+};
+
+const mockEntityImages: Record<string, EntityImageMeta[]> = {
+  'mock-char-1': [
+    {
+      id: 'mock-img-1',
+      entity_id: 'mock-char-1',
+      file_name: 'avatar_jaci.png',
+      mime_type: 'image/png',
+      byte_size: 1024,
+      created_at: '2026-10-27T10:00:00Z',
+    },
+  ],
 };
 
 const mockProductivity: ProductivityOverview = {
@@ -569,6 +637,93 @@ export async function safeInvoke<T>(
       currentDay.session_duration_seconds += payload.session_seconds;
       mockProductivity.daily_logs[payload.date_iso] = currentDay;
       return { ...mockProductivity } as T;
+    }
+    if (cmd === 'get_entity_template') {
+      const payload = args as unknown as { kind: string; title: string };
+      return `---\ntitle: "${payload.title}"\ntype: ${payload.kind}\n---\n\n## Descrição\nTemplate literário.` as T;
+    }
+    if (cmd === 'create_world_entity') {
+      const payload = args as unknown as { kind: string; title: string; tags: string[] };
+      const newEntity: ManifestItem = {
+        id: `mock-ent-${Date.now()}`,
+        kind: payload.kind as ManifestItemKind,
+        parent_id: null,
+        title: payload.title,
+        slug: payload.title.toLowerCase().replace(/\s+/g, '-'),
+        blob_id: `mock-blob-${Date.now()}`,
+        order: mockItems.length,
+        tags: payload.tags || [],
+        status: 'draft',
+      };
+      mockItems.push(newEntity);
+      mockSceneBlobs[newEntity.id] = `---\ntitle: "${payload.title}"\ntype: ${payload.kind}\n---\n\n## Detalhes\nConteúdo inicial da entidade.`;
+      return newEntity as T;
+    }
+    if (cmd === 'import_entity_image') {
+      const payload = args as unknown as {
+        entity_id: string;
+        file_name: string;
+        image_bytes: number[];
+        created_at_iso: string;
+      };
+      const newMeta: EntityImageMeta = {
+        id: `mock-img-${Date.now()}`,
+        entity_id: payload.entity_id,
+        file_name: payload.file_name,
+        mime_type: 'image/png',
+        byte_size: payload.image_bytes.length,
+        created_at: payload.created_at_iso,
+      };
+      const list = mockEntityImages[payload.entity_id] || [];
+      list.push(newMeta);
+      mockEntityImages[payload.entity_id] = list;
+      return newMeta as T;
+    }
+    if (cmd === 'load_entity_image') {
+      const payload = args as unknown as { image_id: string };
+      let found: EntityImageMeta | undefined;
+      for (const list of Object.values(mockEntityImages)) {
+        found = list.find((m) => m.id === payload.image_id);
+        if (found) break;
+      }
+      return {
+        meta: found || {
+          id: payload.image_id,
+          entity_id: 'mock-char-1',
+          file_name: 'imagem.png',
+          mime_type: 'image/png',
+          byte_size: 1024,
+          created_at: new Date().toISOString(),
+        },
+        base64_data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+      } as T;
+    }
+    if (cmd === 'delete_entity_image') {
+      const payload = args as unknown as { entity_id: string; image_id: string };
+      const list = mockEntityImages[payload.entity_id];
+      if (list) {
+        mockEntityImages[payload.entity_id] = list.filter((m) => m.id !== payload.image_id);
+      }
+      return undefined as T;
+    }
+    if (cmd === 'list_entity_images') {
+      const payload = args as unknown as { entity_id: string };
+      return (mockEntityImages[payload.entity_id] || []) as T;
+    }
+    if (cmd === 'get_entity_appearances') {
+      const payload = args as unknown as { entity_id: string };
+      if (payload.entity_id === 'mock-char-1') {
+        return [
+          {
+            scene_id: 'mock-scene-1',
+            scene_title: 'Cena 1: A Névoa da Manhã',
+            line_number: 1,
+            snippet: 'O vento soprava frio quando [[Jaci]] olhou o mar.',
+            alias: null,
+          },
+        ] as T;
+      }
+      return [] as T;
     }
   }
 

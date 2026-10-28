@@ -1615,6 +1615,218 @@ pub fn record_productivity_session_internal(
         .map_err(|e| format!("Falha ao registrar sessão de produtividade: {e}"))
 }
 
+/// Retorna o template padrão em Markdown + Frontmatter para um tipo de entidade literária.
+#[tauri::command]
+pub fn get_entity_template(kind: String, title: String) -> String {
+    crate::worldbuilding::generate_entity_template(&kind, &title)
+}
+
+/// Cria uma nova entidade literária de worldbuilding com seu template gerado no cofre.
+#[tauri::command]
+pub fn create_world_entity(
+    state: tauri::State<'_, AppState>,
+    kind: String,
+    title: String,
+    tags: Vec<String>,
+) -> Result<crate::vault::ManifestItem, String> {
+    create_world_entity_internal(&state, &kind, &title, tags)
+}
+
+/// Lógica interna para criação de entidade de worldbuilding.
+pub fn create_world_entity_internal(
+    state: &AppState,
+    kind: &str,
+    title: &str,
+    tags: Vec<String>,
+) -> Result<crate::vault::ManifestItem, String> {
+    let template_body = crate::worldbuilding::generate_entity_template(kind, title);
+
+    // 1. Cria o item no manifesto
+    let item = create_manuscript_item_internal(state, kind, None, title)?;
+
+    // 2. Atualiza tags se informadas
+    if !tags.is_empty() {
+        let _ = update_scene_metadata_internal(state, &item.id, None, tags);
+    }
+
+    // 3. Salva o conteúdo inicial gerado pelo template
+    save_scene_content_internal(state, &item.id, &template_body)?;
+
+    Ok(item)
+}
+
+/// Importa, valida magic bytes e cifra uma imagem anexada a uma entidade literária.
+#[tauri::command]
+pub fn import_entity_image(
+    state: tauri::State<'_, AppState>,
+    entity_id: String,
+    file_name: String,
+    image_bytes: Vec<u8>,
+    created_at_iso: String,
+) -> Result<crate::worldbuilding::EntityImageMeta, String> {
+    import_entity_image_internal(
+        &state,
+        &entity_id,
+        &file_name,
+        &image_bytes,
+        &created_at_iso,
+    )
+}
+
+/// Lógica interna para importação e cifragem de imagem no cofre.
+pub fn import_entity_image_internal(
+    state: &AppState,
+    entity_id: &str,
+    file_name: &str,
+    image_bytes: &[u8],
+    created_at_iso: &str,
+) -> Result<crate::worldbuilding::EntityImageMeta, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::worldbuilding::import_entity_image(
+        vault,
+        entity_id,
+        file_name,
+        image_bytes,
+        created_at_iso,
+    )
+    .map_err(|e| format!("Falha ao importar imagem: {e}"))
+}
+
+/// Carrega e decifra uma imagem sob demanda para visualização.
+#[tauri::command]
+pub fn load_entity_image(
+    state: tauri::State<'_, AppState>,
+    image_id: String,
+) -> Result<crate::worldbuilding::EntityImageData, String> {
+    load_entity_image_internal(&state, &image_id)
+}
+
+/// Lógica interna para leitura e decifragem de imagem.
+pub fn load_entity_image_internal(
+    state: &AppState,
+    image_id: &str,
+) -> Result<crate::worldbuilding::EntityImageData, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::worldbuilding::load_entity_image(vault, image_id)
+        .map_err(|e| format!("Falha ao carregar imagem: {e}"))
+}
+
+/// Exclui uma imagem do cofre.
+#[tauri::command]
+pub fn delete_entity_image(
+    state: tauri::State<'_, AppState>,
+    entity_id: String,
+    image_id: String,
+) -> Result<(), String> {
+    delete_entity_image_internal(&state, &entity_id, &image_id)
+}
+
+/// Lógica interna para exclusão de imagem.
+pub fn delete_entity_image_internal(
+    state: &AppState,
+    entity_id: &str,
+    image_id: &str,
+) -> Result<(), String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::worldbuilding::delete_entity_image(vault, entity_id, image_id)
+        .map_err(|e| format!("Falha ao excluir imagem: {e}"))
+}
+
+/// Lista todas as imagens anexadas a uma entidade literária.
+#[tauri::command]
+pub fn list_entity_images(
+    state: tauri::State<'_, AppState>,
+    entity_id: String,
+) -> Result<Vec<crate::worldbuilding::EntityImageMeta>, String> {
+    list_entity_images_internal(&state, &entity_id)
+}
+
+/// Lógica interna para listagem de imagens.
+pub fn list_entity_images_internal(
+    state: &AppState,
+    entity_id: &str,
+) -> Result<Vec<crate::worldbuilding::EntityImageMeta>, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    crate::worldbuilding::list_entity_images(vault, entity_id)
+        .map_err(|e| format!("Falha ao listar imagens da entidade: {e}"))
+}
+
+/// Rastreia e lista as aparições de uma entidade em todas as cenas do manuscrito.
+#[tauri::command]
+pub fn get_entity_appearances(
+    state: tauri::State<'_, AppState>,
+    entity_id: String,
+) -> Result<Vec<crate::worldbuilding::EntityAppearance>, String> {
+    get_entity_appearances_internal(&state, &entity_id)
+}
+
+/// Lógica interna para rastreio de aparições no índice.
+pub fn get_entity_appearances_internal(
+    state: &AppState,
+    entity_id: &str,
+) -> Result<Vec<crate::worldbuilding::EntityAppearance>, String> {
+    let guard = state
+        .index
+        .lock()
+        .map_err(|_| "Falha ao obter lock do índice.".to_string())?;
+
+    let index = guard
+        .as_ref()
+        .ok_or_else(|| "Índice indisponível em memória.".to_string())?;
+
+    Ok(crate::worldbuilding::get_entity_appearances(
+        index, entity_id,
+    ))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

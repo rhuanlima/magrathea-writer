@@ -9,6 +9,9 @@
   import { t } from '../i18n';
   import { vault } from '../vault/vault.svelte';
   import { manuscript } from '../vault/manuscript.svelte';
+  import { worldbuilding } from '../worldbuilding/worldbuilding.svelte';
+  import EntityAppearancesPanel from '../worldbuilding/EntityAppearancesPanel.svelte';
+  import EntityGallery from '../worldbuilding/EntityGallery.svelte';
 
   let activeItem = $derived(
     manuscript.items.find((it) => it.id === manuscript.activeSceneId) || null
@@ -19,6 +22,8 @@
   $effect(() => {
     if (activeItem && vault.isInspectorOpen) {
       void vault.loadBacklinks(activeItem.id);
+      void worldbuilding.loadAppearances(activeItem.id);
+      void worldbuilding.loadImages(activeItem.id);
     }
   });
 
@@ -74,6 +79,26 @@
         🔗 {t('inspector.tabBacklinks')}
         {#if backlinks.length > 0}
           <span class="count-pill">{backlinks.length}</span>
+        {/if}
+      </button>
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'appearances'}
+        onclick={() => vault.setInspectorTab('appearances')}
+      >
+        🧭 {t('worldbuilding.tabAppearances')}
+        {#if worldbuilding.appearances.length > 0}
+          <span class="count-pill">{worldbuilding.appearances.length}</span>
+        {/if}
+      </button>
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'gallery'}
+        onclick={() => vault.setInspectorTab('gallery')}
+      >
+        🖼️ {t('worldbuilding.tabGallery')}
+        {#if worldbuilding.images.length > 0}
+          <span class="count-pill">{worldbuilding.images.length}</span>
         {/if}
       </button>
     </div>
@@ -147,6 +172,10 @@
             </div>
           {/if}
         </div>
+      {:else if vault.activeInspectorTab === 'appearances'}
+        <EntityAppearancesPanel appearances={worldbuilding.appearances} />
+      {:else if vault.activeInspectorTab === 'gallery'}
+        <EntityGallery entityId={activeItem.id} />
       {/if}
     </div>
   </aside>

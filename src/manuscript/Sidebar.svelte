@@ -2,7 +2,9 @@
   import { t } from '../i18n';
   import { manuscript, type TreeNode } from '../vault/manuscript.svelte';
   import type { ManifestItemKind } from '../tauri/bridge';
+  import EncyclopediaView from '../worldbuilding/EncyclopediaView.svelte';
 
+  let activeSidebarTab = $state<'manuscript' | 'worldbuilding'>('manuscript');
   let editingItemId = $state<string | null>(null);
   let editingTitle = $state('');
 
@@ -159,58 +161,82 @@
 {/snippet}
 
 <aside class="sidebar-container" class:collapsed={!manuscript.isSidebarOpen}>
-  <header class="sidebar-header">
-    <div class="header-left">
-      <span class="tree-title">{t('manuscript.treeTitle')}</span>
-    </div>
-    <div class="header-buttons">
-      <button
-        type="button"
-        class="add-root-btn"
-        onclick={() => handleCreateRoot('part')}
-        title={t('manuscript.newPart')}
-      >
-        + {t('manuscript.newPart')}
-      </button>
-      <button
-        type="button"
-        class="add-root-btn"
-        onclick={() => handleCreateRoot('chapter')}
-        title={t('manuscript.newChapter')}
-      >
-        + {t('manuscript.newChapter')}
-      </button>
-    </div>
-  </header>
-
-  <div class="tree-content">
-    {#if manuscript.tree.length === 0}
-      <div class="empty-tree-message">
-        <p>{t('manuscript.emptyTree')}</p>
-      </div>
-    {:else}
-      <div class="tree-root">
-        {#each manuscript.tree as rootNode (rootNode.item.id)}
-          {@render renderNode(rootNode, 0)}
-        {/each}
-      </div>
-    {/if}
-  </div>
-
-  <footer class="sidebar-footer">
+  <!-- Alternância entre Manuscrito e Worldbuilding -->
+  <div class="sidebar-tabs">
     <button
       type="button"
-      class="trash-trigger-btn"
-      onclick={() => manuscript.toggleTrash(true)}
-      title={t('manuscript.trash')}
+      class="sidebar-tab-btn"
+      class:active={activeSidebarTab === 'manuscript'}
+      onclick={() => (activeSidebarTab = 'manuscript')}
     >
-      <span class="trash-icon">🗑️</span>
-      <span class="trash-label">{t('manuscript.trash')}</span>
-      {#if manuscript.trashCount > 0}
-        <span class="trash-pill">{manuscript.trashCount}</span>
-      {/if}
+      📖 {t('manuscript.treeTitle')}
     </button>
-  </footer>
+    <button
+      type="button"
+      class="sidebar-tab-btn"
+      class:active={activeSidebarTab === 'worldbuilding'}
+      onclick={() => (activeSidebarTab = 'worldbuilding')}
+    >
+      🌐 {t('worldbuilding.tabTitle')}
+    </button>
+  </div>
+
+  {#if activeSidebarTab === 'manuscript'}
+    <header class="sidebar-header">
+      <div class="header-left">
+        <span class="tree-title">{t('manuscript.treeTitle')}</span>
+      </div>
+      <div class="header-buttons">
+        <button
+          type="button"
+          class="add-root-btn"
+          onclick={() => handleCreateRoot('part')}
+          title={t('manuscript.newPart')}
+        >
+          + {t('manuscript.newPart')}
+        </button>
+        <button
+          type="button"
+          class="add-root-btn"
+          onclick={() => handleCreateRoot('chapter')}
+          title={t('manuscript.newChapter')}
+        >
+          + {t('manuscript.newChapter')}
+        </button>
+      </div>
+    </header>
+
+    <div class="tree-content">
+      {#if manuscript.tree.length === 0}
+        <div class="empty-tree-message">
+          <p>{t('manuscript.emptyTree')}</p>
+        </div>
+      {:else}
+        <div class="tree-root">
+          {#each manuscript.tree as rootNode (rootNode.item.id)}
+            {@render renderNode(rootNode, 0)}
+          {/each}
+        </div>
+      {/if}
+    </div>
+
+    <footer class="sidebar-footer">
+      <button
+        type="button"
+        class="trash-trigger-btn"
+        onclick={() => manuscript.toggleTrash(true)}
+        title={t('manuscript.trash')}
+      >
+        <span class="trash-icon">🗑️</span>
+        <span class="trash-label">{t('manuscript.trash')}</span>
+        {#if manuscript.trashCount > 0}
+          <span class="trash-pill">{manuscript.trashCount}</span>
+        {/if}
+      </button>
+    </footer>
+  {:else}
+    <EncyclopediaView />
+  {/if}
 </aside>
 
 <style>
@@ -230,6 +256,41 @@
   .sidebar-container.collapsed {
     width: 0;
     border-right: none;
+  }
+
+  .sidebar-tabs {
+    display: flex;
+    border-bottom: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-surface);
+  }
+
+  .sidebar-tab-btn {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 6px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--font-ui);
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    transition: all 150ms ease;
+  }
+
+  .sidebar-tab-btn:hover {
+    color: var(--color-ink-charcoal);
+    background-color: var(--color-paper-hover);
+  }
+
+  .sidebar-tab-btn.active {
+    color: var(--color-olive);
+    border-bottom-color: var(--color-olive);
+    background-color: var(--color-paper-base);
   }
 
   .sidebar-header {

@@ -9,6 +9,7 @@ pub mod productivity;
 pub mod refactor;
 pub mod state;
 pub mod vault;
+pub mod worldbuilding;
 
 /// Initializes and executes the Tauri desktop application.
 pub fn run() {
@@ -49,6 +50,13 @@ pub fn run() {
             commands::get_productivity_overview,
             commands::update_productivity_targets,
             commands::record_productivity_session,
+            commands::get_entity_template,
+            commands::create_world_entity,
+            commands::import_entity_image,
+            commands::load_entity_image,
+            commands::delete_entity_image,
+            commands::list_entity_images,
+            commands::get_entity_appearances,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");
