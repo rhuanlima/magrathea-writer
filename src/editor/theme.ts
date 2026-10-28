@@ -103,8 +103,8 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
         fontSize: '19px',
         lineHeight: '32px',
         fontFamily: 'var(--font-literary, Georgia, serif)',
-        backgroundColor: 'var(--color-paper-base, #F7F4EB)',
-        color: 'var(--color-ink-charcoal, #1E231D)',
+        backgroundColor: 'var(--color-paper-base, #FFFFFF)',
+        color: 'var(--color-ink-charcoal, #111827)',
       },
       '.cm-scroller': {
         overflow: 'auto',
@@ -113,11 +113,11 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
       '.cm-content': {
         maxWidth: '720px',
         margin: '0 auto',
-        color: 'var(--color-ink-charcoal, #1E231D)',
+        color: 'var(--color-ink-charcoal, #111827)',
         caretColor: 'var(--color-olive, #5E6F45)',
       },
       '.cm-line': {
-        color: 'var(--color-ink-charcoal, #1E231D)',
+        color: 'var(--color-ink-charcoal, #111827)',
       },
       '.cm-cursor': {
         borderLeftColor: 'var(--color-olive, #5E6F45)',
@@ -127,9 +127,9 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
         backgroundColor: 'rgba(94, 111, 69, 0.2) !important',
       },
       '.cm-gutters': {
-        backgroundColor: 'var(--color-paper-base, #F7F4EB)',
-        borderColor: 'var(--color-paper-border, #E3DDCF)',
-        color: 'var(--color-ink-faded, #A4A89E)',
+        backgroundColor: 'var(--color-paper-base, #FFFFFF)',
+        borderColor: 'var(--color-paper-border, #E5E7EB)',
+        color: 'var(--color-ink-faded, #94A3B8)',
       },
       '.cm-activeLine': {
         backgroundColor: 'rgba(94, 111, 69, 0.04)',

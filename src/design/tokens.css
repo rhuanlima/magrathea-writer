@@ -1,23 +1,23 @@
 @import './fonts.css';
 
 :root {
-  /* Colors - Light Substrate (Default) */
-  --color-paper-base: #F7F4EB;
-  --color-paper-surface: #EFECE1;
+  /* Colors - Light Substrate (Default - Pure White Zen) */
+  --color-paper-base: #FFFFFF;
+  --color-paper-surface: #F8F9FA;
   --color-paper-elevated: #FFFFFF;
-  --color-paper-border: #E3DDCF;
-  --color-paper-hover: #E6E2D4;
-  --color-ink-charcoal: #1E231D;
-  --color-ink-muted: #696E64;
-  --color-ink-faded: #A4A89E;
-  --color-ink-dim: #ABABA3;
+  --color-paper-border: #E5E7EB;
+  --color-paper-hover: #F3F4F6;
+  --color-ink-charcoal: #111827;
+  --color-ink-muted: #64748B;
+  --color-ink-faded: #94A3B8;
+  --color-ink-dim: #CBD5E1;
   --color-olive: #5E6F45;
   --color-olive-hover: #46562F;
-  --color-olive-subtle: #EEF2E6;
+  --color-olive-subtle: #F0FDF4;
   --color-bronze: #C4A468;
   --color-bronze-text: #7A6230;
   --color-bronze-deep: #8C733E;
-  --color-chip-bg: #F0EADE;
+  --color-chip-bg: #F1F5F9;
   --color-error: #BA1A1A;
 
   /* Typography Families */
@@ -110,23 +110,23 @@
   --color-error: #FFB4AB;
 }
 
-/* Explicit Light Theme override */
+/* Explicit Light Theme override (Pure White Zen) */
 :root[data-theme="light"] {
-  --color-paper-base: #F7F4EB;
-  --color-paper-surface: #EFECE1;
+  --color-paper-base: #FFFFFF;
+  --color-paper-surface: #F8F9FA;
   --color-paper-elevated: #FFFFFF;
-  --color-paper-border: #E3DDCF;
-  --color-paper-hover: #E6E2D4;
-  --color-ink-charcoal: #1E231D;
-  --color-ink-muted: #696E64;
-  --color-ink-faded: #A4A89E;
-  --color-ink-dim: #ABABA3;
+  --color-paper-border: #E5E7EB;
+  --color-paper-hover: #F3F4F6;
+  --color-ink-charcoal: #111827;
+  --color-ink-muted: #64748B;
+  --color-ink-faded: #94A3B8;
+  --color-ink-dim: #CBD5E1;
   --color-olive: #5E6F45;
   --color-olive-hover: #46562F;
-  --color-olive-subtle: #EEF2E6;
+  --color-olive-subtle: #F0FDF4;
   --color-bronze: #C4A468;
   --color-bronze-text: #7A6230;
   --color-bronze-deep: #8C733E;
-  --color-chip-bg: #F0EADE;
+  --color-chip-bg: #F1F5F9;
   --color-error: #BA1A1A;
 }

@@ -10,10 +10,10 @@ describe('M0-04: Design Tokens & OFL Embedded Fonts', () => {
   it('declares all mandatory light and dark color tokens from DESIGN.md', () => {
     const css = fs.readFileSync(tokensCssPath, 'utf-8');
 
-    // Light mode tokens
-    expect(css).toContain('--color-paper-base: #F7F4EB');
-    expect(css).toContain('--color-paper-surface: #EFECE1');
-    expect(css).toContain('--color-ink-charcoal: #1E231D');
+    // Light mode tokens (Pure White Zen)
+    expect(css).toContain('--color-paper-base: #FFFFFF');
+    expect(css).toContain('--color-paper-surface: #F8F9FA');
+    expect(css).toContain('--color-ink-charcoal: #111827');
     expect(css).toContain('--color-olive: #5E6F45');
     expect(css).toContain('--color-bronze-text: #7A6230');
     expect(css).toContain('--color-bronze: #C4A468');
