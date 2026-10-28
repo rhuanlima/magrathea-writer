@@ -299,6 +299,7 @@ pub fn run() {
             commands::restore_item_from_trash,
             commands::empty_trash,
             commands::reorder_manuscript_items,
+            commands::move_manuscript_item,
             commands::change_vault_passphrase,
             commands::reencrypt_vault,
             commands::get_vault_keyring_status,

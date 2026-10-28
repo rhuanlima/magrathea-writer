@@ -128,12 +128,13 @@
     })();
 
     tracker = new InactivityTracker({
+      timeoutMs: 30 * 60 * 1000, // 30 minutos de inatividade real
       onTimeout: () => {
         if (vault.isOpen && !vault.isLocked) {
           void vault.lockVault();
         }
       },
-      lockOnHidden: true,
+      lockOnHidden: false, // Não tranca ao alternar para outro app (navegador, etc)
     });
     tracker.start();
   });

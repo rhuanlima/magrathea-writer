@@ -398,6 +398,64 @@ pub fn extract_wikilinks(text: &str) -> Vec<Wikilink> {
             }
         }
 
+        // Verifica início de markdown link indireto: `[label](target)` onde target não é http
+        if bytes[cursor] == b'[' && (cursor == 0 || bytes[cursor - 1] != b'!') {
+            let link_start = cursor;
+            let mut search = cursor + 1;
+            let mut found_close_bracket = None;
+
+            while search < len && bytes[search] != b'\n' {
+                if bytes[search] == b']' {
+                    found_close_bracket = Some(search);
+                    break;
+                }
+                search += 1;
+            }
+
+            if let Some(bracket_pos) = found_close_bracket {
+                if bracket_pos + 1 < len && bytes[bracket_pos + 1] == b'(' {
+                    let mut paren_search = bracket_pos + 2;
+                    let mut found_close_paren = None;
+                    while paren_search < len && bytes[paren_search] != b'\n' {
+                        if bytes[paren_search] == b')' {
+                            found_close_paren = Some(paren_search);
+                            break;
+                        }
+                        paren_search += 1;
+                    }
+
+                    if let Some(paren_pos) = found_close_paren {
+                        let label_text = text[link_start + 1..bracket_pos].trim();
+                        let target_text = text[bracket_pos + 2..paren_pos].trim();
+                        let raw = &text[link_start..paren_pos + 1];
+
+                        // Se não for link web externo com protocolo http, é um link narrativo indireto para entidade!
+                        if !target_text.starts_with("http://")
+                            && !target_text.starts_with("https://")
+                            && !target_text.is_empty()
+                        {
+                            let line_end = text[paren_pos + 1..]
+                                .find('\n')
+                                .map(|pos| paren_pos + 1 + pos)
+                                .unwrap_or(len);
+                            let line_snippet = text[line_start_offset..line_end].trim().to_string();
+
+                            links.push(Wikilink {
+                                raw: raw.to_string(),
+                                target: target_text.to_string(),
+                                label: Some(label_text.to_string()),
+                                line_number,
+                                byte_offset: link_start,
+                                context_snippet: line_snippet,
+                            });
+                            cursor = paren_pos + 1;
+                            continue;
+                        }
+                    }
+                }
+            }
+        }
+
         cursor += 1;
     }
 
@@ -443,6 +501,19 @@ mod tests {
         assert_eq!(links[2].target, "Cofre Secreto");
         assert_eq!(links[2].label, None);
         assert_eq!(links[2].line_number, 2);
+    }
+
+    #[test]
+    fn test_extract_markdown_indirect_links() {
+        let text = "Ela voltou para [casa](Casa da Jaci) e pegou a [arma](Espada Relíquia).";
+        let links = extract_wikilinks(text);
+
+        assert_eq!(links.len(), 2);
+        assert_eq!(links[0].target, "Casa da Jaci");
+        assert_eq!(links[0].label, Some("casa".to_string()));
+
+        assert_eq!(links[1].target, "Espada Relíquia");
+        assert_eq!(links[1].label, Some("arma".to_string()));
     }
 
     #[test]

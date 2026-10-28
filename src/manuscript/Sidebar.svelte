@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { t } from '../i18n';
   import { manuscript, type TreeNode } from '../vault/manuscript.svelte';
-  import type { ManifestItemKind } from '../tauri/bridge';
+  import type { ManifestItemKind, ManifestItem } from '../tauri/bridge';
   import EncyclopediaView from '../worldbuilding/EncyclopediaView.svelte';
 
   const DEFAULT_WIDTH = 280;
@@ -58,6 +58,76 @@
   let editingTitle = $state('');
 
   let showStructureGuide = $state<boolean>(false);
+  let draggedItemId = $state<string | null>(null);
+  let dragOverItemId = $state<string | null>(null);
+
+  function handleDragStart(e: DragEvent, id: string) {
+    draggedItemId = id;
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', id);
+      e.dataTransfer.effectAllowed = 'move';
+    }
+  }
+
+  function handleDragOver(e: DragEvent, targetItem: ManifestItem) {
+    if (!draggedItemId || draggedItemId === targetItem.id) return;
+    e.preventDefault();
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move';
+    }
+    dragOverItemId = targetItem.id;
+  }
+
+  function handleDragLeave(_e: DragEvent, targetId: string) {
+    if (dragOverItemId === targetId) {
+      dragOverItemId = null;
+    }
+  }
+
+  async function handleDrop(e: DragEvent, targetItem: ManifestItem) {
+    e.preventDefault();
+    const sourceId = draggedItemId;
+    draggedItemId = null;
+    dragOverItemId = null;
+
+    if (!sourceId || sourceId === targetItem.id) return;
+
+    const sourceItem = manuscript.items.find((i) => i.id === sourceId);
+    if (!sourceItem) return;
+
+    try {
+      // Se soltar uma cena em cima de um capítulo, move para dentro desse capítulo
+      if (sourceItem.kind === 'scene' && targetItem.kind === 'chapter') {
+        await manuscript.moveItem(sourceId, targetItem.id);
+        return;
+      }
+
+      // Se soltar um capítulo em cima de uma parte, move para dentro dessa parte
+      if (sourceItem.kind === 'chapter' && targetItem.kind === 'part') {
+        await manuscript.moveItem(sourceId, targetItem.id);
+        return;
+      }
+
+      // Se soltar uma cena em cima de outra cena, move para o mesmo capítulo pai
+      if (sourceItem.kind === 'scene' && targetItem.kind === 'scene') {
+        await manuscript.moveItem(sourceId, targetItem.parent_id, targetItem.order);
+        return;
+      }
+
+      // Se soltar um capítulo em cima de outro capítulo, move para a mesma parte pai
+      if (sourceItem.kind === 'chapter' && targetItem.kind === 'chapter') {
+        await manuscript.moveItem(sourceId, targetItem.parent_id, targetItem.order);
+        return;
+      }
+
+      // Se soltar entre itens do mesmo tipo na raiz
+      if (sourceItem.kind === targetItem.kind) {
+        await manuscript.moveItem(sourceId, targetItem.parent_id, targetItem.order);
+      }
+    } catch {
+      // Não quebra a interface
+    }
+  }
 
   function startEditing(id: string, currentTitle: string) {
     editingItemId = id;
@@ -103,6 +173,15 @@
   <div
     class="tree-node depth-{depth} kind-{item.kind}"
     class:selected={isSelected}
+    class:drag-over={dragOverItemId === item.id}
+    draggable={!isEditing}
+    ondragstart={(e) => handleDragStart(e, item.id)}
+    ondragover={(e) => handleDragOver(e, item)}
+    ondragleave={(e) => handleDragLeave(e, item.id)}
+    ondrop={(e) => handleDrop(e, item)}
+    role="treeitem"
+    tabindex="-1"
+    aria-selected={isSelected}
   >
     <div
       class="node-main"
@@ -549,6 +628,12 @@
   .tree-node.selected {
     background-color: rgba(94, 111, 69, 0.15);
     font-weight: 600;
+  }
+
+  .tree-node.drag-over {
+    background-color: var(--color-olive-subtle);
+    outline: 2px dashed var(--color-olive);
+    outline-offset: -2px;
   }
 
   .tree-node.depth-0 {

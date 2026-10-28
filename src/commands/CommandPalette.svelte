@@ -18,6 +18,7 @@
   import { compilerStore } from '../compiler/compiler.svelte';
   import { searchStore } from '../search/search.svelte';
   import { supportStore } from '../support/support.svelte';
+  import { editorPreferences } from '../editor/editor-preferences.svelte';
 
   interface PaletteEntry {
     id: string;
@@ -169,6 +170,16 @@
       icon: '☕',
       execute: () => {
         supportStore.open();
+      },
+    },
+    {
+      id: 'action-editor-preferences',
+      category: 'action',
+      title: 'Preferências do Editor',
+      subtitle: 'Personalizar tipografia, números de linha, tamanho da fonte e largura',
+      icon: '⚙️',
+      execute: () => {
+        editorPreferences.openModal();
       },
     },
     {
