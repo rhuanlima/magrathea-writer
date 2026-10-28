@@ -2,6 +2,7 @@
 
 pub mod backup;
 pub mod commands;
+pub mod compiler;
 pub mod crypto;
 pub mod document;
 pub mod index;
@@ -71,6 +72,14 @@ pub fn run() {
             commands::rollback_global_replace,
             commands::create_vault_backup,
             commands::list_vault_backups,
+            commands::load_compiler_settings,
+            commands::save_compiler_settings,
+            commands::compile_manuscript,
+            commands::export_obsidian_markdown,
+            commands::export_docx,
+            commands::export_epub,
+            commands::export_pdf_html,
+            commands::export_txt_dossier,
         ])
         .run(tauri::generate_context!())
         .expect("error while running magrathea writer application");

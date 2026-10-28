@@ -154,7 +154,7 @@ impl Document {
 
 /// Separa com precisão o bloco frontmatter delimitado por `---` do corpo do documento.
 /// Suporta quebras de linha Unix (`\n`) e Windows (`\r\n`).
-fn split_frontmatter(content: &str) -> (Option<&str>, &str) {
+pub fn split_frontmatter(content: &str) -> (Option<&str>, &str) {
     let normalized_start = content.strip_prefix("\u{feff}").unwrap_or(content); // remove BOM se presente
 
     if !normalized_start.starts_with("---") {

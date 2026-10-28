@@ -2252,6 +2252,215 @@ pub fn list_vault_backups_internal(
     crate::backup::list_backups_internal(vault.root_path(), &dest_path, &title)
 }
 
+// ============================================================================
+// Comandos IPC: Compilador do Manuscrito & Motores de Exportação (M6)
+// ============================================================================
+
+#[tauri::command]
+pub fn load_compiler_settings(
+    state: tauri::State<'_, AppState>,
+) -> Result<crate::compiler::CompilerSettings, String> {
+    load_compiler_settings_internal(&state)
+}
+
+pub fn load_compiler_settings_internal(
+    state: &AppState,
+) -> Result<crate::compiler::CompilerSettings, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::compiler::load_compiler_settings_internal(vault).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn save_compiler_settings(
+    state: tauri::State<'_, AppState>,
+    settings: crate::compiler::CompilerSettings,
+) -> Result<(), String> {
+    save_compiler_settings_internal(&state, &settings)
+}
+
+pub fn save_compiler_settings_internal(
+    state: &AppState,
+    settings: &crate::compiler::CompilerSettings,
+) -> Result<(), String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::compiler::save_compiler_settings_internal(vault, settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn compile_manuscript(
+    state: tauri::State<'_, AppState>,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::CompiledManuscript, String> {
+    compile_manuscript_internal(&state, settings)
+}
+
+pub fn compile_manuscript_internal(
+    state: &AppState,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::CompiledManuscript, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    crate::compiler::compile_manuscript_internal(vault, settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_obsidian_markdown(
+    state: tauri::State<'_, AppState>,
+    destination_dir: String,
+) -> Result<crate::compiler::ExportMarkdownResult, String> {
+    export_obsidian_markdown_internal(&state, &destination_dir)
+}
+
+pub fn export_obsidian_markdown_internal(
+    state: &AppState,
+    destination_dir: &str,
+) -> Result<crate::compiler::ExportMarkdownResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_dir.trim());
+    crate::compiler::export_obsidian_markdown_internal(vault, &dest_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_docx(
+    state: tauri::State<'_, AppState>,
+    destination_file: String,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    export_docx_internal(&state, &destination_file, settings)
+}
+
+pub fn export_docx_internal(
+    state: &AppState,
+    destination_file: &str,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_file.trim());
+    crate::compiler::export_docx_internal(vault, &dest_path, settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_epub(
+    state: tauri::State<'_, AppState>,
+    destination_file: String,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    export_epub_internal(&state, &destination_file, settings)
+}
+
+pub fn export_epub_internal(
+    state: &AppState,
+    destination_file: &str,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_file.trim());
+    crate::compiler::export_epub_internal(vault, &dest_path, settings).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_pdf_html(
+    state: tauri::State<'_, AppState>,
+    destination_file: String,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    export_pdf_html_internal(&state, &destination_file, settings)
+}
+
+pub fn export_pdf_html_internal(
+    state: &AppState,
+    destination_file: &str,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_file.trim());
+    crate::compiler::export_pdf_html_internal(vault, &dest_path, settings)
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub fn export_txt_dossier(
+    state: tauri::State<'_, AppState>,
+    destination_dir: String,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    export_txt_dossier_internal(&state, &destination_dir, settings)
+}
+
+pub fn export_txt_dossier_internal(
+    state: &AppState,
+    destination_dir: &str,
+    settings: Option<crate::compiler::CompilerSettings>,
+) -> Result<crate::compiler::ExportDocumentResult, String> {
+    let guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do cofre.".to_string())?;
+
+    let vault = guard
+        .as_ref()
+        .ok_or_else(|| "Nenhum cofre aberto no momento.".to_string())?;
+
+    let dest_path = PathBuf::from(destination_dir.trim());
+    crate::compiler::export_txt_dossier_internal(vault, &dest_path, settings)
+        .map_err(|e| e.to_string())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

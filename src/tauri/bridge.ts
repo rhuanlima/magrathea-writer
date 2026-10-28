@@ -299,6 +299,53 @@ export interface BackupInfo {
   is_same_disk: boolean;
 }
 
+export interface CompilerSettings {
+  title: string | null;
+  subtitle: string | null;
+  author: string | null;
+  dedication: string | null;
+  epigraph: string | null;
+  epigraph_source: string | null;
+  foreword: string | null;
+  afterword: string | null;
+  acknowledgments: string | null;
+  references: string | null;
+  about_author: string | null;
+  include_scene_titles: boolean;
+  scene_separator: string;
+  page_break_after_chapter: boolean;
+  theme_preset: string; // 'novel' | 'essay' | 'poetry'
+}
+
+export interface CompiledSection {
+  id: string;
+  title: string;
+  kind: 'frontmatter' | 'part' | 'chapter' | 'scene' | 'backmatter';
+  content: string;
+  word_count: number;
+}
+
+export interface CompiledManuscript {
+  settings: CompilerSettings;
+  full_text: string;
+  sections: CompiledSection[];
+  total_words: number;
+  total_characters: number;
+  compiled_at: string;
+}
+
+export interface ExportMarkdownResult {
+  destination_dir: string;
+  files_count: number;
+  byte_size: number;
+}
+
+export interface ExportDocumentResult {
+  file_path: string;
+  format: string;
+  byte_size: number;
+}
+
 export interface BackupResult {
   backup_file: string;
   destination_dir: string;
@@ -398,6 +445,23 @@ let mockItems: ManifestItem[] = [
 
 let mockTrash: ManifestItem[] = [];
 let mockKeyringStatus = false;
+let mockCompilerSettings: CompilerSettings = {
+  title: 'O Canto das Águas Profundas',
+  subtitle: 'Crônicas do Mar Sem Fim',
+  author: 'Rhuan Lima',
+  dedication: 'Para todos os contadores de histórias que navegam no escuro.',
+  epigraph: 'Nem tudo o que reluz é ouro; nem todos os que vagueiam estão perdidos.',
+  epigraph_source: 'J.R.R. Tolkien',
+  foreword: 'Este livro nasceu do silêncio das noites de vigília.',
+  afterword: 'E assim se encerra este relato memorial.',
+  acknowledgments: 'Agradeço aos leitores incansáveis e aos revisores amigos.',
+  references: 'Mapas hidrográficos e cartas de navegação do Atlântico Sul.',
+  about_author: 'Escritor e desenvolvedor apaixonado por ficção especulativa.',
+  include_scene_titles: false,
+  scene_separator: '* * *',
+  page_break_after_chapter: true,
+  theme_preset: 'novel',
+};
 const mockSceneBlobs: Record<string, string> = {
   'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',
   'mock-char-1': '---\ntitle: "Jaci"\ntype: character\nrole: Protagonista\n---\n\n## Presença & Descrição Física\nNavegadora destemida dos mares do sul.',
@@ -1050,7 +1114,165 @@ export async function safeInvoke<T>(
     if (cmd === 'list_vault_backups') {
       return mockBackups as T;
     }
+    if (cmd === 'load_compiler_settings') {
+      return { ...mockCompilerSettings } as T;
+    }
+    if (cmd === 'save_compiler_settings') {
+      const payload = args as unknown as { settings: CompilerSettings };
+      if (payload.settings) {
+        mockCompilerSettings = { ...payload.settings };
+      }
+      return undefined as T;
+    }
+    if (cmd === 'compile_manuscript') {
+      const payload = args as unknown as { settings?: CompilerSettings };
+      const cfg = payload?.settings || mockCompilerSettings;
+      const sections: CompiledSection[] = [
+        {
+          id: 'mock-sec-1',
+          title: 'Capítulo 1: O Despertar',
+          kind: 'chapter',
+          content: mockSceneBlobs['mock-scene-1'] || 'Texto do capítulo 1.',
+          word_count: 150,
+        },
+      ];
+      if (cfg.dedication) {
+        sections.unshift({
+          id: 'dedication',
+          title: 'Dedicatória',
+          kind: 'frontmatter',
+          content: cfg.dedication,
+          word_count: cfg.dedication.split(/\s+/).length,
+        });
+      }
+      if (cfg.references) {
+        sections.push({
+          id: 'references',
+          title: 'Referências e Leituras',
+          kind: 'backmatter',
+          content: cfg.references,
+          word_count: cfg.references.split(/\s+/).length,
+        });
+      }
+      const full_text = sections.map((s) => `## ${s.title}\n\n${s.content}`).join('\n\n---\n\n');
+      return {
+        settings: cfg,
+        full_text,
+        sections,
+        total_words: 350,
+        total_characters: 2100,
+        compiled_at: new Date().toISOString(),
+      } as T;
+    }
+    if (cmd === 'export_obsidian_markdown') {
+      const payload = args as unknown as { destination_dir: string };
+      return {
+        destination_dir: payload.destination_dir || '/exports/obsidian',
+        files_count: 4,
+        byte_size: 4096,
+      } as T;
+    }
+    if (cmd === 'export_docx') {
+      const payload = args as unknown as { destination_file: string };
+      return {
+        file_path: payload.destination_file || '/exports/livro.docx',
+        format: 'docx',
+        byte_size: 15420,
+      } as T;
+    }
+    if (cmd === 'export_epub') {
+      const payload = args as unknown as { destination_file: string };
+      return {
+        file_path: payload.destination_file || '/exports/livro.epub',
+        format: 'epub',
+        byte_size: 18450,
+      } as T;
+    }
+    if (cmd === 'export_pdf_html') {
+      const payload = args as unknown as { destination_file: string };
+      return {
+        file_path: payload.destination_file || '/exports/livro.html',
+        format: 'html_pdf',
+        byte_size: 12200,
+      } as T;
+    }
+    if (cmd === 'export_txt_dossier') {
+      const payload = args as unknown as { destination_dir: string };
+      return {
+        file_path: `${payload.destination_dir || '/exports'}/manuscrito_completo.txt`,
+        format: 'txt',
+        byte_size: 8900,
+      } as T;
+    }
   }
 
   return await tauriInvoke<T>(cmd, normalizedArgs);
+}
+
+// ============================================================================
+// Funções Utilitárias para o Compilador & Exportação (M6)
+// ============================================================================
+
+export async function loadCompilerSettings(): Promise<CompilerSettings> {
+  return safeInvoke<CompilerSettings>('load_compiler_settings');
+}
+
+export async function saveCompilerSettings(
+  settings: CompilerSettings
+): Promise<void> {
+  return safeInvoke<void>('save_compiler_settings', { settings });
+}
+
+export async function compileManuscript(
+  settings?: CompilerSettings
+): Promise<CompiledManuscript> {
+  return safeInvoke<CompiledManuscript>('compile_manuscript', { settings });
+}
+
+export async function exportObsidianMarkdown(
+  destinationDir: string
+): Promise<ExportMarkdownResult> {
+  return safeInvoke<ExportMarkdownResult>('export_obsidian_markdown', {
+    destination_dir: destinationDir,
+  });
+}
+
+export async function exportDocx(
+  destinationFile: string,
+  settings?: CompilerSettings
+): Promise<ExportDocumentResult> {
+  return safeInvoke<ExportDocumentResult>('export_docx', {
+    destination_file: destinationFile,
+    settings,
+  });
+}
+
+export async function exportEpub(
+  destinationFile: string,
+  settings?: CompilerSettings
+): Promise<ExportDocumentResult> {
+  return safeInvoke<ExportDocumentResult>('export_epub', {
+    destination_file: destinationFile,
+    settings,
+  });
+}
+
+export async function exportPdfHtml(
+  destinationFile: string,
+  settings?: CompilerSettings
+): Promise<ExportDocumentResult> {
+  return safeInvoke<ExportDocumentResult>('export_pdf_html', {
+    destination_file: destinationFile,
+    settings,
+  });
+}
+
+export async function exportTxtDossier(
+  destinationDir: string,
+  settings?: CompilerSettings
+): Promise<ExportDocumentResult> {
+  return safeInvoke<ExportDocumentResult>('export_txt_dossier', {
+    destination_dir: destinationDir,
+    settings,
+  });
 }
