@@ -13,6 +13,7 @@
   let { isOpen, onClose, onSuccess }: Props = $props();
 
   let step = $state<1 | 2>(1);
+  let isPasswordless = $state<boolean>(false);
   let projectTitle = $state('');
   let dirPath = $state('');
   let passphrase = $state('');
@@ -25,12 +26,12 @@
   // Avaliação reativa da força da senha
   let strength = $derived(assessPasswordStrength(passphrase));
   let passwordsMatch = $derived(
-    passphrase.length > 0 && passphrase === passphraseConfirm
+    isPasswordless || (passphrase.length > 0 && passphrase === passphraseConfirm)
   );
   let canProceedStep1 = $derived(
     projectTitle.trim().length > 0 &&
       dirPath.trim().length > 0 &&
-      strength.isAcceptable &&
+      (isPasswordless || strength.isAcceptable) &&
       passwordsMatch &&
       !vault.isCreating
   );
@@ -63,8 +64,13 @@
       const res = await vault.createVault(
         dirPath.trim(),
         projectTitle.trim(),
-        passphrase
+        isPasswordless ? '' : passphrase
       );
+      if (isPasswordless) {
+        onSuccess();
+        onClose();
+        return;
+      }
       generatedRecoveryToken = res.recovery_key_token;
       step = 2;
     } catch (err) {
@@ -152,58 +158,92 @@
             />
           </div>
 
-          <div class="form-group">
-            <label for="passphrase" class="field-label">
-              {t('vault.create.passphraseLabel')}
-            </label>
-            <input
-              id="passphrase"
-              type="password"
-              class="text-input"
-              bind:value={passphrase}
-              placeholder={t('vault.create.passphrasePlaceholder')}
-              required
-              disabled={vault.isCreating}
-            />
-
-            <!-- Medidor de Força de Senha Offline -->
-            {#if passphrase.length > 0}
-              <div class="strength-meter">
-                <div class="meter-track">
-                  <div
-                    class="meter-fill"
-                    style="width: {(strength.score / 4) * 100}%; background-color: {strength.colorVar};"
-                  ></div>
+          <!-- Modo de Proteção: Com ou Sem Senha -->
+          <div class="form-group protection-mode-group">
+            <span class="field-label">Modo de Acesso:</span>
+            <div class="protection-mode-cards">
+              <label class="mode-card" class:active={isPasswordless}>
+                <input
+                  type="radio"
+                  name="protection-mode"
+                  checked={isPasswordless}
+                  onchange={() => (isPasswordless = true)}
+                />
+                <div class="mode-info">
+                  <strong>🔓 Cofre Livre (Sem Senha)</strong>
+                  <p>Abertura direta em 1 clique sem exigir senha nem bloqueio por inatividade.</p>
                 </div>
-                <div class="meter-info">
-                  <span class="strength-tag" style="color: {strength.colorVar};">
-                    {t(strength.feedbackKey)}
-                  </span>
-                  <span class="entropy-label">{strength.entropyBits} bits</span>
-                </div>
-              </div>
-            {/if}
+              </label>
 
-            <p class="field-help">{t('vault.create.minRequirementsNote')}</p>
+              <label class="mode-card" class:active={!isPasswordless}>
+                <input
+                  type="radio"
+                  name="protection-mode"
+                  checked={!isPasswordless}
+                  onchange={() => (isPasswordless = false)}
+                />
+                <div class="mode-info">
+                  <strong>🔒 Cofre Protegido (Senha Mestra)</strong>
+                  <p>Cifragem rígida local com Argon2id para proteção máxima de dados confidenciais.</p>
+                </div>
+              </label>
+            </div>
           </div>
 
-          <div class="form-group">
-            <label for="passphrase-confirm" class="field-label">
-              {t('vault.create.passphraseConfirmLabel')}
-            </label>
-            <input
-              id="passphrase-confirm"
-              type="password"
-              class="text-input"
-              bind:value={passphraseConfirm}
-              placeholder={t('vault.create.passphraseConfirmPlaceholder')}
-              required
-              disabled={vault.isCreating}
-            />
-            {#if passphraseConfirm.length > 0 && !passwordsMatch}
-              <span class="field-error">{t('vault.create.passwordsDoNotMatch')}</span>
-            {/if}
-          </div>
+          {#if !isPasswordless}
+            <div class="form-group">
+              <label for="passphrase" class="field-label">
+                {t('vault.create.passphraseLabel')}
+              </label>
+              <input
+                id="passphrase"
+                type="password"
+                class="text-input"
+                bind:value={passphrase}
+                placeholder={t('vault.create.passphrasePlaceholder')}
+                required={!isPasswordless}
+                disabled={vault.isCreating}
+              />
+
+              <!-- Medidor de Força de Senha Offline -->
+              {#if passphrase.length > 0}
+                <div class="strength-meter">
+                  <div class="meter-track">
+                    <div
+                      class="meter-fill"
+                      style="width: {(strength.score / 4) * 100}%; background-color: {strength.colorVar};"
+                    ></div>
+                  </div>
+                  <div class="meter-info">
+                    <span class="strength-tag" style="color: {strength.colorVar};">
+                      {t(strength.feedbackKey)}
+                    </span>
+                    <span class="entropy-label">{strength.entropyBits} bits</span>
+                  </div>
+                </div>
+              {/if}
+
+              <p class="field-help">{t('vault.create.minRequirementsNote')}</p>
+            </div>
+
+            <div class="form-group">
+              <label for="passphrase-confirm" class="field-label">
+                {t('vault.create.passphraseConfirmLabel')}
+              </label>
+              <input
+                id="passphrase-confirm"
+                type="password"
+                class="text-input"
+                bind:value={passphraseConfirm}
+                placeholder={t('vault.create.passphraseConfirmPlaceholder')}
+                required={!isPasswordless}
+                disabled={vault.isCreating}
+              />
+              {#if passphraseConfirm.length > 0 && !passwordsMatch}
+                <span class="field-error">{t('vault.create.passwordsDoNotMatch')}</span>
+              {/if}
+            </div>
+          {/if}
 
           <footer class="modal-footer">
             <button type="button" class="btn-secondary" onclick={onClose}>
@@ -381,6 +421,48 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+  }
+
+  .protection-mode-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .mode-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-base);
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+  }
+
+  .mode-card.active {
+    border-color: var(--color-olive, #5E6F45);
+    background-color: var(--color-paper-surface);
+  }
+
+  .mode-card input {
+    margin-top: 3px;
+    cursor: pointer;
+  }
+
+  .mode-info strong {
+    display: block;
+    font-size: 13px;
+    color: var(--color-ink-charcoal);
+  }
+
+  .mode-info p {
+    margin: 2px 0 0 0;
+    font-size: 11px;
+    color: var(--color-ink-muted);
+    line-height: 1.3;
   }
 
   .field-label {

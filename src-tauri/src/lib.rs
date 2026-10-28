@@ -25,6 +25,7 @@ pub fn run() {
             commands::create_vault,
             commands::get_vault_status,
             commands::lock_vault,
+            commands::is_vault_passwordless,
             commands::open_vault_with_passphrase,
             commands::open_vault_with_recovery_key,
             commands::close_vault,

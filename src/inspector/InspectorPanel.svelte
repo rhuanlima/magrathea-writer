@@ -12,6 +12,7 @@
   import { worldbuilding } from '../worldbuilding/worldbuilding.svelte';
   import EntityAppearancesPanel from '../worldbuilding/EntityAppearancesPanel.svelte';
   import EntityGallery from '../worldbuilding/EntityGallery.svelte';
+  import EntityContextPanel from '../worldbuilding/EntityContextPanel.svelte';
   import SnapshotsPanel from '../snapshots/SnapshotsPanel.svelte';
 
   interface Props {
@@ -72,6 +73,13 @@
 
     <!-- Abas de Navegação -->
     <div class="inspector-tabs">
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'context'}
+        onclick={() => vault.setInspectorTab('context')}
+      >
+        ✨ Contexto
+      </button>
       <button
         class="tab-btn"
         class:active={vault.activeInspectorTab === 'metadata'}
@@ -193,6 +201,8 @@
         <EntityGallery entityId={activeItem.id} />
       {:else if vault.activeInspectorTab === 'snapshots'}
         <SnapshotsPanel {currentContent} {onRestoreContent} />
+      {:else if vault.activeInspectorTab === 'context'}
+        <EntityContextPanel {currentContent} />
       {/if}
     </div>
   </aside>

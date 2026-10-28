@@ -557,6 +557,10 @@ export async function safeInvoke<T>(
         vault_path: `${payload?.dir_path || '/home/author/Documents'}/${payload?.project_title || 'Romance'}.magrathea`,
       } as T;
     }
+    if (cmd === 'is_vault_passwordless') {
+      const payload = args as unknown as { vault_path?: string };
+      return (payload?.vault_path?.includes('passwordless') || false) as T;
+    }
     if (cmd === 'open_vault_with_passphrase') {
       const payload = args as unknown as OpenVaultPayload;
       if (payload?.passphrase === 'wrong-passphrase') {

@@ -48,6 +48,29 @@
     isEditingTitle = false;
   }
 
+  function getItemKindBadge(kind: string): { icon: string; label: string } {
+    switch (kind) {
+      case 'part':
+        return { icon: '📚', label: 'Parte' };
+      case 'chapter':
+        return { icon: '📖', label: 'Capítulo' };
+      case 'scene':
+        return { icon: '🎬', label: 'Cena' };
+      case 'character':
+        return { icon: '👤', label: 'Personagem' };
+      case 'location':
+        return { icon: '📍', label: 'Local' };
+      case 'item':
+        return { icon: '🗡️', label: 'Objeto' };
+      case 'faction':
+        return { icon: '🛡️', label: 'Facção' };
+      case 'lore':
+        return { icon: '📜', label: 'Lore' };
+      default:
+        return { icon: '📄', label: 'Documento' };
+    }
+  }
+
   function handleTitleKeyDown(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       saveTitleEdit();
@@ -59,6 +82,10 @@
 
 {#if scene}
   <header class="scene-header">
+    <div class="kind-indicator">
+      <span class="kind-icon">{getItemKindBadge(scene.kind).icon}</span>
+      <span class="kind-label">{getItemKindBadge(scene.kind).label}</span>
+    </div>
     <div class="title-row">
       {#if isEditingTitle}
         <input
@@ -129,6 +156,19 @@
     margin: 0 auto;
     width: 100%;
     box-sizing: border-box;
+  }
+
+  .kind-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-bronze);
+    margin-bottom: 4px;
   }
 
   .title-row {

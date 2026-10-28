@@ -7,6 +7,7 @@
    */
 
   import { t } from '../i18n';
+  import { safeInvoke } from '../tauri/bridge';
   import { vault } from './vault.svelte';
   import { getRecentVaults, type RecentVault } from './recent-vaults';
 
@@ -71,6 +72,17 @@
         await vault.openWithRecoveryKey(recoveryKey.trim(), trimmedPath);
       } else {
         if (!passphrase) {
+          const isPasswordless = await safeInvoke<boolean>('is_vault_passwordless', {
+            vault_path: trimmedPath,
+          }).catch(() => false);
+
+          if (isPasswordless) {
+            await vault.openWithPassphrase('', trimmedPath);
+            onSuccess?.();
+            onClose();
+            return;
+          }
+
           localError = t('vault.unlock.invalidPassphraseError');
           return;
         }
