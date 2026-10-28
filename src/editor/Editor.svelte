@@ -21,7 +21,8 @@
   import { compilerStore } from '../compiler/compiler.svelte';
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
-  import LiteraryBar from './LiteraryBar.svelte';
+  import { editorPreferences } from './editor-preferences.svelte';
+  import EditorPreferencesModal from './EditorPreferencesModal.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
 
@@ -43,6 +44,18 @@
   let wordsCount = $derived(countWords(bodyOnly));
   let charsCount = $derived(countChars(bodyOnly));
   let isExportMenuOpen = $state(false);
+  let isLiteraryMenuOpen = $state(false);
+
+  function insertLiteraryText(snippet: string, cursorOffset = 0) {
+    if (!view) return;
+    const { from, to } = view.state.selection.main;
+    view.dispatch({
+      changes: { from, to, insert: snippet },
+      selection: { anchor: from + snippet.length + cursorOffset },
+    });
+    view.focus();
+    isLiteraryMenuOpen = false;
+  }
 
   async function handleExportDirect(format: 'docx' | 'epub' | 'pdf' | 'obsidian' | 'txt') {
     isExportMenuOpen = false;
@@ -188,13 +201,16 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="editor-wrapper">
-  <LiteraryBar {view} />
-
   {#if manuscript.activeScene}
     <SceneHeader />
   {/if}
 
-  <div class="editor-container" bind:this={editorElement}></div>
+  <div
+    class="editor-container"
+    class:show-line-numbers={editorPreferences.showLineNumbers}
+    style="--editor-font-size: {editorPreferences.fontSize}px; --editor-font-family: {editorPreferences.fontFamilyCss}; --editor-line-height: {editorPreferences.lineHeight}; --editor-column-max-width: {editorPreferences.columnMaxWidthPx};"
+    bind:this={editorElement}
+  ></div>
 
   <FloatingHud sceneWordsCount={wordsCount} />
 
@@ -250,6 +266,88 @@
       >
         📊
       </button>
+
+      <!-- Menu Popover de Pontuação Literária (Ajuste 5) -->
+      <div class="export-popover-wrapper">
+        <button
+          type="button"
+          class="quick-action-btn"
+          class:active={isLiteraryMenuOpen}
+          onclick={() => (isLiteraryMenuOpen = !isLiteraryMenuOpen)}
+          title="Pontuação Literária (—, «», …, ***)"
+        >
+          ✍️
+        </button>
+
+        {#if isLiteraryMenuOpen}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="export-backdrop" onclick={() => (isLiteraryMenuOpen = false)}></div>
+
+          <div class="export-dropdown-popover" role="menu">
+            <div class="export-dropdown-title">Pontuação Literária</div>
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => insertLiteraryText('— ')}
+            >
+              <span class="export-item-icon">—</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Travessão Literário</span>
+                <span class="export-item-ext">— diálogo</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => insertLiteraryText('«»', -1)}
+            >
+              <span class="export-item-icon">« »</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Aspas Angulares</span>
+                <span class="export-item-ext">«pensamento»</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => insertLiteraryText('“”', -1)}
+            >
+              <span class="export-item-icon">“ ”</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Aspas Tipográficas</span>
+                <span class="export-item-ext">“citação”</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => insertLiteraryText('…')}
+            >
+              <span class="export-item-icon">…</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Reticências Reais</span>
+                <span class="export-item-ext">pausa…</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => insertLiteraryText('\n\n* * *\n\n')}
+            >
+              <span class="export-item-icon">⁂</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Quebra de Cena</span>
+                <span class="export-item-ext">* * *</span>
+              </div>
+            </button>
+          </div>
+        {/if}
+      </div>
 
       <div class="export-popover-wrapper">
         <button
@@ -348,6 +446,15 @@
       <button
         type="button"
         class="quick-action-btn"
+        onclick={() => editorPreferences.openModal()}
+        title="Preferências do Editor (Fonte, Linhas, Espaçamento)"
+      >
+        ⚙️
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
         onclick={() => theme.toggleTheme()}
         title="Alternar Tema Claro / Escuro"
       >
@@ -386,6 +493,8 @@
       {/if}
     </div>
   </footer>
+
+  <EditorPreferencesModal />
 </div>
 
 <style>
@@ -404,6 +513,10 @@
     overflow: hidden;
     box-sizing: border-box;
     background-color: var(--color-paper-base);
+  }
+
+  :global(.editor-container:not(.show-line-numbers) .cm-gutters) {
+    display: none !important;
   }
 
   .editor-footer {

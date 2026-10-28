@@ -339,6 +339,112 @@ pub fn compile_manuscript_internal(
     })
 }
 
+/// Limpa marcas técnicas de escrita literária para a publicação final da obra.
+/// - Converte `[[Alvo|Alias]]` para `Alias`
+/// - Converte `[[Alvo]]` para `Alvo`
+/// - Converte `[Alias](Alvo)` (links narrativos indiretos) para `Alias`
+/// - Remove metadados e tags técnicas ocultas como `#data_20261027`, `#tempo_...`
+pub fn clean_literary_markdown(text: &str) -> String {
+    let mut result = String::with_capacity(text.len());
+    let mut chars = text.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '[' && chars.peek() == Some(&'[') {
+            chars.next(); // Consome '['
+            let mut inner = String::new();
+            let mut closed = false;
+            while let Some(c) = chars.next() {
+                if c == ']' && chars.peek() == Some(&']') {
+                    chars.next(); // Consome ']'
+                    closed = true;
+                    break;
+                }
+                inner.push(c);
+            }
+            if closed {
+                if let Some((_, alias)) = inner.split_once('|') {
+                    result.push_str(alias.trim());
+                } else {
+                    result.push_str(inner.trim());
+                }
+            } else {
+                result.push_str("[[");
+                result.push_str(&inner);
+            }
+        } else if ch == '[' {
+            let mut label = String::new();
+            let mut has_bracket = false;
+            for c in chars.by_ref() {
+                if c == ']' {
+                    has_bracket = true;
+                    break;
+                }
+                label.push(c);
+            }
+            if has_bracket && chars.peek() == Some(&'(') {
+                chars.next(); // Consome '('
+                let mut target = String::new();
+                let mut has_paren = false;
+                for c in chars.by_ref() {
+                    if c == ')' {
+                        has_paren = true;
+                        break;
+                    }
+                    target.push(c);
+                }
+                if has_paren {
+                    let target_trim = target.trim();
+                    if !target_trim.starts_with("http://") && !target_trim.starts_with("https://") {
+                        result.push_str(&label);
+                    } else {
+                        result.push('[');
+                        result.push_str(&label);
+                        result.push_str("](");
+                        result.push_str(&target);
+                        result.push(')');
+                    }
+                } else {
+                    result.push('[');
+                    result.push_str(&label);
+                    result.push_str("](");
+                    result.push_str(&target);
+                }
+            } else {
+                result.push('[');
+                result.push_str(&label);
+                if has_bracket {
+                    result.push(']');
+                }
+            }
+        } else if ch == '#' {
+            let mut tag = String::new();
+            while let Some(&c) = chars.peek() {
+                if c.is_alphanumeric() || c == '_' || c == '-' {
+                    tag.push(c);
+                    chars.next();
+                } else {
+                    break;
+                }
+            }
+            if tag.starts_with("data_")
+                || tag.starts_with("date_")
+                || tag.starts_with("tempo_")
+                || tag.starts_with("time_")
+            {
+                if chars.peek() == Some(&' ') {
+                    chars.next();
+                }
+            } else {
+                result.push('#');
+                result.push_str(&tag);
+            }
+        } else {
+            result.push(ch);
+        }
+    }
+    result
+}
+
 fn compile_tree_item(
     vault: &UnlockedVault,
     item: &ManifestItem,
@@ -353,7 +459,8 @@ fn compile_tree_item(
                 if let Ok(raw_bytes) = vault.read_blob(blob_id) {
                     let text = String::from_utf8_lossy(&raw_bytes);
                     let (_, body) = split_frontmatter(&text);
-                    part_content.push_str(body.trim());
+                    let cleaned = clean_literary_markdown(body.trim());
+                    part_content.push_str(&cleaned);
                 }
             }
             let word_count = part_content.split_whitespace().count();
@@ -380,9 +487,9 @@ fn compile_tree_item(
                 if let Ok(raw_bytes) = vault.read_blob(blob_id) {
                     let text = String::from_utf8_lossy(&raw_bytes);
                     let (_, body) = split_frontmatter(&text);
-                    let trimmed = body.trim();
-                    if !trimmed.is_empty() {
-                        chapter_content.push_str(trimmed);
+                    let cleaned = clean_literary_markdown(body.trim());
+                    if !cleaned.is_empty() {
+                        chapter_content.push_str(&cleaned);
                     }
                 }
             }
@@ -406,7 +513,8 @@ fn compile_tree_item(
                     let raw_bytes = vault.read_blob(blob_id)?;
                     let scene_text = String::from_utf8_lossy(&raw_bytes);
                     let (_, body) = split_frontmatter(&scene_text);
-                    chapter_content.push_str(body.trim());
+                    let cleaned = clean_literary_markdown(body.trim());
+                    chapter_content.push_str(&cleaned);
                 }
             }
 
@@ -425,7 +533,8 @@ fn compile_tree_item(
                 let raw_bytes = vault.read_blob(blob_id)?;
                 let scene_text = String::from_utf8_lossy(&raw_bytes);
                 let (_, body) = split_frontmatter(&scene_text);
-                content.push_str(body.trim());
+                let cleaned = clean_literary_markdown(body.trim());
+                content.push_str(&cleaned);
             }
             let word_count = content.split_whitespace().count();
             sections.push(CompiledSection {
@@ -1091,4 +1200,26 @@ fn xml_escape(text: &str) -> String {
         .replace('>', "&gt;")
         .replace('"', "&quot;")
         .replace('\'', "&apos;")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_clean_literary_markdown_wikilinks_and_indirect_links() {
+        let input = "A [[Jaci]] estava na [[Casa da Jaci|casa dela]] quando acordou... Usou a [espada](Espada Relíquia) para lutar. #data_20261027";
+        let cleaned = clean_literary_markdown(input);
+        assert_eq!(
+            cleaned,
+            "A Jaci estava na casa dela quando acordou... Usou a espada para lutar. "
+        );
+    }
+
+    #[test]
+    fn test_clean_literary_markdown_preserves_external_urls() {
+        let input = "Consulte [este link](https://example.com) para mais informações.";
+        let cleaned = clean_literary_markdown(input);
+        assert_eq!(cleaned, input);
+    }
 }

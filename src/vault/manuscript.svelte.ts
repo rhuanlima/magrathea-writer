@@ -44,11 +44,15 @@ class ManuscriptStore {
   trashCount = $derived(this.trash.length);
 
   /**
-   * Monta a árvore hierárquica respeitando a ordenação monotônica dos nós.
+   * Monta a árvore hierárquica respeitando a ordenação monotônica dos nós da narrativa (part, chapter, scene).
+   * Fichas de worldbuilding (character, location, item, faction, lore) são isoladas na aba própria.
    */
   tree = $derived.by(() => {
+    const narrativeItems = this.items.filter((it) =>
+      ['part', 'chapter', 'scene'].includes(it.kind)
+    );
     const buildNodes = (parentId: string | null): TreeNode[] => {
-      return this.items
+      return narrativeItems
         .filter((it) => it.parent_id === parentId)
         .sort((a, b) => a.order - b.order)
         .map((item) => ({
@@ -239,6 +243,27 @@ class ManuscriptStore {
       item.parent_id,
       reordered.map((i) => i.id)
     );
+  }
+
+  /**
+   * Move um nó para um novo pai hierárquico e define sua ordem (Drag & Drop).
+   */
+  async moveItem(
+    itemId: string,
+    targetParentId: string | null,
+    targetOrder?: number
+  ): Promise<void> {
+    try {
+      await safeInvoke('move_manuscript_item', {
+        item_id: itemId,
+        target_parent_id: targetParentId,
+        target_order: targetOrder,
+      });
+      await this.refreshTree();
+    } catch (err) {
+      this.errorMessage = String(err);
+      throw err;
+    }
   }
 
   /**

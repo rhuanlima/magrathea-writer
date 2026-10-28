@@ -476,6 +476,32 @@ fn extract_summary(doc: &Document) -> Option<String> {
     None
 }
 
+/// Extrai tags inline ocultas de data e tempo diretamente do corpo do texto da cena
+/// (ex: `#data_20261027`, `#data_2026-10-27`, `#tempo_manha`, `#date_20261027`).
+pub fn extract_inline_time_tag(body: &str) -> Option<String> {
+    for word in body.split_whitespace() {
+        if let Some(tag) = word.strip_prefix('#') {
+            let clean =
+                tag.trim_end_matches(|c: char| !c.is_alphanumeric() && c != '_' && c != '-');
+            if let Some(val) = clean
+                .strip_prefix("data_")
+                .or_else(|| clean.strip_prefix("date_"))
+            {
+                if val.len() == 8 && val.chars().all(|c| c.is_ascii_digit()) {
+                    return Some(format!("{}-{}-{}", &val[0..4], &val[4..6], &val[6..8]));
+                }
+                return Some(val.to_string());
+            } else if let Some(val) = clean
+                .strip_prefix("tempo_")
+                .or_else(|| clean.strip_prefix("time_"))
+            {
+                return Some(val.replace('_', " "));
+            }
+        }
+    }
+    None
+}
+
 /// Gera a linha do tempo completa do cofre a partir dos itens do manifesto e seus documentos.
 pub fn build_vault_timeline(
     vault: &UnlockedVault,
@@ -544,6 +570,9 @@ pub fn build_vault_timeline(
                             });
 
                         let (_, body) = split_frontmatter(&text);
+                        if raw_time.is_none() {
+                            raw_time = extract_inline_time_tag(body);
+                        }
                         word_count = body.split_whitespace().count();
                         doc = parsed;
                     }
@@ -568,6 +597,9 @@ pub fn build_vault_timeline(
                                     }
                                 }
                             }
+                        }
+                        if raw_time.is_none() {
+                            raw_time = extract_inline_time_tag(body);
                         }
                     }
                 }
@@ -873,6 +905,17 @@ mod tests {
         assert!(rank2 < rank3);
         // Ano 42 deve ser muito maior que Dia 2
         assert!(rank3 < rank4);
+    }
+
+    #[test]
+    fn test_extract_inline_time_tag() {
+        let body = "O vento soprava frio. #data_20261027\nA batalha começou.";
+        let tag = extract_inline_time_tag(body);
+        assert_eq!(tag, Some("2026-10-27".to_string()));
+
+        let body2 = "Ao amanhecer. #tempo_manha todos partiram.";
+        let tag2 = extract_inline_time_tag(body2);
+        assert_eq!(tag2, Some("manha".to_string()));
     }
 
     #[test]

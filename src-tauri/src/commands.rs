@@ -1056,6 +1056,129 @@ pub fn reorder_manuscript_items_internal(
     Ok(())
 }
 
+/// Move um item do manuscrito para um novo nó pai e define sua posição ordinal (Drag & Drop hierárquico).
+#[tauri::command]
+pub fn move_manuscript_item(
+    state: tauri::State<'_, AppState>,
+    item_id: String,
+    target_parent_id: Option<String>,
+    target_order: Option<u32>,
+) -> Result<(), String> {
+    move_manuscript_item_internal(&state, &item_id, target_parent_id.as_deref(), target_order)
+}
+
+/// Lógica interna para movimentação hierárquica de nós do manuscrito.
+pub fn move_manuscript_item_internal(
+    state: &AppState,
+    item_id: &str,
+    target_parent_id: Option<&str>,
+    target_order: Option<u32>,
+) -> Result<(), String> {
+    let mut guard = state
+        .active_vault
+        .lock()
+        .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
+
+    let vault = guard
+        .as_mut()
+        .ok_or_else(|| "Nenhum cofre aberto em memória.".to_string())?;
+
+    if vault.is_locked() {
+        return Err("O cofre está bloqueado.".to_string());
+    }
+
+    let timestamp_iso = crate::vault::current_timestamp_iso();
+    let manifest = vault
+        .manifest_mut()
+        .map_err(|e| format!("Falha ao acessar manifesto: {e}"))?;
+
+    // 1. Valida que o item existe
+    let item_idx = manifest
+        .items
+        .iter()
+        .position(|it| it.id == item_id)
+        .ok_or_else(|| format!("Item com ID '{item_id}' não encontrado."))?;
+
+    let item_kind = manifest.items[item_idx].kind.clone();
+    let old_parent_id = manifest.items[item_idx].parent_id.clone();
+
+    // 2. Previne ciclos e valida hierarquia
+    if let Some(target_p) = target_parent_id {
+        if target_p == item_id {
+            return Err("Um item não pode ser pai de si mesmo.".to_string());
+        }
+
+        let target_item = manifest
+            .items
+            .iter()
+            .find(|it| it.id == target_p)
+            .ok_or_else(|| format!("Nó pai de destino '{target_p}' não encontrado."))?;
+
+        match item_kind.as_str() {
+            "part" => {
+                return Err(
+                    "Uma Parte não pode ser filha de outro item (deve ficar na raiz).".to_string(),
+                );
+            }
+            "chapter" if target_item.kind != "part" => {
+                return Err(
+                    "Um Capítulo só pode ser filho de uma Parte ou ficar na raiz.".to_string(),
+                );
+            }
+            "scene" if target_item.kind != "chapter" && target_item.kind != "part" => {
+                return Err("Uma Cena só pode ser filha de um Capítulo ou Parte.".to_string());
+            }
+            _ => {}
+        }
+    }
+
+    // 3. Atualiza o parent_id
+    manifest.items[item_idx].parent_id = target_parent_id.map(|s| s.to_string());
+
+    // 4. Coleta todos os irmãos sob o novo pai (excluindo o próprio item)
+    let mut siblings: Vec<String> = manifest
+        .items
+        .iter()
+        .filter(|it| it.id != item_id && it.parent_id.as_deref() == target_parent_id)
+        .map(|it| it.id.clone())
+        .collect();
+
+    // Insere o item na ordem desejada
+    let insert_pos = match target_order {
+        Some(pos) => (pos as usize).min(siblings.len()),
+        None => siblings.len(),
+    };
+    siblings.insert(insert_pos, item_id.to_string());
+
+    // Aplica a nova ordenação monotônica
+    for (idx, id) in siblings.iter().enumerate() {
+        if let Some(it) = manifest.items.iter_mut().find(|it| it.id == *id) {
+            it.order = idx as u32;
+        }
+    }
+
+    // 5. Reorganiza a ordem dos irmãos no pai antigo se mudou de pai
+    if old_parent_id.as_deref() != target_parent_id {
+        let old_siblings: Vec<String> = manifest
+            .items
+            .iter()
+            .filter(|it| it.parent_id.as_deref() == old_parent_id.as_deref())
+            .map(|it| it.id.clone())
+            .collect();
+        for (idx, id) in old_siblings.iter().enumerate() {
+            if let Some(it) = manifest.items.iter_mut().find(|it| it.id == *id) {
+                it.order = idx as u32;
+            }
+        }
+    }
+
+    vault
+        .save_manifest(&timestamp_iso)
+        .map_err(|e| format!("Falha ao salvar manifesto: {e}"))?;
+
+    Ok(())
+}
+
 /// Altera a frase-senha mestra do cofre ativo sem necessidade de recifrar os blobs de texto.
 #[tauri::command]
 pub fn change_vault_passphrase(

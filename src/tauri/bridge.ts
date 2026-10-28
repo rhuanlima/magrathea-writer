@@ -831,6 +831,17 @@ export async function safeInvoke<T>(
       });
       return undefined as T;
     }
+    if (cmd === 'move_manuscript_item') {
+      const payload = args as unknown as { item_id: string; target_parent_id?: string | null; target_order?: number };
+      const item = mockItems.find(i => i.id === payload.item_id);
+      if (item) {
+        item.parent_id = payload.target_parent_id || null;
+        if (payload.target_order !== undefined) {
+          item.order = payload.target_order;
+        }
+      }
+      return undefined as T;
+    }
     if (cmd === 'change_vault_passphrase') {
       const payload = args as unknown as ChangePassphrasePayload;
       if (payload?.new_passphrase?.length < 10) {

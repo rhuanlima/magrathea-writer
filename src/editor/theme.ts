@@ -57,9 +57,9 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
       EditorView.theme({
         '&': {
           height: '100%',
-          fontSize: '19px',
-          lineHeight: '32px',
-          fontFamily: 'var(--font-literary, Georgia, serif)',
+          fontSize: 'var(--editor-font-size, 18px)',
+          lineHeight: 'var(--editor-line-height, 1.8)',
+          fontFamily: 'var(--editor-font-family, var(--font-literary, Georgia, serif))',
           backgroundColor: '#1B1D19',
           color: '#FFFFFF',
         },
@@ -68,7 +68,7 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
           padding: 'var(--space-lg) var(--space-md)',
         },
         '.cm-content': {
-          maxWidth: '720px',
+          maxWidth: 'var(--editor-column-max-width, 720px)',
           margin: '0 auto',
           color: '#FFFFFF',
           caretColor: '#8AA66A',
@@ -100,9 +100,9 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
     EditorView.theme({
       '&': {
         height: '100%',
-        fontSize: '19px',
-        lineHeight: '32px',
-        fontFamily: 'var(--font-literary, Georgia, serif)',
+        fontSize: 'var(--editor-font-size, 18px)',
+        lineHeight: 'var(--editor-line-height, 1.8)',
+        fontFamily: 'var(--editor-font-family, var(--font-literary, Georgia, serif))',
         backgroundColor: 'var(--color-paper-base, #FFFFFF)',
         color: 'var(--color-ink-charcoal, #111827)',
       },
@@ -111,7 +111,7 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
         padding: 'var(--space-lg) var(--space-md)',
       },
       '.cm-content': {
-        maxWidth: '720px',
+        maxWidth: 'var(--editor-column-max-width, 720px)',
         margin: '0 auto',
         color: 'var(--color-ink-charcoal, #111827)',
         caretColor: 'var(--color-olive, #5E6F45)',
