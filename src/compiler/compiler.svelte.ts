@@ -19,6 +19,8 @@ import {
   exportEpub,
   exportPdfHtml,
   exportTxtDossier,
+  pickSaveExportPath,
+  pickDirectory,
 } from '../tauri/bridge';
 
 export type CompilerTab = 'preview' | 'matter' | 'design' | 'export';
@@ -185,6 +187,74 @@ export function createCompilerStore() {
     }
   }
 
+  let toastMessage = $state<string | null>(null);
+  let toastTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function showToast(msg: string) {
+    toastMessage = msg;
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      toastMessage = null;
+    }, 4000);
+  }
+
+  async function quickExportDirect(format: 'docx' | 'epub' | 'pdf' | 'obsidian' | 'txt'): Promise<string | null> {
+    await loadSettings();
+    const raw = (settings.title || 'manuscrito')
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/gi, '_') || 'livro';
+    let chosen: string | null = null;
+
+    if (format === 'docx') {
+      chosen = await pickSaveExportPath('Salvar Manuscrito em Word (.docx)', `${raw}.docx`, 'docx');
+      if (chosen) {
+        const ok = await runExportDocx(chosen);
+        if (ok) {
+          showToast(`✓ Manuscrito exportado para Word: ${chosen}`);
+          return chosen;
+        }
+      }
+    } else if (format === 'epub') {
+      chosen = await pickSaveExportPath('Salvar Livro Digital EPUB (.epub)', `${raw}.epub`, 'epub');
+      if (chosen) {
+        const ok = await runExportEpub(chosen);
+        if (ok) {
+          showToast(`✓ Livro Digital exportado: ${chosen}`);
+          return chosen;
+        }
+      }
+    } else if (format === 'pdf') {
+      chosen = await pickSaveExportPath('Salvar para Leitura / PDF (.html)', `${raw}.html`, 'html');
+      if (chosen) {
+        const ok = await runExportPdf(chosen);
+        if (ok) {
+          showToast(`✓ Documento para leitura gerado: ${chosen}`);
+          return chosen;
+        }
+      }
+    } else if (format === 'obsidian') {
+      chosen = await pickDirectory('Escolha a pasta de destino para o Cofre Obsidian');
+      if (chosen) {
+        const ok = await runExportObsidian(chosen);
+        if (ok) {
+          showToast(`✓ Cofre Obsidian criado: ${chosen}`);
+          return chosen;
+        }
+      }
+    } else if (format === 'txt') {
+      chosen = await pickDirectory('Escolha a pasta para salvar o Manuscrito TXT e Dossiê');
+      if (chosen) {
+        const ok = await runExportTxt(chosen);
+        if (ok) {
+          showToast(`✓ Manuscrito em texto puro exportado: ${chosen}`);
+          return chosen;
+        }
+      }
+    }
+    return null;
+  }
+
   return {
     get isOpen() {
       return isOpen;
@@ -200,6 +270,9 @@ export function createCompilerStore() {
     },
     get isExporting() {
       return isExporting;
+    },
+    get toastMessage() {
+      return toastMessage;
     },
     get settings() {
       return settings;
@@ -222,6 +295,7 @@ export function createCompilerStore() {
     loadSettings,
     saveSettingsNow,
     compile,
+    quickExportDirect,
     runExportObsidian,
     runExportDocx,
     runExportEpub,

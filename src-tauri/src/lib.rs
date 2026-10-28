@@ -180,7 +180,7 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         ],
     )?;
 
-    // Menu Exportação Editorial
+    // Menu Exportação Nativa
     let export_menu = Submenu::with_items(
         handle,
         "Exportar",
@@ -188,18 +188,10 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
         &[
             &MenuItem::with_id(
                 handle,
-                "menu_export_panel",
-                "Painel de Publicação Editorial...",
-                true,
-                Some("CmdOrCtrl+Shift+E"),
-            )?,
-            &PredefinedMenuItem::separator(handle)?,
-            &MenuItem::with_id(
-                handle,
                 "menu_export_docx",
                 "Exportar para Word (.docx)...",
                 true,
-                None::<&str>,
+                Some("CmdOrCtrl+Shift+E"),
             )?,
             &MenuItem::with_id(
                 handle,
@@ -215,6 +207,7 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
                 true,
                 None::<&str>,
             )?,
+            &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(
                 handle,
                 "menu_export_obsidian",

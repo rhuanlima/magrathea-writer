@@ -18,7 +18,6 @@
   import CreateEntityModal from './worldbuilding/CreateEntityModal.svelte';
   import GlobalSearchModal from './search/GlobalSearchModal.svelte';
   import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
-  import CompilerModal from './compiler/CompilerModal.svelte';
   import TimelineModal from './timeline/TimelineModal.svelte';
   import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
   import { searchStore } from './search/search.svelte';
@@ -95,23 +94,20 @@
         listenToEvent('menu_security', () => {
           if (vault.isOpen && !vault.isLocked) vault.toggleSecurityModal(true);
         }),
-        listenToEvent('menu_export_panel', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
-        }),
         listenToEvent('menu_export_docx', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+          if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('docx');
         }),
         listenToEvent('menu_export_epub', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+          if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('epub');
         }),
         listenToEvent('menu_export_pdf', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+          if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('pdf');
         }),
         listenToEvent('menu_export_obsidian', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+          if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('obsidian');
         }),
         listenToEvent('menu_export_txt', () => {
-          if (vault.isOpen && !vault.isLocked) compilerStore.openModal('export');
+          if (vault.isOpen && !vault.isLocked) void compilerStore.quickExportDirect('txt');
         }),
       ];
 
@@ -185,7 +181,7 @@
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'E' || e.key === 'e')) {
       e.preventDefault();
       if (vault.isOpen && !vault.isLocked) {
-        compilerStore.openModal();
+        void compilerStore.quickExportDirect('docx');
       }
     }
     if ((e.metaKey || e.ctrlKey) && e.shiftKey && (e.key === 'T' || e.key === 't')) {
@@ -334,11 +330,16 @@
 
   <BackupSettingsModal />
 
-  <CompilerModal />
-
   <TimelineModal />
 
   <GraphCanvasModal />
+
+  {#if compilerStore.toastMessage}
+    <aside class="export-toast-notification" role="status" aria-live="polite">
+      <span class="toast-check">✓</span>
+      <span>{compilerStore.toastMessage}</span>
+    </aside>
+  {/if}
 
   {#if vault.isLocked && vault.vaultPath}
     <LockScreen />
@@ -538,5 +539,40 @@
     flex: 1;
     overflow: hidden;
     background-color: var(--color-paper-base);
+  }
+
+  .export-toast-notification {
+    position: fixed;
+    bottom: 38px;
+    right: 20px;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border-radius: var(--rounded-lg, 8px);
+    background-color: var(--color-ink-charcoal, #111827);
+    color: #ffffff;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.2);
+    animation: toast-fade 0.2s ease-out;
+  }
+
+  @keyframes toast-fade {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .toast-check {
+    color: #4ade80;
+    font-weight: 700;
   }
 </style>

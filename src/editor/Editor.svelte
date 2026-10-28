@@ -41,6 +41,12 @@
   let bodyOnly = $derived(splitFrontmatter(currentDoc).body);
   let wordsCount = $derived(countWords(bodyOnly));
   let charsCount = $derived(countChars(bodyOnly));
+  let isExportMenuOpen = $state(false);
+
+  async function handleExportDirect(format: 'docx' | 'epub' | 'pdf' | 'obsidian' | 'txt') {
+    isExportMenuOpen = false;
+    await compilerStore.quickExportDirect(format);
+  }
 
   onMount(() => {
     if (!editorElement) {
@@ -235,14 +241,89 @@
         📊
       </button>
 
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => compilerStore.openModal('export')}
-        title="Exportação Editorial & Publicação (Cmd+Shift+E)"
-      >
-        📖
-      </button>
+      <div class="export-popover-wrapper">
+        <button
+          type="button"
+          class="quick-action-btn"
+          class:active={isExportMenuOpen}
+          onclick={() => (isExportMenuOpen = !isExportMenuOpen)}
+          title="Exportar Manuscrito (Word, EPUB, PDF...)"
+        >
+          📖
+        </button>
+
+        {#if isExportMenuOpen}
+          <!-- Backdrop invisível para fechar ao clicar fora -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="export-backdrop" onclick={() => (isExportMenuOpen = false)}></div>
+
+          <div class="export-dropdown-popover" role="menu">
+            <div class="export-dropdown-title">Exportar Manuscrito</div>
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => handleExportDirect('docx')}
+            >
+              <span class="export-item-icon">📄</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Microsoft Word</span>
+                <span class="export-item-ext">.docx</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => handleExportDirect('epub')}
+            >
+              <span class="export-item-icon">📱</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Livro Digital</span>
+                <span class="export-item-ext">.epub</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => handleExportDirect('pdf')}
+            >
+              <span class="export-item-icon">🖨️</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Leitura / Impressão</span>
+                <span class="export-item-ext">.html / .pdf</span>
+              </div>
+            </button>
+
+            <div class="export-dropdown-divider"></div>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => handleExportDirect('obsidian')}
+            >
+              <span class="export-item-icon">💎</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Cofre Obsidian</span>
+                <span class="export-item-ext">.md</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => handleExportDirect('txt')}
+            >
+              <span class="export-item-icon">📝</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Texto Puro + Dossiê</span>
+                <span class="export-item-ext">.txt</span>
+              </div>
+            </button>
+          </div>
+        {/if}
+      </div>
 
       <button
         type="button"
@@ -369,6 +450,93 @@
 
   .quick-action-btn.lock-btn:hover {
     color: #e11d48;
+  }
+
+  .export-popover-wrapper {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .export-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    cursor: default;
+  }
+
+  .export-dropdown-popover {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    z-index: 100;
+    min-width: 220px;
+    background-color: var(--color-paper-elevated, #ffffff);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-lg, 8px);
+    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .export-dropdown-title {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-ink-faded);
+    padding: 4px 8px;
+    margin-bottom: 2px;
+  }
+
+  .export-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    text-align: left;
+    font-family: var(--font-ui);
+    color: var(--color-ink-charcoal);
+    transition: background-color 0.12s ease;
+  }
+
+  .export-dropdown-item:hover {
+    background-color: var(--color-paper-hover);
+  }
+
+  .export-item-icon {
+    font-size: 14px;
+    line-height: 1;
+  }
+
+  .export-item-info {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex: 1;
+  }
+
+  .export-item-name {
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .export-item-ext {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--color-ink-muted);
+  }
+
+  .export-dropdown-divider {
+    height: 1px;
+    background-color: var(--color-paper-border);
+    margin: 4px 0;
   }
 
   .dot {
