@@ -71,6 +71,29 @@
     }
   }
 
+  function getItemRoleDescription(kind: string): string {
+    switch (kind) {
+      case 'part':
+        return 'Abertura e texto da Parte no livro compilado';
+      case 'chapter':
+        return 'Texto do capítulo (compõe antes das cenas ou diretamente como capítulo)';
+      case 'scene':
+        return 'Cena narrativa sequencial do capítulo';
+      case 'character':
+        return 'Dossiê, notas de contexto e perfil do personagem';
+      case 'location':
+        return 'Notas de cenário, atmosfera e geografia';
+      case 'item':
+        return 'Descrição, história e relevância do objeto na trama';
+      case 'faction':
+        return 'Ideologia, estrutura e motivações da facção';
+      case 'lore':
+        return 'História, mitologia e regras do mundo';
+      default:
+        return 'Documento do manuscrito';
+    }
+  }
+
   function handleTitleKeyDown(e: KeyboardEvent) {
     if (e.key === 'Enter') {
       saveTitleEdit();
@@ -85,6 +108,8 @@
     <div class="kind-indicator">
       <span class="kind-icon">{getItemKindBadge(scene.kind).icon}</span>
       <span class="kind-label">{getItemKindBadge(scene.kind).label}</span>
+      <span class="kind-sep">•</span>
+      <span class="kind-role">{getItemRoleDescription(scene.kind)}</span>
     </div>
     <div class="title-row">
       {#if isEditingTitle}
@@ -161,7 +186,7 @@
   .kind-indicator {
     display: inline-flex;
     align-items: center;
-    gap: 5px;
+    gap: 6px;
     font-family: var(--font-ui);
     font-size: 11px;
     font-weight: 700;
@@ -169,6 +194,20 @@
     letter-spacing: 0.5px;
     color: var(--color-bronze);
     margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+
+  .kind-sep {
+    color: var(--color-ink-faded);
+    font-weight: 400;
+  }
+
+  .kind-role {
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--color-ink-muted);
   }
 
   .title-row {

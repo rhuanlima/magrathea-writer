@@ -96,6 +96,13 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
             &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(
                 handle,
+                "menu_command_palette",
+                "Paleta de Comandos...",
+                true,
+                Some("CmdOrCtrl+K"),
+            )?,
+            &MenuItem::with_id(
+                handle,
                 "menu_find",
                 "Busca Global no Projeto...",
                 true,

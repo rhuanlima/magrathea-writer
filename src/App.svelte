@@ -20,6 +20,8 @@
   import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
   import TimelineModal from './timeline/TimelineModal.svelte';
   import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
+  import CommandPalette from './commands/CommandPalette.svelte';
+  import { commandPaletteStore } from './commands/palette.svelte';
   import { searchStore } from './search/search.svelte';
   import { backupStore } from './backup/backup.svelte';
   import { compilerStore } from './compiler/compiler.svelte';
@@ -66,6 +68,9 @@
         }),
         listenToEvent('menu_lock_world', () => {
           if (vault.isOpen && !vault.isLocked) void vault.lockVault();
+        }),
+        listenToEvent('menu_command_palette', () => {
+          if (vault.isOpen && !vault.isLocked) commandPaletteStore.toggle();
         }),
         listenToEvent('menu_find', () => {
           if (vault.isOpen && !vault.isLocked) searchStore.openModal();
@@ -333,6 +338,8 @@
   <TimelineModal />
 
   <GraphCanvasModal />
+
+  <CommandPalette />
 
   {#if compilerStore.toastMessage}
     <aside class="export-toast-notification" role="status" aria-live="polite">

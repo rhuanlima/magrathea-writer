@@ -348,12 +348,21 @@ fn compile_tree_item(
 ) -> Result<(), VaultError> {
     match item.kind.as_str() {
         "part" => {
+            let mut part_content = String::new();
+            if let Some(ref blob_id) = item.blob_id {
+                if let Ok(raw_bytes) = vault.read_blob(blob_id) {
+                    let text = String::from_utf8_lossy(&raw_bytes);
+                    let (_, body) = split_frontmatter(&text);
+                    part_content.push_str(body.trim());
+                }
+            }
+            let word_count = part_content.split_whitespace().count();
             sections.push(CompiledSection {
                 id: item.id.clone(),
                 title: item.title.clone(),
                 kind: "part".to_string(),
-                content: String::new(),
-                word_count: 0,
+                content: part_content,
+                word_count,
             });
             let children: Vec<_> = all_items
                 .iter()
@@ -365,13 +374,28 @@ fn compile_tree_item(
         }
         "chapter" => {
             let mut chapter_content = String::new();
+
+            // 1. Se o próprio capítulo possui texto direto (abertura/introdução ou capítulo contínuo)
+            if let Some(ref blob_id) = item.blob_id {
+                if let Ok(raw_bytes) = vault.read_blob(blob_id) {
+                    let text = String::from_utf8_lossy(&raw_bytes);
+                    let (_, body) = split_frontmatter(&text);
+                    let trimmed = body.trim();
+                    if !trimmed.is_empty() {
+                        chapter_content.push_str(trimmed);
+                    }
+                }
+            }
+
+            // 2. Cenas filhas pertencentes a este capítulo
             let scenes: Vec<_> = all_items
                 .iter()
                 .filter(|i| i.parent_id.as_deref() == Some(&item.id))
                 .collect();
 
             for (idx, scene) in scenes.iter().enumerate() {
-                if idx > 0 {
+                let has_previous = !chapter_content.is_empty() || idx > 0;
+                if has_previous {
                     chapter_content.push_str(&format!("\n\n{}\n\n", cfg.scene_separator));
                 }
                 if cfg.include_scene_titles {

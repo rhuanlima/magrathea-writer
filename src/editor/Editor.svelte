@@ -15,6 +15,7 @@
   import { focusModeExtension } from './focus-mode';
   import { editorViewState } from './editor-view-state.svelte';
   import { searchStore } from '../search/search.svelte';
+  import { commandPaletteStore } from '../commands/palette.svelte';
   import { timelineStore } from '../timeline/timeline.svelte';
   import { graphStore } from '../graph/graph.svelte';
   import { compilerStore } from '../compiler/compiler.svelte';
@@ -205,6 +206,15 @@
     </div>
 
     <div class="quick-status-actions" role="toolbar" aria-label="Ações Rápidas">
+      <button
+        type="button"
+        class="quick-action-btn"
+        onclick={() => commandPaletteStore.toggle()}
+        title="Paleta de Comandos & Quick Open (Cmd+K)"
+      >
+        ⚡
+      </button>
+
       <button
         type="button"
         class="quick-action-btn"
