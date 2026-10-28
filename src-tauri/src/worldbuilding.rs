@@ -226,11 +226,11 @@ pub fn import_entity_image(
     Ok(meta)
 }
 
-/// Carrega e decifra uma imagem sob demanda para visualização segura em memória.
-pub fn load_entity_image(
+/// Carrega e decifra os bytes binários brutos de uma imagem sob demanda.
+pub fn load_entity_image_bytes(
     vault: &UnlockedVault,
     image_id: &str,
-) -> Result<EntityImageData, VaultError> {
+) -> Result<Vec<u8>, VaultError> {
     if vault.is_locked() {
         return Err(VaultError::Locked);
     }
@@ -255,7 +255,15 @@ pub fn load_entity_image(
 
     let dek = vault.dek()?;
     let aad = format!("MAGRATHEA-V1:image:{image_id}");
-    let plaintext = decrypt_payload(dek, &nonce, aad.as_bytes(), ciphertext)?;
+    decrypt_payload(dek, &nonce, aad.as_bytes(), ciphertext).map_err(VaultError::from)
+}
+
+/// Carrega e decifra uma imagem sob demanda para visualização segura em memória.
+pub fn load_entity_image(
+    vault: &UnlockedVault,
+    image_id: &str,
+) -> Result<EntityImageData, VaultError> {
+    let plaintext = load_entity_image_bytes(vault, image_id)?;
 
     // Localiza metadados no índice
     let index = load_images_index(vault)?;

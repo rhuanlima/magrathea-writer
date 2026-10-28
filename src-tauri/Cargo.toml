@@ -23,5 +23,6 @@ argon2 = "0.5"
 zeroize = { version = "1.8", features = ["derive"] }
 rand = "0.8"
 keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service"] }
+zip = { version = "2.2", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
