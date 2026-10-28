@@ -19,10 +19,11 @@ describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
     expect(vault.recoveryKeyToken).toBeNull();
   });
 
-  it('avalia critérios de senha forte antes de permitir submissão', () => {
+  it('avalia critérios de força de senha sem bloquear senhas fracas', () => {
     const weakPass = '12345';
     const weakRes = assessPasswordStrength(weakPass);
-    expect(weakRes.isAcceptable).toBe(false);
+    expect(weakRes.score).toBe(0);
+    expect(weakRes.isAcceptable).toBe(true);
 
     const strongPass = 'correto cavalo bateria grampo';
     const strongRes = assessPasswordStrength(strongPass);

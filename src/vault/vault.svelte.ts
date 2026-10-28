@@ -87,7 +87,9 @@ class VaultStore {
 
     try {
       const response = await safeInvoke<CreateVaultResponse>('create_vault', {
+        dirPath,
         dir_path: dirPath,
+        projectTitle: title,
         project_title: title,
         passphrase,
       });

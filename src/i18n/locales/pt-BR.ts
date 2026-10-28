@@ -45,7 +45,7 @@ export const ptBR: TranslationSchema = {
       strengthGood: 'Boa (boa entropia)',
       strengthStrong: 'Forte (excelente proteção)',
       minRequirementsNote:
-        'A senha mestra deve ter pelo menos 10 caracteres e complexidade razoável para proteger sua obra.',
+        'A senha mestra protege seu cofre offline. Recomendamos boa complexidade, mas você tem total liberdade de escolha.',
       continueButton: 'Criar Cofre e Gerar Chave',
       creatingVault: 'Criptografando e inicializando cofre...',
       recoveryWarning:

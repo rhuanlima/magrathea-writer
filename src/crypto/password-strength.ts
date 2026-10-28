@@ -111,8 +111,9 @@ export function assessPasswordStrength(password: string): PasswordStrengthResult
     colorVar = 'var(--color-olive)';
   }
 
-  // Uma senha é aceitável para criação se tiver no mínimo 10 caracteres e score >= 2
-  const isAcceptable = length >= 10 && score >= 2;
+  // A força da senha é orientativa e informativa para o autor.
+  // Qualquer senha não-vazia é aceitável, dando total soberania ao autor.
+  const isAcceptable = length > 0;
 
   return {
     score,

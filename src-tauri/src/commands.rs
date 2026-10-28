@@ -82,8 +82,8 @@ pub fn create_vault_internal(
         return Err("O título do projeto não pode ser vazio.".to_string());
     }
 
-    if passphrase.len() < 10 {
-        return Err("A senha mestra deve conter no mínimo 10 caracteres.".to_string());
+    if passphrase.is_empty() {
+        return Err("A senha mestra não pode ser vazia.".to_string());
     }
 
     let raw_path = PathBuf::from(dir_path.trim());
@@ -1037,8 +1037,8 @@ pub fn change_vault_passphrase_internal(
     current_passphrase: &str,
     new_passphrase: &str,
 ) -> Result<(), String> {
-    if new_passphrase.len() < 10 {
-        return Err("A nova senha mestra deve conter no mínimo 10 caracteres.".to_string());
+    if new_passphrase.is_empty() {
+        return Err("A nova senha mestra não pode ser vazia.".to_string());
     }
 
     let mut guard = state

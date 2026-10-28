@@ -45,7 +45,7 @@ export const enUS: TranslationSchema = {
       strengthGood: 'Good (good entropy)',
       strengthStrong: 'Strong (excellent protection)',
       minRequirementsNote:
-        'Master passphrase must have at least 10 characters and fair complexity to protect your work.',
+        'The master passphrase protects your offline vault. We recommend good complexity, but you have full freedom of choice.',
       continueButton: 'Create Vault & Generate Key',
       creatingVault: 'Encrypting and initializing vault...',
       recoveryWarning:
