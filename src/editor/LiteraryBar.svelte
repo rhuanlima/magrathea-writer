@@ -1,5 +1,6 @@
 <script lang="ts">
   import { t } from '../i18n';
+  import { editorViewState } from './editor-view-state.svelte';
   import type { EditorView } from 'codemirror';
 
   interface Props {
@@ -94,6 +95,36 @@
     >
       ***
     </button>
+
+    <div class="divider"></div>
+
+    <button
+      type="button"
+      class="lit-btn tool-btn"
+      class:active={editorViewState.isFocusMode}
+      onclick={() => editorViewState.toggleFocus(view)}
+      title={t('editor.focusModeToggle')}
+    >
+      🎯
+    </button>
+    <button
+      type="button"
+      class="lit-btn tool-btn"
+      class:active={editorViewState.isZenMode}
+      onclick={() => editorViewState.toggleZen()}
+      title={t('editor.zenModeToggle')}
+    >
+      🧘
+    </button>
+    <button
+      type="button"
+      class="lit-btn tool-btn"
+      class:active={editorViewState.isHudVisible}
+      onclick={() => editorViewState.toggleHud()}
+      title={t('hud.toggle')}
+    >
+      📊
+    </button>
   </div>
 </div>
 
@@ -114,7 +145,7 @@
     gap: 4px;
     background-color: var(--color-paper-base);
     padding: 2px 6px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--rounded-sm);
     border: 1px solid var(--color-paper-border);
   }
 
@@ -129,7 +160,7 @@
     justify-content: center;
     padding: 0 6px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--rounded-sm);
     background: transparent;
     color: var(--color-ink-charcoal);
     cursor: pointer;
@@ -143,6 +174,15 @@
 
   .lit-btn:active {
     background-color: var(--color-paper-border);
+  }
+
+  .tool-btn {
+    font-size: 13px;
+  }
+
+  .tool-btn.active {
+    background-color: var(--color-olive-subtle);
+    border: 1px solid var(--color-olive);
   }
 
   .break-btn {

@@ -167,6 +167,23 @@ export interface ApplyRenameRefactorResponse {
   applied_at: string;
 }
 
+export interface DailyLogEntry {
+  words_written: number;
+  session_duration_seconds: number;
+}
+
+export interface ProductivityOverview {
+  project_target_words: number;
+  project_deadline: string | null;
+  daily_target_words: number;
+  total_manuscript_words: number;
+  today_words: number;
+  today_seconds: number;
+  seven_days_avg_words: number;
+  thirty_days_avg_words: number;
+  daily_logs: Record<string, DailyLogEntry>;
+}
+
 // Armazenamento em memória para testes e ambiente de preview no browser
 let mockItems: ManifestItem[] = [
   {
@@ -208,6 +225,23 @@ let mockTrash: ManifestItem[] = [];
 let mockKeyringStatus = false;
 const mockSceneBlobs: Record<string, string> = {
   'mock-scene-1': '# Cena 1: A Névoa da Manhã\n\nO vento soprava frio contra a vidraça.',
+};
+
+const mockProductivity: ProductivityOverview = {
+  project_target_words: 50000,
+  project_deadline: '2026-12-31',
+  daily_target_words: 1000,
+  total_manuscript_words: 850,
+  today_words: 450,
+  today_seconds: 1200,
+  seven_days_avg_words: 520,
+  thirty_days_avg_words: 480,
+  daily_logs: {
+    '2026-10-27': {
+      words_written: 450,
+      session_duration_seconds: 1200,
+    },
+  },
 };
 
 /**
@@ -502,6 +536,39 @@ export async function safeInvoke<T>(
     }
     if (cmd === 'rollback_rename_refactor') {
       return undefined as T;
+    }
+    if (cmd === 'get_productivity_overview') {
+      return { ...mockProductivity } as T;
+    }
+    if (cmd === 'update_productivity_targets') {
+      const payload = args as unknown as {
+        project_target: number;
+        deadline: string | null;
+        daily_target: number;
+        today_date_iso: string;
+      };
+      mockProductivity.project_target_words = payload.project_target;
+      mockProductivity.project_deadline = payload.deadline;
+      mockProductivity.daily_target_words = payload.daily_target;
+      return { ...mockProductivity } as T;
+    }
+    if (cmd === 'record_productivity_session') {
+      const payload = args as unknown as {
+        date_iso: string;
+        words_delta: number;
+        session_seconds: number;
+      };
+      mockProductivity.today_words += payload.words_delta;
+      mockProductivity.today_seconds += payload.session_seconds;
+      mockProductivity.total_manuscript_words += payload.words_delta;
+      const currentDay = mockProductivity.daily_logs[payload.date_iso] || {
+        words_written: 0,
+        session_duration_seconds: 0,
+      };
+      currentDay.words_written += payload.words_delta;
+      currentDay.session_duration_seconds += payload.session_seconds;
+      mockProductivity.daily_logs[payload.date_iso] = currentDay;
+      return { ...mockProductivity } as T;
     }
   }
 

@@ -12,8 +12,11 @@
   import { wikilinkAutocompleteExtension } from './wikilink-autocomplete';
   import { wikilinkHoverExtension } from './wikilink-hover';
   import { externalLinksPlugin } from './external-links';
+  import { focusModeExtension } from './focus-mode';
+  import { editorViewState } from './editor-view-state.svelte';
   import LiteraryBar from './LiteraryBar.svelte';
   import SceneHeader from './SceneHeader.svelte';
+  import FloatingHud from './FloatingHud.svelte';
 
   interface Props {
     initialContent?: string;
@@ -56,6 +59,8 @@
       },
     });
 
+    let prevWords = countWords(splitFrontmatter(initialContent).body);
+
     const updateListener = EditorView.updateListener.of((update) => {
       if (update.docChanged) {
         const text = update.state.doc.toString();
@@ -64,6 +69,12 @@
           onChange(text);
         }
         autosaveManager?.notifyChange(text);
+
+        const newWords = countWords(splitFrontmatter(text).body);
+        if (newWords > prevWords) {
+          editorViewState.recordWordsDelta(newWords - prevWords);
+        }
+        prevWords = newWords;
       }
     });
 
@@ -76,6 +87,7 @@
         wikilinkAutocompleteExtension,
         wikilinkHoverExtension,
         externalLinksPlugin,
+        focusModeExtension,
         updateListener,
         EditorView.theme({
           '&': {
@@ -115,7 +127,26 @@
       state,
       parent: editorElement,
     });
+    editorViewState.applyInitialFocus(view);
   });
+
+  function handleKeydown(e: KeyboardEvent) {
+    // Cmd/Ctrl + Alt + F: Alternar Modo Foco
+    if ((e.metaKey || e.ctrlKey) && e.altKey && e.code === 'KeyF') {
+      e.preventDefault();
+      editorViewState.toggleFocus(view);
+    }
+    // Cmd/Ctrl + Shift + F: Alternar Modo Zen
+    else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyF') {
+      e.preventDefault();
+      editorViewState.toggleZen();
+    }
+    // Cmd/Ctrl + Shift + M: Alternar Metas / Dashboard
+    else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyM') {
+      e.preventDefault();
+      editorViewState.openProductivityDashboard();
+    }
+  }
 
   // Reage à mudança de cena ativa selecionada na barra lateral
   $effect(() => {
@@ -153,12 +184,15 @@
       autosaveManager.dispose();
       autosaveManager = null;
     }
+    void editorViewState.flushSessionToVault();
     if (view) {
       view.destroy();
       view = null;
     }
   });
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div class="editor-wrapper">
   <LiteraryBar {view} />
@@ -168,6 +202,8 @@
   {/if}
 
   <div class="editor-container" bind:this={editorElement}></div>
+
+  <FloatingHud sceneWordsCount={wordsCount} />
 
   <footer class="editor-footer">
     <div class="stats">
