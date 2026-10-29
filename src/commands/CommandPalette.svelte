@@ -20,6 +20,8 @@
   import { supportStore } from '../support/support.svelte';
   import { preferences } from '../preferences/preferences.svelte';
   import { onboardingStore } from '../onboarding/onboarding.svelte';
+  import { editorPreferences } from '../editor/editor-preferences.svelte';
+  import { typewriterAudio } from '../editor/typewriter-audio';
 
   interface PaletteEntry {
     id: string;
@@ -100,6 +102,29 @@
       icon: theme.isDark ? '☀️' : '🌙',
       execute: () => {
         theme.toggleTheme();
+      },
+    },
+    {
+      id: 'action-typewriter-sound',
+      category: 'action',
+      title: 'Alternar Som de Máquina de Escrever (Typewriter)',
+      subtitle: `Atualmente: ${editorPreferences.typewriterSound ? 'Sons Ativados' : 'Silencioso'}`,
+      icon: '⌨️',
+      execute: () => {
+        editorPreferences.toggleTypewriterSound();
+        if (editorPreferences.typewriterSound) {
+          typewriterAudio.playEnterReturn(editorPreferences.typewriterVolume);
+        }
+      },
+    },
+    {
+      id: 'action-typewriter-scroll',
+      category: 'action',
+      title: 'Alternar Rolagem Centralizada de Typewriter',
+      subtitle: `Cursor no centro da tela: ${editorPreferences.typewriterScrolling ? 'Ativado' : 'Desativado'}`,
+      icon: '🎯',
+      execute: () => {
+        editorPreferences.toggleTypewriterScrolling();
       },
     },
     {

@@ -11,6 +11,7 @@
    */
 
   import { editorPreferences } from './editor-preferences.svelte';
+  import { typewriterAudio } from './typewriter-audio';
 
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape' && editorPreferences.isModalOpen) {
@@ -201,6 +202,62 @@
             Fluida
           </button>
         </div>
+      </div>
+
+      <!-- 6. Modo Máquina de Escrever (Typewriter) -->
+      <div class="pref-row">
+        <div class="pref-label-col">
+          <span class="pref-label">⌨️ Som de Máquina de Escrever</span>
+          <span class="pref-hint">Cliques mecânicos analógicos, barra de espaço e sineta de retorno (Ding!)</span>
+        </div>
+        <div class="typewriter-controls">
+          <button
+            type="button"
+            class="toggle-btn"
+            class:active={editorPreferences.typewriterSound}
+            onclick={() => {
+              editorPreferences.toggleTypewriterSound();
+              if (editorPreferences.typewriterSound) {
+                typewriterAudio.playEnterReturn(editorPreferences.typewriterVolume);
+              }
+            }}
+            role="switch"
+            aria-checked={editorPreferences.typewriterSound}
+          >
+            <span class="toggle-indicator"></span>
+            <span>{editorPreferences.typewriterSound ? 'Ativado' : 'Silencioso'}</span>
+          </button>
+
+          {#if editorPreferences.typewriterSound}
+            <button
+              type="button"
+              class="test-sound-btn"
+              onclick={() => typewriterAudio.playEnterReturn(editorPreferences.typewriterVolume)}
+              title="Testar som da sineta de retorno"
+            >
+              🎵 Testar
+            </button>
+          {/if}
+        </div>
+      </div>
+
+      <!-- 7. Rolagem Centralizada de Typewriter -->
+      <div class="pref-row">
+        <div class="pref-label-col">
+          <span class="pref-label">Rolagem Centralizada (Typewriter Scrolling)</span>
+          <span class="pref-hint">Mantém a linha ativa do cursor fixada no meio vertical da tela</span>
+        </div>
+        <button
+          type="button"
+          class="toggle-btn"
+          class:active={editorPreferences.typewriterScrolling}
+          onclick={() => editorPreferences.toggleTypewriterScrolling()}
+          role="switch"
+          aria-checked={editorPreferences.typewriterScrolling}
+        >
+          <span class="toggle-indicator"></span>
+          <span>{editorPreferences.typewriterScrolling ? 'Ativado' : 'Desativado'}</span>
+        </button>
       </div>
     </div>
 
@@ -427,6 +484,29 @@
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--color-ink-charcoal);
+  }
+
+  .typewriter-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .test-sound-btn {
+    padding: 0.35rem 0.65rem;
+    background: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-md);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--color-ink-charcoal);
+    transition: background-color 0.15s ease;
+  }
+
+  .test-sound-btn:hover {
+    background: var(--color-paper-hover);
   }
 
   .pref-footer {

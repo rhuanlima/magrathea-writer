@@ -22,6 +22,7 @@
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
+  import { typewriterAudio } from './typewriter-audio';
   import { preferences } from '../preferences/preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
@@ -88,6 +89,16 @@
     let prevWords = countWords(splitFrontmatter(initialContent).body);
 
     const updateListener = EditorView.updateListener.of((update) => {
+      if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
+        setTimeout(() => {
+          if (view) {
+            view.dispatch({
+              effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }),
+            });
+          }
+        }, 10);
+      }
+
       if (update.docChanged) {
         const text = update.state.doc.toString();
         currentDoc = text;
@@ -104,6 +115,25 @@
       }
     });
 
+    const typewriterKeyHandler = EditorView.domEventHandlers({
+      keydown(e) {
+        if (!editorPreferences.typewriterSound) return false;
+        if (e.metaKey || e.ctrlKey || e.altKey) return false;
+
+        const vol = editorPreferences.typewriterVolume;
+        if (e.key === 'Enter') {
+          typewriterAudio.playEnterReturn(vol);
+        } else if (e.key === ' ') {
+          typewriterAudio.playSpacebar(vol);
+        } else if (e.key === 'Backspace' || e.key === 'Delete') {
+          typewriterAudio.playBackspace(vol);
+        } else if (e.key.length === 1) {
+          typewriterAudio.playKeyClick(vol);
+        }
+        return false;
+      },
+    });
+
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
@@ -114,6 +144,7 @@
         wikilinkHoverExtension,
         externalLinksPlugin,
         focusModeExtension,
+        typewriterKeyHandler,
         updateListener,
         editorThemeCompartment.of(getEditorThemeExtension(theme.isDark)),
       ],
@@ -208,6 +239,7 @@
   <div
     class="editor-container"
     class:show-line-numbers={editorPreferences.showLineNumbers}
+    class:typewriter-scrolling={editorPreferences.typewriterScrolling}
     style="--editor-font-size: {editorPreferences.fontSize}px; --editor-font-family: {editorPreferences.fontFamilyCss}; --editor-line-height: {editorPreferences.lineHeight}; --editor-column-max-width: {editorPreferences.columnMaxWidthPx};"
     bind:this={editorElement}
   ></div>
@@ -471,6 +503,22 @@
       <button
         type="button"
         class="quick-action-btn"
+        class:active={editorPreferences.typewriterSound}
+        onclick={() => {
+          editorPreferences.toggleTypewriterSound();
+          if (editorPreferences.typewriterSound) {
+            typewriterAudio.playKeyClick(editorPreferences.typewriterVolume);
+          }
+        }}
+        title="Som Mecânico de Máquina de Escrever (Typewriter)"
+      >
+        <span class="btn-icon">⌨️</span>
+        <span class="btn-tag">{editorPreferences.typewriterSound ? 'Sons ON' : 'Sons'}</span>
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
         class:active={vault.isInspectorOpen}
         onclick={() => vault.toggleInspector()}
         title="Inspetor de Fichas e Personagens (Cmd+I)"
@@ -556,6 +604,11 @@
 
   :global(.editor-container:not(.show-line-numbers) .cm-gutters) {
     display: none !important;
+  }
+
+  :global(.editor-container.typewriter-scrolling .cm-content) {
+    padding-top: 35vh !important;
+    padding-bottom: 45vh !important;
   }
 
   .editor-footer {
