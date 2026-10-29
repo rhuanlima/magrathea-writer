@@ -14,6 +14,7 @@ export type ColumnWidthChoice = 'narrow' | 'medium' | 'wide' | 'full';
 
 class EditorPreferencesStore {
   showLineNumbers = $state<boolean>(false);
+  relativeLineNumbers = $state<boolean>(false);
   fontSize = $state<number>(18);
   fontFamily = $state<FontFamilyChoice>('garamond');
   lineHeight = $state<number>(1.8);
@@ -34,6 +35,7 @@ class EditorPreferencesStore {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (typeof parsed.showLineNumbers === 'boolean') this.showLineNumbers = parsed.showLineNumbers;
+        if (typeof parsed.relativeLineNumbers === 'boolean') this.relativeLineNumbers = parsed.relativeLineNumbers;
         if (typeof parsed.fontSize === 'number') this.fontSize = parsed.fontSize;
         if (['garamond', 'sans', 'mono'].includes(parsed.fontFamily)) this.fontFamily = parsed.fontFamily;
         if (typeof parsed.lineHeight === 'number') this.lineHeight = parsed.lineHeight;
@@ -54,6 +56,7 @@ class EditorPreferencesStore {
         'magrathea_editor_preferences',
         JSON.stringify({
           showLineNumbers: this.showLineNumbers,
+          relativeLineNumbers: this.relativeLineNumbers,
           fontSize: this.fontSize,
           fontFamily: this.fontFamily,
           lineHeight: this.lineHeight,
@@ -70,6 +73,11 @@ class EditorPreferencesStore {
 
   toggleLineNumbers(): void {
     this.showLineNumbers = !this.showLineNumbers;
+    this.saveToStorage();
+  }
+
+  toggleRelativeLineNumbers(): void {
+    this.relativeLineNumbers = !this.relativeLineNumbers;
     this.saveToStorage();
   }
 

@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
-  import { EditorState } from '@codemirror/state';
+  import { EditorState, Compartment, type Extension } from '@codemirror/state';
+  import { lineNumbers } from '@codemirror/view';
   import { markdown } from '@codemirror/lang-markdown';
   import { t } from '../i18n';
   import { vault } from '../vault/vault.svelte';
@@ -24,6 +25,7 @@
   import { editorPreferences } from './editor-preferences.svelte';
   import { typewriterAudio } from './typewriter-audio';
   import { preferences } from '../preferences/preferences.svelte';
+  import { focusPreferences } from '../preferences/focus-preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
 
@@ -38,6 +40,24 @@
   let view = $state<EditorView | null>(null);
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
+
+  const lineNumbersCompartment = new Compartment();
+
+  function getLineNumbersExtension(relative: boolean): Extension {
+    if (!relative) {
+      return lineNumbers();
+    }
+    return lineNumbers({
+      formatNumber(lineNo: number, state: EditorState): string {
+        const head = state.selection.main.head;
+        const cursorLine = state.doc.lineAt(head).number;
+        if (lineNo === cursorLine) {
+          return String(lineNo);
+        }
+        return String(Math.abs(lineNo - cursorLine));
+      },
+    });
+  }
   let autosaveManager: AutosaveManager | null = null;
   let lastLoadedSceneId = $state<string | null>(null);
 
@@ -87,6 +107,7 @@
     });
 
     let prevWords = countWords(splitFrontmatter(initialContent).body);
+    let lastCursorLine = -1;
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
@@ -97,6 +118,16 @@
             });
           }
         }, 10);
+      }
+
+      if (editorPreferences.relativeLineNumbers && update.selectionSet) {
+        const curLine = update.state.doc.lineAt(update.state.selection.main.head).number;
+        if (curLine !== lastCursorLine) {
+          lastCursorLine = curLine;
+          view?.dispatch({
+            effects: lineNumbersCompartment.reconfigure(getLineNumbersExtension(true)),
+          });
+        }
       }
 
       if (update.docChanged) {
@@ -110,6 +141,9 @@
         const newWords = countWords(splitFrontmatter(text).body);
         if (newWords > prevWords) {
           editorViewState.recordWordsDelta(newWords - prevWords);
+          focusPreferences.checkDailyGoalAchieved(
+            editorViewState.productivity.today_words + editorViewState.sessionWords
+          );
         }
         prevWords = newWords;
       }
@@ -118,7 +152,17 @@
     const typewriterKeyHandler = EditorView.domEventHandlers({
       keydown(e) {
         if (!editorPreferences.typewriterSound) return false;
-        if (e.metaKey || e.ctrlKey || e.altKey) return false;
+
+        // Modificadores solitários não disparam som
+        if (
+          e.key === 'Shift' ||
+          e.key === 'Control' ||
+          e.key === 'Alt' ||
+          e.key === 'Meta' ||
+          e.key === 'CapsLock'
+        ) {
+          return false;
+        }
 
         const vol = editorPreferences.typewriterVolume;
         if (e.key === 'Enter') {
@@ -127,7 +171,8 @@
           typewriterAudio.playSpacebar(vol);
         } else if (e.key === 'Backspace' || e.key === 'Delete') {
           typewriterAudio.playBackspace(vol);
-        } else if (e.key.length === 1) {
+        } else {
+          // Toda e qualquer outra tecla (letras, números, pontuação, Tab, atalhos de texto)
           typewriterAudio.playKeyClick(vol);
         }
         return false;
@@ -137,7 +182,8 @@
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
-        basicSetup,
+        lineNumbersCompartment.of(getLineNumbersExtension(editorPreferences.relativeLineNumbers)),
+        ...((basicSetup as unknown as Extension[]).slice(1)),
         markdown(),
         wikilinkDecoratorPlugin,
         wikilinkAutocompleteExtension,
@@ -163,6 +209,16 @@
     if (view) {
       view.dispatch({
         effects: editorThemeCompartment.reconfigure(getEditorThemeExtension(isDark)),
+      });
+    }
+  });
+
+  // Reconfigura o modo numérico de linhas (Normal vs Vim relativo)
+  $effect(() => {
+    const isRel = editorPreferences.relativeLineNumbers;
+    if (view) {
+      view.dispatch({
+        effects: lineNumbersCompartment.reconfigure(getLineNumbersExtension(isRel)),
       });
     }
   });
