@@ -256,7 +256,7 @@
       >
         ☰
       </button>
-      <span class="logo-mark">◈</span>
+      <img src="/app-icon.png" alt="Magrathea Writer" class="brand-logo-img" />
       <span class="brand-title">{t('app.title')}</span>
       {#if vault.isOpen && vault.projectTitle}
         <span class="vault-pill" title={vault.vaultPath || ''}>
@@ -502,8 +502,13 @@
     color: var(--color-ink-charcoal);
   }
 
-  .logo-mark {
-    font-size: 16px;
+  .brand-logo-img {
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    object-fit: cover;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    flex-shrink: 0;
   }
 
   .brand-title {
