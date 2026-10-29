@@ -644,45 +644,43 @@ pub fn export_obsidian_markdown_internal(
         }
     }
 
-    // 2. Criação de Mundo (Worldbuilding - somente se habilitado nas opções)
-    if cfg.include_worldbuilding_dossier {
-        let world_dir = destination_dir.join("mundo");
-        fs::create_dir_all(&world_dir).map_err(|e| VaultError::Io(e.to_string()))?;
+    // 2. Criação de Mundo (Worldbuilding)
+    let world_dir = destination_dir.join("mundo");
+    fs::create_dir_all(&world_dir).map_err(|e| VaultError::Io(e.to_string()))?;
 
-        let entities: Vec<_> = manifest
-            .items
-            .iter()
-            .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
-            .collect();
+    let entities: Vec<_> = manifest
+        .items
+        .iter()
+        .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
+        .collect();
 
-        for ent in entities {
-            let content = if let Some(ref blob_id) = ent.blob_id {
-                let raw_bytes = vault.read_blob(blob_id)?;
-                String::from_utf8_lossy(&raw_bytes).to_string()
-            } else {
-                String::new()
-            };
-            let file_name = format!("{}.md", sanitize_filename(&ent.title));
-            let file_path = world_dir.join(file_name);
-            fs::write(&file_path, &content).map_err(|e| VaultError::Io(e.to_string()))?;
-            files_count += 1;
-            total_bytes += content.len() as u64;
-        }
+    for ent in entities {
+        let content = if let Some(ref blob_id) = ent.blob_id {
+            let raw_bytes = vault.read_blob(blob_id)?;
+            String::from_utf8_lossy(&raw_bytes).to_string()
+        } else {
+            String::new()
+        };
+        let file_name = format!("{}.md", sanitize_filename(&ent.title));
+        let file_path = world_dir.join(file_name);
+        fs::write(&file_path, &content).map_err(|e| VaultError::Io(e.to_string()))?;
+        files_count += 1;
+        total_bytes += content.len() as u64;
+    }
 
-        // 3. Imagens da Galeria (Anexos descriptografados)
-        let attach_dir = destination_dir.join("anexos");
-        let images_index = crate::worldbuilding::load_images_index(vault)?;
-        let all_images: Vec<_> = images_index.values().flat_map(|list| list.iter()).collect();
+    // 3. Imagens da Galeria (Anexos descriptografados)
+    let attach_dir = destination_dir.join("anexos");
+    let images_index = crate::worldbuilding::load_images_index(vault)?;
+    let all_images: Vec<_> = images_index.values().flat_map(|list| list.iter()).collect();
 
-        if !all_images.is_empty() {
-            fs::create_dir_all(&attach_dir).map_err(|e| VaultError::Io(e.to_string()))?;
-            for img in all_images {
-                if let Ok(data) = crate::worldbuilding::load_entity_image_bytes(vault, &img.id) {
-                    let file_path = attach_dir.join(&img.file_name);
-                    fs::write(&file_path, &data).map_err(|e| VaultError::Io(e.to_string()))?;
-                    files_count += 1;
-                    total_bytes += data.len() as u64;
-                }
+    if !all_images.is_empty() {
+        fs::create_dir_all(&attach_dir).map_err(|e| VaultError::Io(e.to_string()))?;
+        for img in all_images {
+            if let Ok(data) = crate::worldbuilding::load_entity_image_bytes(vault, &img.id) {
+                let file_path = attach_dir.join(&img.file_name);
+                fs::write(&file_path, &data).map_err(|e| VaultError::Io(e.to_string()))?;
+                files_count += 1;
+                total_bytes += data.len() as u64;
             }
         }
     }
@@ -1208,36 +1206,34 @@ pub fn export_txt_dossier_internal(
     let main_txt = destination_dir.join("manuscrito_completo.txt");
     fs::write(&main_txt, &compiled.full_text).map_err(|e| VaultError::Io(e.to_string()))?;
 
-    // Gera dossiê literário em txt com notas de mundo (apenas se habilitado)
-    if compiled.settings.include_worldbuilding_dossier {
-        let mut dossier = String::from(
-            "DOSSIÊ DE CRIAÇÃO DE MUNDO & PERSONAGENS\n=========================================\n\n",
-        );
-        let manifest = vault.manifest()?;
-        let entities: Vec<_> = manifest
-            .items
-            .iter()
-            .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
-            .collect();
+    // Gera dossiê literário em txt com notas de mundo
+    let mut dossier = String::from(
+        "DOSSIÊ DE CRIAÇÃO DE MUNDO & PERSONAGENS\n=========================================\n\n",
+    );
+    let manifest = vault.manifest()?;
+    let entities: Vec<_> = manifest
+        .items
+        .iter()
+        .filter(|i| !matches!(i.kind.as_str(), "part" | "chapter" | "scene"))
+        .collect();
 
-        for ent in entities {
-            dossier.push_str(&format!("### {} [{}]\n", ent.title, ent.kind));
-            if !ent.tags.is_empty() {
-                dossier.push_str(&format!("Tags: {}\n", ent.tags.join(", ")));
-            }
-            if let Some(ref blob_id) = ent.blob_id {
-                if let Ok(raw_bytes) = vault.read_blob(blob_id) {
-                    let sheet = String::from_utf8_lossy(&raw_bytes);
-                    let (_, body) = split_frontmatter(&sheet);
-                    dossier.push_str(body.trim());
-                }
-            }
-            dossier.push_str("\n\n-----------------------------------------\n\n");
+    for ent in entities {
+        dossier.push_str(&format!("### {} [{}]\n", ent.title, ent.kind));
+        if !ent.tags.is_empty() {
+            dossier.push_str(&format!("Tags: {}\n", ent.tags.join(", ")));
         }
-
-        let dossier_txt = destination_dir.join("dossie_de_criacao.txt");
-        fs::write(&dossier_txt, &dossier).map_err(|e| VaultError::Io(e.to_string()))?;
+        if let Some(ref blob_id) = ent.blob_id {
+            if let Ok(raw_bytes) = vault.read_blob(blob_id) {
+                let sheet = String::from_utf8_lossy(&raw_bytes);
+                let (_, body) = split_frontmatter(&sheet);
+                dossier.push_str(body.trim());
+            }
+        }
+        dossier.push_str("\n\n-----------------------------------------\n\n");
     }
+
+    let dossier_txt = destination_dir.join("dossie_de_criacao.txt");
+    fs::write(&dossier_txt, &dossier).map_err(|e| VaultError::Io(e.to_string()))?;
 
     let meta = fs::metadata(&main_txt).map_err(|e| VaultError::Io(e.to_string()))?;
     Ok(ExportDocumentResult {
