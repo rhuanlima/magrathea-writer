@@ -57,10 +57,10 @@
           <button
             class="refactor-btn"
             onclick={() => vault.openRefactorModal(activeItem.title)}
-            title={t('refactor.modalTitle')}
-            aria-label={t('refactor.modalTitle')}
+            title="Renomear e atualizar referências no cofre"
+            aria-label="Renomear e atualizar referências"
           >
-            🔄
+            ✎
           </button>
         {/if}
         <button
@@ -358,44 +358,79 @@
   .header-actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
   }
 
   .refactor-btn {
-    background: none;
-    border: none;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
     cursor: pointer;
     font-size: 14px;
-    color: var(--color-ink-faded, #6C7368);
-    padding: 4px;
-    border-radius: 4px;
+    color: var(--color-ink-muted, #6C7368);
     transition: all 0.15s ease;
   }
 
   .refactor-btn:hover {
     color: var(--color-bronze, #C28D58);
-    background-color: var(--color-paper-border);
+    border-color: var(--color-bronze, #C28D58);
+    background-color: rgba(194, 141, 88, 0.08);
   }
 
   .close-btn {
-    background: none;
-    border: none;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
     cursor: pointer;
-    font-size: 16px;
-    color: var(--color-ink-faded, #6C7368);
-    padding: 4px;
-    border-radius: 4px;
+    font-size: 13px;
+    color: var(--color-ink-muted, #6C7368);
+    transition: all 0.15s ease;
   }
 
   .close-btn:hover {
-    color: var(--color-ink-charcoal);
-    background-color: var(--color-paper-border);
+    color: var(--color-ink-charcoal, #111827);
+    border-color: var(--color-ink-faded, #9CA3AF);
+    background-color: var(--color-paper-hover, rgba(0, 0, 0, 0.05));
+  }
+
+  :global(.dark) .refactor-btn,
+  :global(.dark) .close-btn {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .refactor-btn:hover {
+    border-color: #D4B97F;
+    color: #D4B97F;
+    background-color: rgba(212, 185, 127, 0.12);
+  }
+
+  :global(.dark) .close-btn:hover {
+    border-color: #555A4E;
+    color: #FFFFFF;
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   .inspector-tabs {
     display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
     border-bottom: 1px solid var(--color-paper-border);
     background-color: var(--color-paper-base);
+  }
+
+  .inspector-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .tab-btn {

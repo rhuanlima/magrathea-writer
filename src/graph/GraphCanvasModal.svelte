@@ -265,18 +265,35 @@
   }
 
   .btn-close {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
-    border: none;
-    font-size: 16px;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    font-size: 14px;
     color: var(--color-ink-muted, #726E65);
     cursor: pointer;
-    padding: 6px 10px;
-    border-radius: 6px;
+    border-radius: 8px;
+    transition: all 0.15s ease;
   }
 
   .btn-close:hover {
     background-color: var(--color-paper-hover, #F4EFE6);
+    border-color: var(--color-ink-faded, #9CA3AF);
     color: var(--color-ink-charcoal, #1E231D);
+  }
+
+  :global(.dark) .btn-close {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border-color: #555A4E;
   }
 
   .graph-filters-bar {

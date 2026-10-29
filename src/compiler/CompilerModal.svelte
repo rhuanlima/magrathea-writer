@@ -83,6 +83,19 @@
     }
   }
 
+  async function copyPreviewToClipboard() {
+    if (!compilerStore.compiled?.full_text) return;
+    try {
+      await navigator.clipboard.writeText(compilerStore.compiled.full_text);
+      copiedFeedback = true;
+      setTimeout(() => {
+        copiedFeedback = false;
+      }, 2000);
+    } catch {
+      // Fallback
+    }
+  }
+
   function handleKeydown(event: KeyboardEvent) {
     if (event.key === 'Escape') {
       compilerStore.closeModal();
@@ -143,34 +156,25 @@
   <!-- Backdrop sutil para focar a atenção sem bloquear a visão do autor -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div
-    class="fixed inset-0 z-50 bg-black/40 backdrop-blur-[2px] transition-opacity duration-200"
-    onclick={() => compilerStore.closeModal()}
-  ></div>
+  <div class="compiler-backdrop" onclick={() => compilerStore.closeModal()}></div>
 
-  <!-- Drawer Lateral à Direita (Painel Editorial) -->
+  <!-- Drawer Lateral / Modal Editorial -->
   <div
-    class="fixed inset-y-0 right-0 z-50 w-full sm:w-[500px] md:w-[560px] lg:w-[620px] bg-white dark:bg-stone-900 border-l border-stone-200 dark:border-stone-800 shadow-2xl flex flex-col h-full overflow-hidden text-stone-900 dark:text-stone-100"
+    class="compiler-drawer"
     role="dialog"
     aria-modal="true"
     aria-labelledby="compiler-modal-title"
   >
     <!-- Header do Painel -->
-    <div
-      class="flex items-center justify-between px-5 py-3.5 border-b border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/80"
-    >
-      <div class="flex items-center gap-2.5">
-        <div
-          class="text-xl p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400"
-        >
-          📖
-        </div>
+    <div class="compiler-header">
+      <div class="header-info">
+        <div class="header-icon">📖</div>
         <div>
-          <h2 id="compiler-modal-title" class="text-base font-bold tracking-tight">
+          <h2 id="compiler-modal-title" class="header-title">
             {t('compiler.modalTitle')}
           </h2>
           {#if compilerStore.compiled}
-            <div class="flex items-center gap-2 text-[11px] text-stone-500 dark:text-stone-400 mt-0.5">
+            <div class="header-stats">
               <span>{t('compiler.statsWords', { count: compilerStore.compiled.total_words })}</span>
               <span>•</span>
               <span>{t('compiler.statsChars', { count: compilerStore.compiled.total_characters })}</span>
@@ -182,8 +186,10 @@
       </div>
 
       <button
+        type="button"
         onclick={() => compilerStore.closeModal()}
-        class="p-1.5 rounded-lg text-stone-400 hover:text-stone-600 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors font-bold text-base"
+        class="close-button"
+        title="Fechar (Esc)"
         aria-label="Fechar"
       >
         ✕
@@ -191,711 +197,1424 @@
     </div>
 
     <!-- Abas de Navegação -->
-    <div
-      class="flex border-b border-stone-200 dark:border-stone-800 px-4 sm:px-5 gap-1 bg-stone-100/50 dark:bg-stone-950/30 overflow-x-auto"
-    >
+    <div class="compiler-tabs" role="tablist">
       <button
+        type="button"
         onclick={() => compilerStore.setActiveTab('export')}
-        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'export' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+        class="tab-btn"
+        class:active={compilerStore.activeTab === 'export'}
       >
         💾 {t('compiler.tabExport')}
       </button>
 
       <button
+        type="button"
         onclick={() => compilerStore.setActiveTab('preview')}
-        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'preview' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+        class="tab-btn"
+        class:active={compilerStore.activeTab === 'preview'}
       >
         📄 {t('compiler.tabPreview')}
       </button>
 
       <button
+        type="button"
         onclick={() => compilerStore.setActiveTab('matter')}
-        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'matter' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+        class="tab-btn"
+        class:active={compilerStore.activeTab === 'matter'}
       >
         ✍️ {t('compiler.tabMatter')}
       </button>
 
       <button
+        type="button"
         onclick={() => compilerStore.setActiveTab('design')}
-        class="flex items-center gap-1.5 py-2.5 px-3 border-b-2 font-medium text-xs sm:text-sm transition-colors whitespace-nowrap {compilerStore.activeTab === 'design' ? 'border-amber-500 text-amber-600 dark:text-amber-400 font-semibold' : 'border-transparent text-stone-500 hover:text-stone-800 dark:hover:text-stone-300'}"
+        class="tab-btn"
+        class:active={compilerStore.activeTab === 'design'}
       >
         ⚙️ {t('compiler.tabDesign')}
       </button>
     </div>
 
     <!-- Corpo da Aba Ativa -->
-    <div class="flex-1 overflow-y-auto p-4 sm:p-5 space-y-5">
-        <!-- Aba 1: Pré-visualização do Manuscrito Unificado -->
-        {#if compilerStore.activeTab === 'preview'}
-          <div class="flex items-center justify-between pb-3 border-b border-stone-200 dark:border-stone-800">
+    <div class="compiler-body">
+      <!-- Aba 1: Pré-visualização do Manuscrito Unificado -->
+      {#if compilerStore.activeTab === 'preview'}
+        <div class="preview-header">
+          <div>
+            <h3 class="section-title">Pré-visualização do Manuscrito</h3>
+            <p class="section-subtitle">Exibição contínua de todas as seções e capítulos compilados.</p>
+          </div>
+          <div class="preview-actions">
+            <button
+              type="button"
+              onclick={() => compilerStore.compile()}
+              disabled={compilerStore.isCompiling}
+              class="btn-secondary"
+            >
+              🔄 {compilerStore.isCompiling ? t('compiler.compiling') : 'Recompilar'}
+            </button>
+            <button
+              type="button"
+              onclick={copyPreviewToClipboard}
+              class="btn-primary"
+            >
+              {copiedFeedback ? '✓ Copiado!' : '📋 Copiar Texto'}
+            </button>
+          </div>
+        </div>
+
+        {#if compilerStore.compiled}
+          <div class="preview-book-sheet">
+            {compilerStore.compiled.full_text}
+          </div>
+        {:else if compilerStore.isCompiling}
+          <div class="loading-state">
+            <div class="loading-spinner">⏳</div>
+            <p>{t('compiler.compiling')}</p>
+          </div>
+        {/if}
+
+      <!-- Aba 2: Seções Pré e Pós-Textuais (Dedicatória, Epígrafe, Referências, etc.) -->
+      {:else if compilerStore.activeTab === 'matter'}
+        <div class="matter-container">
+          <div class="matter-top-bar">
             <div>
-              <h3 class="font-semibold text-lg">Visualização do Livro Compilado</h3>
-              <p class="text-xs text-stone-500 dark:text-stone-400">
-                O compilador unifica todas as partes, capítulos, cenas e seções pré/pós-textuais em ordem canônica.
+              <h3 class="section-title">Partes do Livro (Pré e Pós-Textuais)</h3>
+              <p class="section-subtitle">
+                Adicione e edite referências, agradecimentos, dedicatória, epígrafe e posfácio como blocos legítimos de livro.
               </p>
             </div>
             <button
-              onclick={() => compilerStore.compile()}
-              disabled={compilerStore.isCompiling}
-              class="flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 transition-colors"
+              type="button"
+              onclick={handleSaveSettings}
+              disabled={compilerStore.isSaving}
+              class="btn-save-matter"
             >
-              🔄 {t('compiler.recompileButton')}
+              💾 {compilerStore.isSaving ? t('compiler.saving') : 'Salvar no Mundo'}
             </button>
           </div>
 
-          {#if compilerStore.compiled}
-            <div
-              class="p-6 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 font-serif leading-relaxed text-sm whitespace-pre-wrap max-h-[500px] overflow-y-auto select-text selection:bg-amber-500/20"
-            >
-              {compilerStore.compiled.full_text}
+          <!-- Bloco 1: Identificação da Obra -->
+          <div class="matter-card">
+            <div class="matter-card-header">
+              <span class="card-tag">Identificação</span>
+              <h4 class="card-title">Capa & Informações da Obra</h4>
             </div>
-          {:else if compilerStore.isCompiling}
-            <div class="py-16 text-center text-stone-500">
-              <div class="text-3xl mb-2 animate-spin">⏳</div>
-              <p>{t('compiler.compiling')}</p>
-            </div>
-          {/if}
-
-        <!-- Aba 2: Seções Pré e Pós-Textuais (Dedicatória, Epígrafe, Referências, etc.) -->
-        {:else if compilerStore.activeTab === 'matter'}
-          <div class="space-y-6">
-            <div class="flex items-center justify-between">
-              <div>
-                <h3 class="font-semibold text-lg">Partes do Livro (Pré e Pós-Textuais)</h3>
-                <p class="text-xs text-stone-500 dark:text-stone-400">
-                  Adicione e edite referências, agradecimentos, dedicatória, epígrafe e posfácio. Tudo é cifrado com segurança no cofre.
-                </p>
-              </div>
-              <button
-                onclick={handleSaveSettings}
-                disabled={compilerStore.isSaving}
-                class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-2"
-              >
-                💾 {compilerStore.isSaving ? t('compiler.saving') : t('compiler.saveSettings')}
-              </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <!-- Título & Subtítulo -->
-              <div>
-                <label for="book-title" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.titleLabel')}
-                </label>
+            <div class="matter-two-cols">
+              <div class="matter-field">
+                <label for="book-title" class="matter-label">{t('compiler.titleLabel')}</label>
                 <input
                   id="book-title"
                   type="text"
                   bind:value={compilerStore.settings.title}
-                  placeholder="Título da obra"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Título principal da obra"
+                  class="matter-input"
                 />
               </div>
 
-              <div>
-                <label for="book-author" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.authorLabel')}
-                </label>
+              <div class="matter-field">
+                <label for="book-author" class="matter-label">{t('compiler.authorLabel')}</label>
                 <input
                   id="book-author"
                   type="text"
                   bind:value={compilerStore.settings.author}
-                  placeholder="Nome do autor"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Nome do autor ou pseudônimo"
+                  class="matter-input"
                 />
               </div>
             </div>
+          </div>
+
+          <!-- Bloco 2: Pré-Textuais -->
+          <div class="matter-card">
+            <div class="matter-card-header">
+              <span class="card-tag tag-pre">Pré-Textuais</span>
+              <h4 class="card-title">Abertura do Livro</h4>
+            </div>
 
             <!-- Dedicatória -->
-            <div>
-              <label for="dedication-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                {t('compiler.dedicationLabel')}
-              </label>
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="dedication-input" class="matter-label">{t('compiler.dedicationLabel')}</label>
+                <span class="matter-hint">A quem este livro é oferecido com carinho ou homenagem</span>
+              </div>
               <textarea
                 id="dedication-input"
                 bind:value={compilerStore.settings.dedication}
                 placeholder={t('compiler.dedicationPlaceholder')}
-                rows="3"
-                class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                rows="4"
+                class="matter-textarea literary-prose"
               ></textarea>
             </div>
 
-            <!-- Epígrafe & Fonte -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div class="md:col-span-2">
-                <label for="epigraph-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.epigraphLabel')}
-                </label>
-                <textarea
-                  id="epigraph-input"
-                  bind:value={compilerStore.settings.epigraph}
-                  placeholder={t('compiler.epigraphPlaceholder')}
-                  rows="2"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                ></textarea>
+            <!-- Epígrafe -->
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="epigraph-input" class="matter-label">{t('compiler.epigraphLabel')}</label>
+                <span class="matter-hint">Citação, verso ou pensamento temático que ecoa o tom da narrativa</span>
               </div>
-              <div>
-                <label for="epigraph-src" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.epigraphSourceLabel')}
-                </label>
+              <textarea
+                id="epigraph-input"
+                bind:value={compilerStore.settings.epigraph}
+                placeholder={t('compiler.epigraphPlaceholder')}
+                rows="3"
+                class="matter-textarea literary-prose"
+              ></textarea>
+              <div class="epigraph-source-row">
+                <label for="epigraph-src" class="matter-label inline-label">{t('compiler.epigraphSourceLabel')}:</label>
                 <input
                   id="epigraph-src"
                   type="text"
                   bind:value={compilerStore.settings.epigraph_source}
-                  placeholder="Autor ou obra citada"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  placeholder="Autor, filósofo ou obra citada"
+                  class="matter-input inline-input"
                 />
               </div>
             </div>
 
-            <!-- Prefácio & Posfácio -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="foreword-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.forewordLabel')}
-                </label>
-                <textarea
-                  id="foreword-input"
-                  bind:value={compilerStore.settings.foreword}
-                  rows="3"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                ></textarea>
+            <!-- Prefácio -->
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="foreword-input" class="matter-label">{t('compiler.forewordLabel')}</label>
+                <span class="matter-hint">Apresentação preliminar que introduz o universo ou o contexto da história</span>
               </div>
-              <div>
-                <label for="afterword-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.afterwordLabel')}
-                </label>
-                <textarea
-                  id="afterword-input"
-                  bind:value={compilerStore.settings.afterword}
-                  rows="3"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                ></textarea>
+              <textarea
+                id="foreword-input"
+                bind:value={compilerStore.settings.foreword}
+                placeholder="Escreva aqui o prefácio ou nota introdutória..."
+                rows="6"
+                class="matter-textarea literary-prose"
+              ></textarea>
+            </div>
+          </div>
+
+          <!-- Bloco 3: Pós-Textuais -->
+          <div class="matter-card">
+            <div class="matter-card-header">
+              <span class="card-tag tag-post">Pós-Textuais</span>
+              <h4 class="card-title">Encerramento & Apêndices</h4>
+            </div>
+
+            <!-- Posfácio -->
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="afterword-input" class="matter-label">{t('compiler.afterwordLabel')}</label>
+                <span class="matter-hint">Reflexões de bastidores, ensaio de encerramento ou considerações finais</span>
               </div>
+              <textarea
+                id="afterword-input"
+                bind:value={compilerStore.settings.afterword}
+                placeholder="Escreva aqui o posfácio..."
+                rows="6"
+                class="matter-textarea literary-prose"
+              ></textarea>
             </div>
 
             <!-- Referências & Leituras -->
-            <div>
-              <label for="references-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                {t('compiler.referencesLabel')}
-              </label>
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="references-input" class="matter-label">{t('compiler.referencesLabel')}</label>
+                <span class="matter-hint">Bibliografia, arquivos históricos consultados ou leituras sugeridas</span>
+              </div>
               <textarea
                 id="references-input"
                 bind:value={compilerStore.settings.references}
                 placeholder={t('compiler.referencesPlaceholder')}
-                rows="3"
-                class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                rows="5"
+                class="matter-textarea"
               ></textarea>
             </div>
 
-            <!-- Agradecimentos & Sobre o Autor -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label for="acks-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.acknowledgmentsLabel')}
-                </label>
-                <textarea
-                  id="acks-input"
-                  bind:value={compilerStore.settings.acknowledgments}
-                  rows="3"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                ></textarea>
+            <!-- Agradecimentos -->
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="acks-input" class="matter-label">{t('compiler.acknowledgmentsLabel')}</label>
+                <span class="matter-hint">Reconhecimento a leitores beta, revisores, familiares e amigos</span>
               </div>
-              <div>
-                <label for="about-input" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                  {t('compiler.aboutAuthorLabel')}
-                </label>
-                <textarea
-                  id="about-input"
-                  bind:value={compilerStore.settings.about_author}
-                  rows="3"
-                  class="w-full px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                ></textarea>
+              <textarea
+                id="acks-input"
+                bind:value={compilerStore.settings.acknowledgments}
+                placeholder="Agradeço imensamente a..."
+                rows="5"
+                class="matter-textarea literary-prose"
+              ></textarea>
+            </div>
+
+            <!-- Sobre o Autor -->
+            <div class="matter-field">
+              <div class="field-info">
+                <label for="about-input" class="matter-label">{t('compiler.aboutAuthorLabel')}</label>
+                <span class="matter-hint">Minibiografia para a orelha ou página final do livro impresso</span>
               </div>
+              <textarea
+                id="about-input"
+                bind:value={compilerStore.settings.about_author}
+                placeholder="Sobre o autor(a)..."
+                rows="4"
+                class="matter-textarea"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+      <!-- Aba 3: Diagramação & Estilos -->
+      {:else if compilerStore.activeTab === 'design'}
+        <div class="design-container">
+          <div>
+            <h3 class="section-title">Opções de Diagramação</h3>
+            <p class="section-subtitle">
+              Ajuste os parâmetros de paginação e estilo tipográfico para a exportação final.
+            </p>
+          </div>
+
+          <!-- Presets de Tipografia -->
+          <div class="design-card">
+            <label for="preset-novel" class="matter-label">{t('compiler.presetLabel')}</label>
+            <div class="preset-choices">
+              <label class="preset-option" class:selected={compilerStore.settings.theme_preset === 'novel'}>
+                <input
+                  id="preset-novel"
+                  type="radio"
+                  name="preset"
+                  value="novel"
+                  bind:group={compilerStore.settings.theme_preset}
+                />
+                <div>
+                  <div class="preset-title">Romance Clássico</div>
+                  <div class="preset-desc">{t('compiler.presetNovel')}</div>
+                </div>
+              </label>
+
+              <label class="preset-option" class:selected={compilerStore.settings.theme_preset === 'essay'}>
+                <input
+                  type="radio"
+                  name="preset"
+                  value="essay"
+                  bind:group={compilerStore.settings.theme_preset}
+                />
+                <div>
+                  <div class="preset-title">Ensaio / Artigo</div>
+                  <div class="preset-desc">{t('compiler.presetEssay')}</div>
+                </div>
+              </label>
+
+              <label class="preset-option" class:selected={compilerStore.settings.theme_preset === 'poetry'}>
+                <input
+                  type="radio"
+                  name="preset"
+                  value="poetry"
+                  bind:group={compilerStore.settings.theme_preset}
+                />
+                <div>
+                  <div class="preset-title">Poesia / Livre</div>
+                  <div class="preset-desc">{t('compiler.presetPoetry')}</div>
+                </div>
+              </label>
             </div>
           </div>
 
-        <!-- Aba 3: Diagramação & Estilos -->
-        {:else if compilerStore.activeTab === 'design'}
-          <div class="space-y-6 max-w-2xl">
-            <div>
-              <h3 class="font-semibold text-lg">Opções de Diagramação</h3>
-              <p class="text-xs text-stone-500 dark:text-stone-400">
-                Ajuste os parâmetros de paginação e estilo tipográfico para a exportação final.
-              </p>
-            </div>
-
-            <!-- Presets de Tipografia -->
-            <div>
-              <label for="preset-novel" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-2">
-                {t('compiler.presetLabel')}
-              </label>
-              <div class="space-y-2">
-                <label class="flex items-start gap-3 p-3 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950 cursor-pointer">
-                  <input
-                    id="preset-novel"
-                    type="radio"
-                    name="preset"
-                    value="novel"
-                    bind:group={compilerStore.settings.theme_preset}
-                    class="mt-1 text-amber-600 focus:ring-amber-500"
-                  />
-                  <div>
-                    <div class="text-sm font-medium">Romance Clássico</div>
-                    <div class="text-xs text-stone-500 dark:text-stone-400">
-                      {t('compiler.presetNovel')}
-                    </div>
-                  </div>
-                </label>
-
-                <label class="flex items-start gap-3 p-3 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="preset"
-                    value="essay"
-                    bind:group={compilerStore.settings.theme_preset}
-                    class="mt-1 text-amber-600 focus:ring-amber-500"
-                  />
-                  <div>
-                    <div class="text-sm font-medium">Ensaio / Artigo</div>
-                    <div class="text-xs text-stone-500 dark:text-stone-400">
-                      {t('compiler.presetEssay')}
-                    </div>
-                  </div>
-                </label>
-
-                <label class="flex items-start gap-3 p-3 rounded-lg border border-stone-200 dark:border-stone-800 hover:bg-stone-50 dark:hover:bg-stone-950 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="preset"
-                    value="poetry"
-                    bind:group={compilerStore.settings.theme_preset}
-                    class="mt-1 text-amber-600 focus:ring-amber-500"
-                  />
-                  <div>
-                    <div class="text-sm font-medium">Poesia / Livre</div>
-                    <div class="text-xs text-stone-500 dark:text-stone-400">
-                      {t('compiler.presetPoetry')}
-                    </div>
-                  </div>
-                </label>
-              </div>
-            </div>
-
-            <!-- Separador de cenas -->
-            <div>
-              <label for="scene-sep" class="block text-xs font-medium text-stone-600 dark:text-stone-400 mb-1">
-                {t('compiler.sceneSeparatorLabel')}
-              </label>
+          <!-- Separador e Paginação -->
+          <div class="design-card">
+            <div class="matter-field">
+              <label for="scene-sep" class="matter-label">{t('compiler.sceneSeparatorLabel')}</label>
               <input
                 id="scene-sep"
                 type="text"
                 bind:value={compilerStore.settings.scene_separator}
-                class="w-48 px-3 py-2 text-sm bg-stone-50 dark:bg-stone-950 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
+                class="matter-input sep-input"
               />
             </div>
 
-            <!-- Checkboxes de paginação -->
-            <div class="space-y-3 pt-2">
-              <label class="flex items-center gap-2 cursor-pointer">
+            <div class="checkbox-group">
+              <label class="checkbox-label">
                 <input
                   type="checkbox"
                   bind:checked={compilerStore.settings.page_break_after_chapter}
-                  class="rounded text-amber-600 focus:ring-amber-500"
                 />
-                <span class="text-sm font-medium">{t('compiler.pageBreakAfterChapterLabel')}</span>
+                <span>{t('compiler.pageBreakAfterChapterLabel')}</span>
               </label>
 
-              <label class="flex items-center gap-2 cursor-pointer">
+              <label class="checkbox-label">
                 <input
                   type="checkbox"
                   bind:checked={compilerStore.settings.include_scene_titles}
-                  class="rounded text-amber-600 focus:ring-amber-500"
                 />
-                <span class="text-sm font-medium">{t('compiler.includeSceneTitlesLabel')}</span>
+                <span>{t('compiler.includeSceneTitlesLabel')}</span>
               </label>
             </div>
-
-            <button
-              onclick={handleSaveSettings}
-              disabled={compilerStore.isSaving}
-              class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold shadow-sm transition-colors flex items-center gap-2"
-            >
-              💾 {compilerStore.isSaving ? t('compiler.saving') : t('compiler.saveSettings')}
-            </button>
           </div>
 
-        <!-- Aba 4: Motores de Exportação Multi-Formato -->
-        {:else if compilerStore.activeTab === 'export'}
-          <div class="space-y-6">
-            <div class="flex items-start justify-between">
-              <div>
-                <h3 class="font-semibold text-lg">Exportação Editorial Multi-Formato</h3>
-                <p class="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
-                  Escolha o formato desejado e salve diretamente no seu computador com 1 clique através do diálogo nativo.
-                </p>
+          <button
+            type="button"
+            onclick={handleSaveSettings}
+            disabled={compilerStore.isSaving}
+            class="btn-save-matter"
+          >
+            💾 {compilerStore.isSaving ? t('compiler.saving') : t('compiler.saveSettings')}
+          </button>
+        </div>
+
+      <!-- Aba 4: Motores de Exportação Multi-Formato -->
+      {:else if compilerStore.activeTab === 'export'}
+        <div class="export-container">
+          <div class="export-top-bar">
+            <div>
+              <h3 class="section-title">Exportação Editorial Multi-Formato</h3>
+              <p class="section-subtitle">
+                Escolha o formato desejado e salve diretamente no seu computador com 1 clique através do diálogo nativo.
+              </p>
+            </div>
+            {#if compilerStore.compiled}
+              <div class="export-badge-pill">
+                📖 {compilerStore.compiled.total_words} palavras • {compilerStore.compiled.sections.length} seções
               </div>
-              {#if compilerStore.compiled}
-                <div class="text-right">
-                  <span class="inline-block px-2.5 py-1 text-xs font-medium rounded-full bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300">
-                    📖 {compilerStore.compiled.total_words} palavras • {compilerStore.compiled.sections.length} seções
-                  </span>
-                </div>
-              {/if}
+            {/if}
+          </div>
+
+          <!-- Opções Rápidas de Compilação & Escopo Editorial -->
+          <div class="export-options-box">
+            <div class="box-title">
+              <span>⚙️</span>
+              <h4>Opções de Conteúdo da Exportação</h4>
             </div>
 
-            <!-- Opções Rápidas de Compilação & Escopo Editorial (Ajuste 2) -->
-            <div class="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/60 space-y-4">
-              <div class="flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                  <span class="text-base">⚙️</span>
-                  <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">Opções de Conteúdo da Exportação</h4>
-                </div>
-                <span class="text-[11px] text-stone-500">Salvo automaticamente</span>
-              </div>
-
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <!-- Escopo do Manuscrito: Tudo vs Apenas Final -->
-                <div class="p-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
-                  <div class="text-xs font-semibold mb-2 text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
-                    <span>🎯</span> Escopo do Manuscrito
-                  </div>
-                  <label class="flex items-center gap-2 text-xs cursor-pointer py-1 text-stone-800 dark:text-stone-200">
+            <div class="box-content-grid">
+              <!-- Escopo: Tudo vs Final -->
+              <div class="option-column">
+                <span class="option-col-label">Cenas Incluídas:</span>
+                <div class="radio-pill-group">
+                  <label class="radio-pill" class:active={!compilerStore.settings.only_final_scenes}>
                     <input
                       type="radio"
-                      name="export-scope"
+                      name="scopeChoice"
                       checked={!compilerStore.settings.only_final_scenes}
-                      onchange={async () => {
-                        compilerStore.settings.only_final_scenes = false;
-                        await compilerStore.saveSettingsNow();
-                        await compilerStore.compile();
-                      }}
-                      class="text-amber-600 focus:ring-amber-500"
+                      onchange={() => (compilerStore.settings.only_final_scenes = false)}
                     />
-                    <span><strong>Manuscrito Completo</strong> (Rascunhos, revisados e finais)</span>
+                    <span>📚 Todas as Cenas</span>
                   </label>
-                  <label class="flex items-center gap-2 text-xs cursor-pointer py-1 text-stone-800 dark:text-stone-200">
+                  <label class="radio-pill" class:active={compilerStore.settings.only_final_scenes}>
                     <input
                       type="radio"
-                      name="export-scope"
+                      name="scopeChoice"
                       checked={compilerStore.settings.only_final_scenes}
-                      onchange={async () => {
-                        compilerStore.settings.only_final_scenes = true;
-                        await compilerStore.saveSettingsNow();
-                        await compilerStore.compile();
-                      }}
-                      class="text-amber-600 focus:ring-amber-500"
+                      onchange={() => (compilerStore.settings.only_final_scenes = true)}
                     />
-                    <span><strong>Apenas Cenas Finais</strong> (Somente status "Final")</span>
+                    <span>✨ Apenas Prontas (Final)</span>
                   </label>
                 </div>
-
-                <!-- Fichas do Segundo Cérebro (Worldbuilding) -->
-                <div class="p-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 flex flex-col justify-between">
-                  <div>
-                    <div class="text-xs font-semibold mb-2 text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
-                      <span>🧠</span> Fichas do Segundo Cérebro
-                    </div>
-                    <label class="flex items-start gap-2 text-xs cursor-pointer text-stone-800 dark:text-stone-200">
-                      <input
-                        type="checkbox"
-                        checked={compilerStore.settings.include_worldbuilding_dossier}
-                        onchange={async (e) => {
-                          compilerStore.settings.include_worldbuilding_dossier = (e.target as HTMLInputElement).checked;
-                          await compilerStore.saveSettingsNow();
-                          await compilerStore.compile();
-                        }}
-                        class="mt-0.5 rounded text-amber-600 focus:ring-amber-500"
-                      />
-                      <div>
-                        <strong>Incluir Fichas como Apêndice</strong>
-                        <p class="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 leading-normal">
-                          Anexa personagens, locais e itens compilados ao final do livro.
-                        </p>
-                      </div>
-                    </label>
-                  </div>
-                </div>
               </div>
 
-              <!-- Acesso Rápido às Partes do Livro (Referências, Agradecimentos, Dedicatória...) -->
-              <div class="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
-                <div class="flex items-center gap-2 text-amber-900 dark:text-amber-300">
-                  <span class="text-base">✍️</span>
-                  <div>
-                    <strong>Partes do Livro:</strong> Dedicatória, Epígrafe, Prefácio, Agradecimentos, Referências, etc.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onclick={() => compilerStore.setActiveTab('matter')}
-                  class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs transition-colors flex-shrink-0"
-                >
-                  Editar Partes do Livro →
-                </button>
+              <!-- Anexar Fichas -->
+              <div class="option-column">
+                <span class="option-col-label">Apêndice de Construção de Mundo:</span>
+                <label class="checkbox-label world-check">
+                  <input
+                    type="checkbox"
+                    bind:checked={compilerStore.settings.include_worldbuilding_dossier}
+                  />
+                  <span>Anexar Fichas de Personagens e Lugares no final</span>
+                </label>
               </div>
             </div>
+          </div>
 
-            <!-- Feedback de Sucesso / Erro / Andamento em Destaque -->
-            {#if compilerStore.isExporting}
-              <div class="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 animate-pulse text-sm">
-                <span class="text-xl">⏳</span>
+          <!-- Grid de Motores de Exportação em 1 Clique -->
+          <div class="formats-grid">
+            <!-- Word DOCX -->
+            <div class="format-card">
+              <div class="format-card-top">
+                <div class="format-icon icon-blue">📄</div>
                 <div>
-                  <div class="font-bold">Gerando e compilando publicação...</div>
-                  <div class="text-xs opacity-90">Diagramando estrutura, capítulos e metadados no arquivo final.</div>
+                  <h4 class="format-title">Microsoft Word</h4>
+                  <span class="format-ext">.docx</span>
                 </div>
               </div>
-            {:else if compilerStore.exportResult}
-              <div class="flex items-start justify-between gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-300 text-sm shadow-sm">
-                <div class="flex items-start gap-3">
-                  <span class="text-2xl">✅</span>
-                  <div>
-                    <div class="font-bold text-base">{t('compiler.exportSuccess')}</div>
-                    {#if 'file_path' in compilerStore.exportResult}
-                      <p class="text-xs font-mono text-stone-700 dark:text-stone-300 mt-1 break-all">
-                        {compilerStore.exportResult.file_path}
-                      </p>
-                      <span class="inline-block mt-1 text-[11px] opacity-75">
-                        Tamanho final: {(compilerStore.exportResult.byte_size / 1024).toFixed(1)} KB
-                      </span>
-                    {:else if 'destination_dir' in compilerStore.exportResult}
-                      <p class="text-xs font-mono text-stone-700 dark:text-stone-300 mt-1 break-all">
-                        {compilerStore.exportResult.destination_dir}
-                      </p>
-                      <span class="inline-block mt-1 text-[11px] opacity-75">
-                        Total gerado: {compilerStore.exportResult.files_count} arquivos organizados
-                      </span>
-                    {/if}
-                  </div>
-                </div>
+              <p class="format-desc">Ideal para submissão a editoras, agentes literários e revisão compartilhada.</p>
+              <button
+                type="button"
+                onclick={() => handleQuickExport('docx')}
+                disabled={compilerStore.isExporting}
+                class="btn-format btn-format-blue"
+              >
+                {compilerStore.isExporting && selectedExportFormat === 'docx' ? 'Exportando...' : 'Salvar Word (.docx)'}
+              </button>
+            </div>
 
-                {#if lastExportedPath}
+            <!-- Livro Digital EPUB -->
+            <div class="format-card">
+              <div class="format-card-top">
+                <div class="format-icon icon-emerald">📱</div>
+                <div>
+                  <h4 class="format-title">Livro Digital EPUB</h4>
+                  <span class="format-ext">.epub</span>
+                </div>
+              </div>
+              <p class="format-desc">Pronto para Kindle, Apple Books, Kobo e leitores de e-books com sumário.</p>
+              <button
+                type="button"
+                onclick={() => handleQuickExport('epub')}
+                disabled={compilerStore.isExporting}
+                class="btn-format btn-format-emerald"
+              >
+                {compilerStore.isExporting && selectedExportFormat === 'epub' ? 'Exportando...' : 'Salvar EPUB (.epub)'}
+              </button>
+            </div>
+
+            <!-- Impressão PDF / HTML -->
+            <div class="format-card">
+              <div class="format-card-top">
+                <div class="format-icon icon-rose">🖨️</div>
+                <div>
+                  <h4 class="format-title">Impressão / PDF</h4>
+                  <span class="format-ext">.html / .pdf</span>
+                </div>
+              </div>
+              <p class="format-desc">Arquivo diagramado com quebras de página pré-configuradas para impressão.</p>
+              <button
+                type="button"
+                onclick={() => handleQuickExport('pdf')}
+                disabled={compilerStore.isExporting}
+                class="btn-format btn-format-rose"
+              >
+                {compilerStore.isExporting && selectedExportFormat === 'pdf' ? 'Exportando...' : 'Salvar para PDF'}
+              </button>
+            </div>
+
+            <!-- Cofre Obsidian -->
+            <div class="format-card">
+              <div class="format-card-top">
+                <div class="format-icon icon-purple">💎</div>
+                <div>
+                  <h4 class="format-title">Cofre Obsidian</h4>
+                  <span class="format-ext">Markdown + Links</span>
+                </div>
+              </div>
+              <p class="format-desc">Exporta todas as notas com wikilinks [[...]] preservados em pastas.</p>
+              <button
+                type="button"
+                onclick={() => handleQuickExport('obsidian')}
+                disabled={compilerStore.isExporting}
+                class="btn-format btn-format-purple"
+              >
+                {compilerStore.isExporting && selectedExportFormat === 'obsidian' ? 'Exportando...' : 'Exportar para Obsidian'}
+              </button>
+            </div>
+
+            <!-- Texto Puro TXT -->
+            <div class="format-card">
+              <div class="format-card-top">
+                <div class="format-icon icon-stone">📝</div>
+                <div>
+                  <h4 class="format-title">Texto Puro + Dossiê</h4>
+                  <span class="format-ext">.txt</span>
+                </div>
+              </div>
+              <p class="format-desc">Texto cru sem formatação e arquivo de dossiê das fichas para backup.</p>
+              <button
+                type="button"
+                onclick={() => handleQuickExport('txt')}
+                disabled={compilerStore.isExporting}
+                class="btn-format btn-format-stone"
+              >
+                {compilerStore.isExporting && selectedExportFormat === 'txt' ? 'Exportando...' : 'Salvar Texto Puro'}
+              </button>
+            </div>
+          </div>
+
+          <!-- Feedback de Sucesso -->
+          {#if lastExportedPath}
+            <div class="export-success-box">
+              <div class="success-top">
+                <span class="success-icon">✓</span>
+                <div>
+                  <strong>Exportação Concluída com Sucesso!</strong>
+                  <p class="success-path">{lastExportedPath}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onclick={copyPathToClipboard}
+                class="btn-copy-path"
+              >
+                {copiedFeedback ? '✓ Caminho Copiado' : '📋 Copiar Caminho'}
+              </button>
+            </div>
+          {/if}
+
+          <!-- Caminho Manual Avançado -->
+          <div class="advanced-path-section">
+            <button
+              type="button"
+              onclick={() => (showAdvancedPath = !showAdvancedPath)}
+              class="btn-toggle-advanced"
+            >
+              <span>{showAdvancedPath ? '▼' : '▶'}</span>
+              <span>Opções Avançadas: Especificar caminho manual no disco</span>
+            </button>
+
+            {#if showAdvancedPath}
+              <div class="advanced-path-box">
+                <label for="export-dest" class="matter-label">
+                  Caminho Completo do Arquivo ou Diretório de Destino:
+                </label>
+                <div class="advanced-input-row">
+                  <input
+                    id="export-dest"
+                    type="text"
+                    bind:value={exportPathInput}
+                    placeholder="/Users/seu-usuario/Documents/meu_livro.docx"
+                    class="matter-input mono-font flex-1"
+                  />
                   <button
                     type="button"
-                    onclick={copyPathToClipboard}
-                    class="px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition-colors flex-shrink-0"
+                    onclick={handleExport}
+                    disabled={compilerStore.isExporting || !exportPathInput.trim()}
+                    class="btn-primary"
                   >
-                    {copiedFeedback ? 'Copiado! ✓' : '📋 Copiar Caminho'}
+                    Exportar
                   </button>
-                {/if}
-              </div>
-            {:else if compilerStore.exportError}
-              <div class="flex items-start gap-3 p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-900 dark:text-red-300 text-sm">
-                <span class="text-xl">⚠️</span>
-                <div>
-                  <div class="font-bold">Falha ao exportar documento</div>
-                  <div class="text-xs mt-0.5">{compilerStore.exportError}</div>
                 </div>
               </div>
             {/if}
-
-            <!-- Galeria de Cards de Formato Editorial -->
-            <div class="grid grid-cols-1 gap-3">
-              <!-- DOCX -->
-              <div
-                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-blue-500/50 hover:shadow-md transition-all group"
-              >
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg font-bold">
-                        📄
-                      </div>
-                      <div>
-                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportDocxTitle')}</h4>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-blue-600 dark:text-blue-400 font-semibold">.docx • Word / LibreOffice</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
-                    {t('compiler.exportDocxDesc')} Inclui estilos de parágrafo, quebras automáticas de capítulo e notas.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={compilerStore.isExporting}
-                  onclick={() => handleQuickExport('docx')}
-                  class="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>💾 Salvar como DOCX...</span>
-                </button>
-              </div>
-
-              <!-- EPUB -->
-              <div
-                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-emerald-500/50 hover:shadow-md transition-all group"
-              >
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg font-bold">
-                        📱
-                      </div>
-                      <div>
-                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportEpubTitle')}</h4>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-emerald-600 dark:text-emerald-400 font-semibold">.epub • Leitores Digitais</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
-                    {t('compiler.exportEpubDesc')} Pronto para Apple Books, Kobo, Kindle e lojas de e-books com metadados.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={compilerStore.isExporting}
-                  onclick={() => handleQuickExport('epub')}
-                  class="w-full py-2 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>💾 Salvar como EPUB...</span>
-                </button>
-              </div>
-
-              <!-- PDF / HTML -->
-              <div
-                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-rose-500/50 hover:shadow-md transition-all group"
-              >
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg font-bold">
-                        🖨️
-                      </div>
-                      <div>
-                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportPdfTitle')}</h4>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-rose-600 dark:text-rose-400 font-semibold">.html / .pdf • Tipografia Editorial</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
-                    {t('compiler.exportPdfDesc')} Layout limpo e tipografia selecionada pronto para imprimir ou gerar PDF direto no navegador.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={compilerStore.isExporting}
-                  onclick={() => handleQuickExport('pdf')}
-                  class="w-full py-2 px-3 rounded-lg bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>💾 Salvar HTML / PDF...</span>
-                </button>
-              </div>
-
-              <!-- Obsidian Markdown -->
-              <div
-                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-purple-500/50 hover:shadow-md transition-all group"
-              >
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center text-lg font-bold">
-                        📁
-                      </div>
-                      <div>
-                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportObsidianTitle')}</h4>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-purple-600 dark:text-purple-400 font-semibold">.md • Hiperlinks [[ ]]</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
-                    {t('compiler.exportObsidianDesc')} Transforma todo o Mundo em notas com ligações bidirecionais, personagens e locais.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={compilerStore.isExporting}
-                  onclick={() => handleQuickExport('obsidian')}
-                  class="w-full py-2 px-3 rounded-lg bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>💾 Exportar para Pasta Obsidian...</span>
-                </button>
-              </div>
-
-              <!-- TXT + Dossiê -->
-              <div
-                class="flex flex-col justify-between p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900/60 shadow-sm hover:border-stone-400 hover:shadow-md transition-all group"
-              >
-                <div>
-                  <div class="flex items-center justify-between mb-2">
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded-lg bg-stone-500/10 text-stone-600 dark:text-stone-400 flex items-center justify-center text-lg font-bold">
-                        📝
-                      </div>
-                      <div>
-                        <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">{t('compiler.exportTxtTitle')}</h4>
-                        <span class="text-[10px] font-mono uppercase tracking-wider text-stone-500 dark:text-stone-400 font-semibold">.txt • Texto Puro & Dossiê Completo</span>
-                      </div>
-                    </div>
-                  </div>
-                  <p class="text-xs text-stone-600 dark:text-stone-400 leading-relaxed mb-3">
-                    {t('compiler.exportTxtDesc')} Salva o manuscrito consolidado em texto puro sem formatações complexas, perfeito para arquivamento ou processamentos de texto.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  disabled={compilerStore.isExporting}
-                  onclick={() => handleQuickExport('txt')}
-                  class="w-full py-2 px-3 rounded-lg bg-stone-700 hover:bg-stone-800 disabled:opacity-50 text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                >
-                  <span>💾 Salvar TXT + Dossiê em Pasta...</span>
-                </button>
-              </div>
-            </div>
-
-            <!-- Opções Avançadas de Destino Manual (Colapsável) -->
-            <div class="border-t border-stone-200 dark:border-stone-800 pt-3">
-              <button
-                type="button"
-                onclick={() => (showAdvancedPath = !showAdvancedPath)}
-                class="text-xs text-stone-500 hover:text-stone-800 dark:hover:text-stone-300 font-medium flex items-center gap-1.5 transition-colors"
-              >
-                <span>{showAdvancedPath ? '▼' : '▶'}</span>
-                <span>Opções Avançadas: Especificar caminho manual no disco</span>
-              </button>
-
-              {#if showAdvancedPath}
-                <div class="mt-2.5 p-3.5 bg-stone-50 dark:bg-stone-950/50 rounded-xl border border-stone-200 dark:border-stone-800 space-y-2.5">
-                  <label for="export-dest" class="block text-xs font-semibold text-stone-600 dark:text-stone-400">
-                    Caminho Completo do Arquivo ou Diretório de Destino:
-                  </label>
-                  <div class="flex flex-col sm:flex-row gap-2">
-                    <input
-                      id="export-dest"
-                      type="text"
-                      bind:value={exportPathInput}
-                      placeholder="/Users/seu-usuario/Documents/meu_livro.docx"
-                      class="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-stone-900 border border-stone-200 dark:border-stone-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                    />
-                    <button
-                      type="button"
-                      onclick={handleExport}
-                      disabled={compilerStore.isExporting || !exportPathInput.trim()}
-                      class="px-4 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-lg font-semibold text-xs shadow-sm transition-colors flex items-center justify-center gap-2"
-                    >
-                      Exportar
-                    </button>
-                  </div>
-                </div>
-              {/if}
-            </div>
           </div>
-        {/if}
-      </div>
-
-      <!-- Footer do Painel -->
-      <div
-        class="flex items-center justify-between px-5 py-3 border-t border-stone-200 dark:border-stone-800 bg-stone-50/80 dark:bg-stone-900/80 text-xs text-stone-500"
-      >
-        <span>Compilador Editorial Offline</span>
-        <button
-          onclick={() => compilerStore.closeModal()}
-          class="px-3.5 py-1.5 rounded-lg bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-stone-200 font-medium transition-colors"
-        >
-          Fechar
-        </button>
-      </div>
+        </div>
+      {/if}
     </div>
+
+    <!-- Footer do Painel -->
+    <div class="compiler-footer">
+      <span>Compilador Editorial Offline • Magrathea Writer</span>
+      <button
+        type="button"
+        onclick={() => compilerStore.closeModal()}
+        class="btn-secondary"
+      >
+        Fechar
+      </button>
+    </div>
+  </div>
 {/if}
+
+<style>
+  .compiler-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-modal, 1000);
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+  }
+
+  .compiler-drawer {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    z-index: calc(var(--z-modal, 1000) + 1);
+    width: 900px;
+    max-width: 96vw;
+    height: 92vh;
+    background: var(--color-paper-card, #FFFFFF);
+    color: var(--color-ink-charcoal, #111827);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 12px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  :global(.dark) .compiler-drawer {
+    background: #1F221D;
+    color: #FFFFFF;
+    border-color: #383C32;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65);
+  }
+
+  .compiler-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: var(--color-paper-subtle, #F9FAFB);
+    border-bottom: 1px solid var(--color-paper-border, #E5E0D8);
+  }
+
+  :global(.dark) .compiler-header {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .header-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .header-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+  }
+
+  .header-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: inherit;
+  }
+
+  .header-stats {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.75rem;
+    color: var(--color-ink-muted, #6B7280);
+    margin-top: 2px;
+  }
+
+  :global(.dark) .header-stats {
+    color: #A4A89E;
+  }
+
+  .close-button {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--color-ink-muted, #6B7280);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .close-button:hover {
+    color: var(--color-ink-charcoal, #111827);
+    background: var(--color-paper-hover, rgba(0, 0, 0, 0.05));
+    border-color: var(--color-ink-faded, #9CA3AF);
+  }
+
+  :global(.dark) .close-button {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .close-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border-color: #555A4E;
+  }
+
+  .compiler-tabs {
+    display: flex;
+    background: var(--color-paper-subtle, #F3F4F6);
+    border-bottom: 1px solid var(--color-paper-border, #E5E0D8);
+    padding: 0 16px;
+    overflow-x: auto;
+    gap: 4px;
+  }
+
+  :global(.dark) .compiler-tabs {
+    background: #1A1C18;
+    border-color: #383C32;
+  }
+
+  .tab-btn {
+    padding: 10px 14px;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--color-ink-muted, #6B7280);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+  }
+
+  :global(.dark) .tab-btn {
+    color: #A4A89E;
+  }
+
+  .tab-btn.active {
+    color: var(--color-olive, #5E6F45);
+    border-bottom-color: var(--color-olive, #5E6F45);
+    font-weight: 700;
+  }
+
+  :global(.dark) .tab-btn.active {
+    color: #A3BD84;
+    border-bottom-color: #A3BD84;
+  }
+
+  .compiler-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .section-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: inherit;
+  }
+
+  .section-subtitle {
+    margin: 4px 0 0;
+    font-size: 0.8rem;
+    color: var(--color-ink-muted, #6B7280);
+    line-height: 1.4;
+  }
+
+  :global(.dark) .section-subtitle {
+    color: #A4A89E;
+  }
+
+  /* Matter Container */
+  .matter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .matter-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .btn-save-matter {
+    background: var(--color-olive, #5E6F45);
+    color: #FFFFFF;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+  }
+
+  .btn-save-matter:hover {
+    background: #4A5836;
+  }
+
+  :global(.dark) .btn-save-matter {
+    background: #5E6F45;
+  }
+
+  .matter-card {
+    background: var(--color-paper-subtle, #F9FAFB);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  :global(.dark) .matter-card {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .matter-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid var(--color-paper-border, #E5E0D8);
+    padding-bottom: 8px;
+  }
+
+  :global(.dark) .matter-card-header {
+    border-color: #383C32;
+  }
+
+  .card-tag {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: rgba(94, 111, 69, 0.12);
+    color: var(--color-olive, #5E6F45);
+  }
+
+  .card-tag.tag-pre {
+    background: rgba(194, 141, 88, 0.15);
+    color: var(--color-bronze, #C28D58);
+  }
+
+  .card-tag.tag-post {
+    background: rgba(37, 99, 235, 0.12);
+    color: #2563EB;
+  }
+
+  :global(.dark) .card-tag {
+    color: #A3BD84;
+  }
+
+  :global(.dark) .card-tag.tag-pre {
+    color: #D4B97F;
+  }
+
+  :global(.dark) .card-tag.tag-post {
+    color: #93C5FD;
+  }
+
+  .card-title {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .matter-two-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .matter-two-cols {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .matter-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .field-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .matter-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--color-ink-charcoal, #111827);
+  }
+
+  :global(.dark) .matter-label {
+    color: #F3F4F6;
+  }
+
+  .matter-hint {
+    font-size: 0.72rem;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  :global(.dark) .matter-hint {
+    color: #A4A89E;
+  }
+
+  .matter-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 12px;
+    background: var(--color-paper-card, #FFFFFF);
+    color: var(--color-ink-charcoal, #111827);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  :global(.dark) .matter-input {
+    background: #1B1D19;
+    color: #FFFFFF;
+    border-color: #383C32;
+  }
+
+  .matter-input:focus,
+  .matter-textarea:focus {
+    border-color: var(--color-olive, #5E6F45);
+  }
+
+  .matter-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    background: var(--color-paper-card, #FFFFFF);
+    color: var(--color-ink-charcoal, #111827);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    outline: none;
+    resize: vertical;
+    transition: border-color 0.15s ease;
+  }
+
+  :global(.dark) .matter-textarea {
+    background: #1B1D19;
+    color: #FFFFFF;
+    border-color: #383C32;
+  }
+
+  .literary-prose {
+    font-family: var(--font-literary, Georgia, serif);
+  }
+
+  .epigraph-source-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+
+  .inline-label {
+    white-space: nowrap;
+    margin: 0;
+  }
+
+  .inline-input {
+    flex: 1;
+  }
+
+  /* Preview */
+  .preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .preview-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .preview-book-sheet {
+    background: var(--color-paper-base, #FFFFFF);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    padding: 24px;
+    font-family: var(--font-literary, Georgia, serif);
+    font-size: 0.95rem;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  :global(.dark) .preview-book-sheet {
+    background: #1B1D19;
+    border-color: #383C32;
+  }
+
+  /* Design */
+  .design-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 680px;
+  }
+
+  .design-card {
+    background: var(--color-paper-subtle, #F9FAFB);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  :global(.dark) .design-card {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .preset-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .preset-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--color-paper-card, #FFFFFF);
+    transition: all 0.15s ease;
+  }
+
+  :global(.dark) .preset-option {
+    background: #1B1D19;
+    border-color: #383C32;
+  }
+
+  .preset-option.selected {
+    border-color: var(--color-olive, #5E6F45);
+    background: rgba(94, 111, 69, 0.05);
+  }
+
+  .preset-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .preset-desc {
+    font-size: 0.75rem;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .sep-input {
+    max-width: 200px;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    cursor: pointer;
+  }
+
+  /* Export */
+  .export-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .export-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .export-badge-pill {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    background: rgba(94, 111, 69, 0.1);
+    color: var(--color-olive, #5E6F45);
+    font-weight: 600;
+  }
+
+  :global(.dark) .export-badge-pill {
+    color: #A3BD84;
+  }
+
+  .export-options-box {
+    background: var(--color-paper-subtle, #F9FAFB);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  :global(.dark) .export-options-box {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .box-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .box-title h4 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+
+  .box-content-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 600px) {
+    .box-content-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .option-column {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .option-col-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .radio-pill-group {
+    display: flex;
+    gap: 6px;
+  }
+
+  .radio-pill {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    background: var(--color-paper-card, #FFFFFF);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 6px;
+    font-size: 0.78rem;
+    cursor: pointer;
+  }
+
+  :global(.dark) .radio-pill {
+    background: #1B1D19;
+    border-color: #383C32;
+  }
+
+  .radio-pill.active {
+    border-color: var(--color-olive, #5E6F45);
+    background: rgba(94, 111, 69, 0.08);
+    color: var(--color-olive, #5E6F45);
+    font-weight: 600;
+  }
+
+  .formats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .format-card {
+    background: var(--color-paper-card, #FFFFFF);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  :global(.dark) .format-card {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .format-card-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .format-icon {
+    font-size: 1.25rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  .icon-blue { background: rgba(37, 99, 235, 0.1); color: #2563EB; }
+  .icon-emerald { background: rgba(16, 185, 129, 0.1); color: #10B981; }
+  .icon-rose { background: rgba(225, 29, 72, 0.1); color: #E11D48; }
+  .icon-purple { background: rgba(147, 51, 234, 0.1); color: #9333EA; }
+  .icon-stone { background: rgba(107, 114, 128, 0.1); color: #6B7280; }
+
+  .format-title {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .format-ext {
+    font-size: 0.72rem;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .format-desc {
+    margin: 0;
+    font-size: 0.78rem;
+    color: var(--color-ink-muted, #6B7280);
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .btn-format {
+    padding: 7px 12px;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: center;
+  }
+
+  .btn-format-blue { background: #2563EB; color: #FFFFFF; }
+  .btn-format-emerald { background: #059669; color: #FFFFFF; }
+  .btn-format-rose { background: #E11D48; color: #FFFFFF; }
+  .btn-format-purple { background: #7C3AED; color: #FFFFFF; }
+  .btn-format-stone { background: #4B5563; color: #FFFFFF; }
+
+  .export-success-box {
+    background: rgba(16, 185, 129, 0.1);
+    border: 1px solid #10B981;
+    border-radius: 8px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .success-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .success-icon {
+    font-size: 1.25rem;
+    color: #10B981;
+    font-weight: 700;
+  }
+
+  .success-path {
+    margin: 2px 0 0;
+    font-size: 0.75rem;
+    font-family: monospace;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .btn-copy-path {
+    background: transparent;
+    border: 1px solid #10B981;
+    color: #059669;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .advanced-path-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-toggle-advanced {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: 0.75rem;
+    color: var(--color-ink-muted, #6B7280);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .advanced-path-box {
+    background: var(--color-paper-subtle, #F9FAFB);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  :global(.dark) .advanced-path-box {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .advanced-input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mono-font {
+    font-family: monospace;
+    font-size: 0.78rem;
+  }
+
+  .flex-1 {
+    flex: 1;
+  }
+
+  .btn-primary {
+    background: var(--color-olive, #5E6F45);
+    color: #FFFFFF;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    color: inherit;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  :global(.dark) .btn-secondary {
+    border-color: #383C32;
+  }
+
+  .compiler-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-top: 1px solid var(--color-paper-border, #E5E0D8);
+    background: var(--color-paper-subtle, #F9FAFB);
+    font-size: 0.75rem;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  :global(.dark) .compiler-footer {
+    background: #252822;
+    border-color: #383C32;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .loading-spinner {
+    font-size: 2rem;
+    margin-bottom: 8px;
+  }
+</style>

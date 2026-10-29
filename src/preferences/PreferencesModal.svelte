@@ -38,6 +38,31 @@
   let isKeyCopied = $state(false);
   let reencryptError = $state<string | null>(null);
 
+  // Guia de tradução
+  let isCopiedGuide = $state(false);
+
+  async function handleOpenGuide(e?: Event) {
+    if (e) e.preventDefault();
+    const url = 'https://github.com/rhuanlima/magrathea-writer/blob/main/TRANSLATING.md';
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+        isCopiedGuide = true;
+        setTimeout(() => {
+          isCopiedGuide = false;
+        }, 3000);
+      }
+    } catch {
+      // Ignora erro de clipboard se bloqueado
+    }
+
+    try {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch {
+      // Fallback seguro
+    }
+  }
+
   async function handleChangePassphrase() {
     passphraseError = null;
     passphraseSuccess = false;
@@ -828,14 +853,28 @@
           <div class="community-text">
             <strong>Adicionar um Novo Idioma ao Magrathea</strong>
             <p>O aplicativo foi desenhado para ser traduzido facilmente por autores e tradutores de qualquer lugar do universo.</p>
-            <a
-              href="https://github.com/rhuanlima/magrathea-writer/blob/main/TRANSLATING.md"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="community-link"
-            >
-              📖 Guia Passo a Passo no GitHub (README) →
-            </a>
+            <div class="community-actions">
+              <button
+                type="button"
+                class="community-action-btn primary"
+                onclick={handleOpenGuide}
+                title="Abrir o guia no GitHub"
+              >
+                📖 Abrir Guia no GitHub (README) →
+              </button>
+              <button
+                type="button"
+                class="community-action-btn secondary"
+                class:copied={isCopiedGuide}
+                onclick={handleOpenGuide}
+                title="Copiar link para o navegador"
+              >
+                {isCopiedGuide ? '✓ Link Copiado!' : '📋 Copiar Link'}
+              </button>
+            </div>
+            {#if isCopiedGuide}
+              <span class="community-hint">Link copiado! Se a janela não abrir pelo app, cole diretamente no seu navegador.</span>
+            {/if}
           </div>
         </div>
       {/if}
@@ -913,18 +952,36 @@
   }
 
   .close-button {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
-    border: none;
-    font-size: 1.1rem;
-    color: var(--color-ink-muted);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    color: var(--color-ink-muted, #6B7280);
     cursor: pointer;
-    padding: 0.25rem 0.5rem;
-    border-radius: var(--rounded-md);
+    transition: all 0.15s ease;
+    flex-shrink: 0;
   }
 
   .close-button:hover {
-    color: var(--color-ink-charcoal);
-    background: var(--color-paper-hover);
+    color: var(--color-ink-charcoal, #111827);
+    background: var(--color-paper-hover, rgba(0, 0, 0, 0.05));
+    border-color: var(--color-ink-faded, #9CA3AF);
+  }
+
+  :global(.dark) .close-button {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .close-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border-color: #555A4E;
   }
 
   .pref-tab-bar {
@@ -1452,18 +1509,68 @@
     line-height: 1.4;
   }
 
-  .community-link {
-    font-family: var(--font-ui);
-    font-size: 0.82rem;
-    font-weight: 600;
-    color: var(--color-olive);
-    text-decoration: none;
-    margin-top: 0.2rem;
+  .community-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+    flex-wrap: wrap;
   }
 
-  .community-link:hover {
-    text-decoration: underline;
-    color: var(--color-olive-hover);
+  .community-action-btn {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+  }
+
+  .community-action-btn.primary {
+    background: var(--color-olive, #5E6F45);
+    color: #FFFFFF;
+  }
+
+  .community-action-btn.primary:hover {
+    background: #4A5836;
+  }
+
+  .community-action-btn.secondary {
+    background: transparent;
+    border-color: var(--color-paper-border, #E5E0D8);
+    color: var(--color-ink-charcoal, #111827);
+  }
+
+  .community-action-btn.secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  .community-action-btn.secondary.copied {
+    background: rgba(16, 185, 129, 0.1);
+    border-color: #10B981;
+    color: #059669;
+  }
+
+  :global(.dark) .community-action-btn.secondary {
+    border-color: #383C32;
+    color: #F3F4F6;
+  }
+
+  :global(.dark) .community-action-btn.secondary:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .community-hint {
+    font-size: 0.75rem;
+    color: var(--color-olive, #5E6F45);
+    font-weight: 500;
+    margin-top: 4px;
+  }
+
+  :global(.dark) .community-hint {
+    color: #A3BD84;
   }
 
   .pref-footer {

@@ -677,7 +677,12 @@
       </button>
     </div>
 
-    <div class="save-status" class:saving={autosaveStatus === 'saving'} class:error={autosaveStatus === 'error'}>
+    <div
+      class="save-status"
+      class:saving={autosaveStatus === 'saving'}
+      class:error={autosaveStatus === 'error'}
+      title="Status de salvamento automático cifrado no cofre"
+    >
       {#if autosaveStatus === 'saving'}
         <span class="status-indicator saving">●</span>
         <span>{t('editor.saving')}</span>
@@ -930,7 +935,12 @@
   .save-status {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
+    min-width: 110px;
+    white-space: nowrap;
+    user-select: none;
+    flex-shrink: 0;
   }
 
   .save-status.saving {
