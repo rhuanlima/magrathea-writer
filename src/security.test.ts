@@ -2,13 +2,14 @@ import { describe, it, expect } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 
-// Allowed XML namespace URIs that may appear in SVG/HTML serializers
+// Allowed XML namespace URIs that may appear in SVG/HTML serializers or documentation links
 const ALLOWED_NAMESPACES = new Set([
   'http://www.w3.org/2000/svg',
   'http://www.w3.org/1999/xhtml',
   'http://www.w3.org/1999/xlink',
   'http://www.w3.org/XML/1998/namespace',
   'http://ipc.localhost',
+  'https://github.com/rhuanlima/magrathea-writer/blob/main/TRANSLATING.md',
 ]);
 
 function getFilesRecursively(dir: string): string[] {

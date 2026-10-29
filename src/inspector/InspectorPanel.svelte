@@ -15,6 +15,7 @@
   import EntityContextPanel from '../worldbuilding/EntityContextPanel.svelte';
   import SnapshotsPanel from '../snapshots/SnapshotsPanel.svelte';
   import LocalGraphTab from './LocalGraphTab.svelte';
+  import { analyzeProseStyle } from '../editor/text-analysis';
 
   interface Props {
     currentContent?: string;
@@ -28,6 +29,7 @@
   );
 
   let backlinks = $derived(vault.activeBacklinks);
+  let styleAnalysis = $derived(analyzeProseStyle(currentContent));
 
   $effect(() => {
     if (activeItem && vault.isInspectorOpen) {
@@ -132,6 +134,14 @@
       >
         🕸️ {t('graph.tabLocalGraph')}
       </button>
+      <button
+        class="tab-btn"
+        class:active={vault.activeInspectorTab === 'style'}
+        onclick={() => vault.setInspectorTab('style')}
+        title="Estilometria, advérbios e verbos de diálogo"
+      >
+        🔬 Estilo
+      </button>
     </div>
 
     <!-- Conteúdo da Aba Ativa -->
@@ -213,6 +223,87 @@
         <EntityContextPanel {currentContent} />
       {:else if vault.activeInspectorTab === 'graph'}
         <LocalGraphTab centerId={activeItem.id} />
+      {:else if vault.activeInspectorTab === 'style'}
+        <div class="style-tab-content">
+          <div class="style-summary-cards">
+            <div class="style-mini-card">
+              <span class="mini-label">Palavras</span>
+              <span class="mini-val">{styleAnalysis.totalWords}</span>
+            </div>
+            <div class="style-mini-card">
+              <span class="mini-label">Riqueza (TTR)</span>
+              <span class="mini-val">{styleAnalysis.vocabularyRichnessPercent}%</span>
+            </div>
+            <div class="style-mini-card">
+              <span class="mini-label">Advérbios</span>
+              <span class="mini-val">{styleAnalysis.adverbsCount}</span>
+            </div>
+            <div class="style-mini-card">
+              <span class="mini-label">Diálogos</span>
+              <span class="mini-val">{styleAnalysis.dialoguePercent}%</span>
+            </div>
+          </div>
+
+          <!-- Advérbios -->
+          <div class="style-block">
+            <div class="style-block-title">
+              <span>Advérbios ({styleAnalysis.adverbsPercent}%)</span>
+              <span class="style-badge">{styleAnalysis.menteAdverbsCount} em -mente</span>
+            </div>
+            {#if styleAnalysis.topAdverbs.length > 0}
+              <div class="style-tags">
+                {#each styleAnalysis.topAdverbs as adv}
+                  <span class="style-tag" class:mente={adv.word.endsWith('mente')}>
+                    {adv.word} <small>{adv.count}×</small>
+                  </span>
+                {/each}
+              </div>
+            {:else}
+              <p class="style-empty">Nenhum advérbio detectado na cena.</p>
+            {/if}
+          </div>
+
+          <!-- Verbos de Diálogo -->
+          <div class="style-block">
+            <div class="style-block-title">
+              <span>Verbos de Diálogo</span>
+              <span class="style-badge dialogue">{styleAnalysis.dialogueVerbsCount}</span>
+            </div>
+            {#if styleAnalysis.topDialogueVerbs.length > 0}
+              <div class="style-tags">
+                {#each styleAnalysis.topDialogueVerbs as v}
+                  <span class="style-tag dialogue">
+                    {v.word} <small>{v.count}×</small>
+                  </span>
+                {/each}
+              </div>
+            {:else}
+              <p class="style-empty">Nenhuma tag de diálogo clássica identificada.</p>
+            {/if}
+          </div>
+
+          <!-- Ritmo Frasal -->
+          <div class="style-block">
+            <div class="style-block-title">
+              <span>Ritmo Frasal</span>
+              <span class="style-badge">~{styleAnalysis.avgWordsPerSentence} pal/frase</span>
+            </div>
+            <div class="style-rhythm-list">
+              <div class="rhythm-item">
+                <span>Curtas (&lt; 8):</span>
+                <strong>{styleAnalysis.shortSentencesCount}</strong>
+              </div>
+              <div class="rhythm-item">
+                <span>Médias (8–20):</span>
+                <strong>{styleAnalysis.mediumSentencesCount}</strong>
+              </div>
+              <div class="rhythm-item">
+                <span>Longas (&gt; 20):</span>
+                <strong>{styleAnalysis.longSentencesCount}</strong>
+              </div>
+            </div>
+          </div>
+        </div>
       {/if}
     </div>
   </aside>
@@ -501,5 +592,150 @@
     line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+  }
+
+  .style-tab-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .style-summary-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+
+  .style-mini-card {
+    background: var(--color-paper-card, #FFFFFF);
+    border: 1px solid var(--color-paper-border, #E5E7EB);
+    border-radius: 6px;
+    padding: 6px 8px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  :global(.dark) .style-mini-card {
+    background: #232620;
+    border-color: #383C32;
+  }
+
+  .mini-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    color: var(--color-ink-faded, #6B7280);
+  }
+
+  .mini-val {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-olive, #5E6F45);
+  }
+
+  :global(.dark) .mini-val {
+    color: #A3BD84;
+  }
+
+  .style-block {
+    background: var(--color-paper-card, #FFFFFF);
+    border: 1px solid var(--color-paper-border, #E5E7EB);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  :global(.dark) .style-block {
+    background: #232620;
+    border-color: #383C32;
+  }
+
+  .style-block-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .style-badge {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(220, 38, 38, 0.1);
+    color: #DC2626;
+  }
+
+  :global(.dark) .style-badge {
+    color: #F87171;
+  }
+
+  .style-badge.dialogue {
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563EB;
+  }
+
+  :global(.dark) .style-badge.dialogue {
+    color: #93C5FD;
+  }
+
+  .style-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .style-tag {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.04);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  :global(.dark) .style-tag {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.08);
+  }
+
+  .style-tag.mente {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.2);
+    color: #DC2626;
+  }
+
+  :global(.dark) .style-tag.mente {
+    color: #F87171;
+  }
+
+  .style-tag.dialogue {
+    background: rgba(37, 99, 235, 0.08);
+    border-color: rgba(37, 99, 235, 0.15);
+    color: #2563EB;
+  }
+
+  :global(.dark) .style-tag.dialogue {
+    color: #93C5FD;
+  }
+
+  .style-rhythm-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .rhythm-item {
+    display: flex;
+    justify-content: space-between;
+    color: var(--color-ink-muted, #4B5563);
+  }
+
+  .style-empty {
+    font-size: 11px;
+    color: var(--color-ink-faded, #6B7280);
+    font-style: italic;
+    margin: 0;
   }
 </style>

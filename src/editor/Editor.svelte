@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { EditorView, basicSetup } from 'codemirror';
-  import { EditorState, Compartment, type Extension } from '@codemirror/state';
+  import { EditorState, Compartment, Transaction, type Extension } from '@codemirror/state';
   import { lineNumbers } from '@codemirror/view';
   import { markdown } from '@codemirror/lang-markdown';
   import { t } from '../i18n';
@@ -28,6 +28,7 @@
   import { focusPreferences } from '../preferences/focus-preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
+  import StyleStatsModal from './StyleStatsModal.svelte';
 
   interface Props {
     initialContent?: string;
@@ -40,6 +41,7 @@
   let view = $state<EditorView | null>(null);
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
+  let isStyleModalOpen = $state(false);
 
   const lineNumbersCompartment = new Compartment();
 
@@ -108,6 +110,8 @@
 
     let prevWords = countWords(splitFrontmatter(initialContent).body);
     let lastCursorLine = -1;
+    let isPasting = false;
+    let pasteTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const updateListener = EditorView.updateListener.of((update) => {
       if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
@@ -139,8 +143,24 @@
         autosaveManager?.notifyChange(text);
 
         const newWords = countWords(splitFrontmatter(text).body);
-        if (newWords > prevWords) {
-          editorViewState.recordWordsDelta(newWords - prevWords);
+        const wordsDelta = newWords - prevWords;
+
+        // Detecta se a transação do CodeMirror ou o evento de entrada é de colagem (paste) ou arrasto (drop)
+        const isPasteOrDrop =
+          isPasting ||
+          update.transactions.some(
+            (tr) =>
+              tr.isUserEvent('input.paste') ||
+              tr.isUserEvent('input.drop') ||
+              tr.annotation(Transaction.userEvent)?.startsWith('input.paste') ||
+              tr.annotation(Transaction.userEvent)?.startsWith('input.drop')
+          );
+
+        // A meta diária conta apenas a digitação autêntica e contínua do autor.
+        // Colagens de blocos de texto (paste/drop ou grandes inserções súbitas >= 15 palavras)
+        // atualizam a contagem total do texto, mas são desconsideradas da meta diária da sessão.
+        if (wordsDelta > 0 && !isPasteOrDrop && wordsDelta < 15) {
+          editorViewState.recordWordsDelta(wordsDelta);
           focusPreferences.checkDailyGoalAchieved(
             editorViewState.productivity.today_words + editorViewState.sessionWords
           );
@@ -150,6 +170,22 @@
     });
 
     const typewriterKeyHandler = EditorView.domEventHandlers({
+      paste() {
+        isPasting = true;
+        if (pasteTimeout) clearTimeout(pasteTimeout);
+        pasteTimeout = setTimeout(() => {
+          isPasting = false;
+        }, 150);
+        return false;
+      },
+      drop() {
+        isPasting = true;
+        if (pasteTimeout) clearTimeout(pasteTimeout);
+        pasteTimeout = setTimeout(() => {
+          isPasting = false;
+        }, 150);
+        return false;
+      },
       keydown(e) {
         if (!editorPreferences.typewriterSound) return false;
 
@@ -182,6 +218,7 @@
     const state = EditorState.create({
       doc: initialContent,
       extensions: [
+        EditorView.lineWrapping,
         lineNumbersCompartment.of(getLineNumbersExtension(editorPreferences.relativeLineNumbers)),
         ...((basicSetup as unknown as Extension[]).slice(1)),
         markdown(),
@@ -303,7 +340,14 @@
   <FloatingHud sceneWordsCount={wordsCount} />
 
   <footer class="editor-footer">
-    <div class="stats">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div
+      class="stats clickable-stats"
+      role="button"
+      tabindex="0"
+      onclick={() => (isStyleModalOpen = true)}
+      title="Clique para ver Análise Estilométrica (Advérbios, Verbos de Diálogo, Ritmo)"
+    >
       <span>{t('editor.wordsCount', { count: wordsCount })}</span>
       <span class="dot">·</span>
       <span>{t('editor.charactersCount', { count: charsCount })}</span>
@@ -353,6 +397,17 @@
         title="Metas de Escrita & Ritmo (Cmd+Shift+P)"
       >
         📊
+      </button>
+
+      <button
+        type="button"
+        class="quick-action-btn"
+        class:active={isStyleModalOpen}
+        onclick={() => (isStyleModalOpen = true)}
+        title="Estilometria & Análise da Prosa (Advérbios, Verbos, Ritmo)"
+      >
+        <span class="btn-icon">🔬</span>
+        <span class="btn-tag">Estilo</span>
       </button>
 
       <!-- Menu Popover de Pontuação Literária (Ajuste 5) -->
@@ -638,6 +693,13 @@
       {/if}
     </div>
   </footer>
+
+  <StyleStatsModal
+    isOpen={isStyleModalOpen}
+    text={currentDoc}
+    sceneTitle={manuscript.activeScene?.title}
+    onClose={() => (isStyleModalOpen = false)}
+  />
 </div>
 
 <style>
@@ -648,14 +710,27 @@
     height: 100%;
     box-sizing: border-box;
     background-color: var(--color-paper-base);
+    overflow-x: hidden;
   }
 
   .editor-container {
     flex: 1;
     width: 100%;
-    overflow: hidden;
+    overflow-x: hidden;
+    overflow-y: hidden;
     box-sizing: border-box;
     background-color: var(--color-paper-base);
+    position: relative;
+  }
+
+  :global(.editor-container .cm-editor) {
+    height: 100%;
+    outline: none !important;
+  }
+
+  :global(.editor-container .cm-scroller) {
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
   }
 
   :global(.editor-container:not(.show-line-numbers) .cm-gutters) {
@@ -684,6 +759,24 @@
     display: flex;
     align-items: center;
     gap: 6px;
+  }
+
+  .clickable-stats {
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 6px;
+    transition: background 0.15s ease, color 0.15s ease;
+    user-select: none;
+  }
+
+  .clickable-stats:hover {
+    background: rgba(0, 0, 0, 0.05);
+    color: var(--color-olive, #5E6F45);
+  }
+
+  :global(.dark) .clickable-stats:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #A3BD84;
   }
 
   .quick-status-actions {

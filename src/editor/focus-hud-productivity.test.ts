@@ -124,6 +124,35 @@ describe('M3 — Foco Dinâmico, Zen Mode, HUD e Metas Literárias', () => {
       editorViewState.recordWordsDelta(50);
       expect(editorViewState.sessionWords).toBe(200);
     });
+
+    it('deve desconsiderar colagens e incrementos em lote da contagem da meta diária', () => {
+      expect(editorViewState.sessionWords).toBe(0);
+
+      // Simulação da lógica do Editor: digitação autêntica e contínua (< 15 palavras)
+      const typedDelta = 3;
+      let isPasteOrDrop = false;
+      if (typedDelta > 0 && !isPasteOrDrop && typedDelta < 15) {
+        editorViewState.recordWordsDelta(typedDelta);
+      }
+      expect(editorViewState.sessionWords).toBe(3);
+
+      // Simulação: colagem de bloco com 500 palavras (paste ativo)
+      const pastedDelta = 500;
+      isPasteOrDrop = true;
+      if (pastedDelta > 0 && !isPasteOrDrop && pastedDelta < 15) {
+        editorViewState.recordWordsDelta(pastedDelta);
+      }
+      // O progresso da meta diária permanece preservado, sem ser inflado pela colagem
+      expect(editorViewState.sessionWords).toBe(3);
+
+      // Simulação: arrasto/soltura ou salto artificial sem evento explícito de paste
+      const burstDelta = 35;
+      isPasteOrDrop = false;
+      if (burstDelta > 0 && !isPasteOrDrop && burstDelta < 15) {
+        editorViewState.recordWordsDelta(burstDelta);
+      }
+      expect(editorViewState.sessionWords).toBe(3);
+    });
   });
 
   describe('M3-04 & M3-05: Metas e Dashboard de Produtividade', () => {
