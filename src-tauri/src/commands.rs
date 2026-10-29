@@ -2650,15 +2650,37 @@ pub fn get_vault_timeline_internal(
 /// para selecionar um Mundo Literário (.magrathea).
 #[tauri::command]
 pub fn pick_vault_path() -> Result<Option<String>, String> {
-    let mut dialog = rfd::FileDialog::new().set_title("Selecione o Mundo Literário (.magrathea)");
-
     let default_dir = get_default_vault_dir();
-    if !default_dir.is_empty() {
-        dialog = dialog.set_directory(default_dir);
+
+    #[cfg(target_os = "macos")]
+    {
+        // No macOS, diretórios .magrathea são marcados como pacotes (bundles com bit B).
+        // O AppKit / NSOpenPanel trata pacotes de documentos como arquivos opacos selecionáveis via pick_file.
+        let mut dialog = rfd::FileDialog::new()
+            .set_title("Selecione o Mundo Literário (.magrathea)")
+            .add_filter("Mundo Literário (*.magrathea)", &["magrathea"]);
+
+        if !default_dir.is_empty() {
+            dialog = dialog.set_directory(default_dir);
+        }
+
+        if let Some(path) = dialog.pick_file() {
+            return Ok(Some(path.to_string_lossy().to_string()));
+        }
     }
 
-    if let Some(folder) = dialog.pick_folder() {
-        return Ok(Some(folder.to_string_lossy().to_string()));
+    #[cfg(not(target_os = "macos"))]
+    {
+        let mut dialog =
+            rfd::FileDialog::new().set_title("Selecione o Mundo Literário (.magrathea)");
+
+        if !default_dir.is_empty() {
+            dialog = dialog.set_directory(default_dir);
+        }
+
+        if let Some(folder) = dialog.pick_folder() {
+            return Ok(Some(folder.to_string_lossy().to_string()));
+        }
     }
 
     Ok(None)
