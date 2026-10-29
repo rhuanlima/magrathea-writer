@@ -1036,13 +1036,340 @@ p.scene-break {
     })
 }
 
-/// M6-05: Exporta para HTML diagramado e pronto para impressão em PDF (Print CSS).
+/// Escapa texto e mapeia acentos de Português/Latin para WinAnsiEncoding do PDF.
+fn pdf_escape_text(text: &str) -> String {
+    let mut out = String::with_capacity(text.len());
+    for ch in text.chars() {
+        match ch {
+            '(' => out.push_str("\\("),
+            ')' => out.push_str("\\)"),
+            '\\' => out.push_str("\\\\"),
+            // Caracteres acentuados comuns em PT-BR mapeados para WinAnsi (octal):
+            'á' => out.push_str("\\341"),
+            'à' => out.push_str("\\340"),
+            'â' => out.push_str("\\342"),
+            'ã' => out.push_str("\\343"),
+            'é' => out.push_str("\\351"),
+            'ê' => out.push_str("\\352"),
+            'í' => out.push_str("\\355"),
+            'ó' => out.push_str("\\363"),
+            'ô' => out.push_str("\\364"),
+            'õ' => out.push_str("\\365"),
+            'ú' => out.push_str("\\372"),
+            'ü' => out.push_str("\\374"),
+            'ç' => out.push_str("\\347"),
+            'Á' => out.push_str("\\301"),
+            'À' => out.push_str("\\300"),
+            'Â' => out.push_str("\\302"),
+            'Ã' => out.push_str("\\303"),
+            'É' => out.push_str("\\311"),
+            'Ê' => out.push_str("\\312"),
+            'Í' => out.push_str("\\315"),
+            'Ó' => out.push_str("\\323"),
+            'Ô' => out.push_str("\\324"),
+            'Õ' => out.push_str("\\325"),
+            'Ú' => out.push_str("\\332"),
+            'Ü' => out.push_str("\\334"),
+            'Ç' => out.push_str("\\307"),
+            '—' => out.push_str("\\227"),
+            '–' => out.push_str("\\226"),
+            '“' => out.push_str("\\223"),
+            '”' => out.push_str("\\224"),
+            '‘' => out.push_str("\\221"),
+            '’' => out.push_str("\\222"),
+            '«' => out.push_str("\\253"),
+            '»' => out.push_str("\\273"),
+            c if c.is_ascii() && !c.is_control() => out.push(c),
+            _ => out.push('?'),
+        }
+    }
+    out
+}
+
+/// Quebra de texto em linhas respeitando limites de palavras para largura do PDF.
+fn wrap_words(text: &str, max_chars: usize) -> Vec<String> {
+    let mut lines = Vec::new();
+    let words = text.split_whitespace();
+    let mut current_line = String::new();
+
+    for word in words {
+        if current_line.is_empty() {
+            current_line.push_str(word);
+        } else if current_line.chars().count() + 1 + word.chars().count() <= max_chars {
+            current_line.push(' ');
+            current_line.push_str(word);
+        } else {
+            lines.push(current_line);
+            current_line = word.to_string();
+        }
+    }
+    if !current_line.is_empty() {
+        lines.push(current_line);
+    }
+    lines
+}
+
+/// Gera um documento PDF 1.4 nativo em formato A5 diagramado profissionalmente.
+fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultError> {
+    let title = compiled.settings.title.as_deref().unwrap_or("Manuscrito");
+    let subtitle = compiled.settings.subtitle.as_deref();
+    let author = compiled.settings.author.as_deref().unwrap_or("");
+    let is_poetry = compiled.settings.theme_preset == "poetry";
+
+    let mut page_streams: Vec<String> = Vec::new();
+    let mut page_number = 1usize;
+
+    // --- Página 1: Folha de Rosto / Capa ---
+    {
+        let mut stream = String::new();
+        stream.push_str("BT\n/F2 22 Tf\n28 TL\n");
+        let safe_title = pdf_escape_text(title);
+        let title_len = title.chars().count();
+        let title_x = (210.0 - (title_len as f32 * 5.5)).max(48.0);
+        stream.push_str(&format!(
+            "{:.1} 360.0 Td\n({}) Tj\nT*\n",
+            title_x, safe_title
+        ));
+
+        if let Some(sub) = subtitle {
+            if !sub.trim().is_empty() {
+                let safe_sub = pdf_escape_text(sub.trim());
+                let sub_len = sub.trim().chars().count();
+                let sub_x = (210.0 - (sub_len as f32 * 3.5)).max(48.0);
+                stream.push_str(&format!(
+                    "/F3 12 Tf\n18 TL\n{:.1} 320.0 Td\n({}) Tj\nT*\n",
+                    sub_x, safe_sub
+                ));
+            }
+        }
+
+        if !author.trim().is_empty() {
+            let safe_author = pdf_escape_text(author.trim());
+            let auth_len = author.trim().chars().count();
+            let auth_x = (210.0 - (auth_len as f32 * 3.2)).max(48.0);
+            stream.push_str(&format!(
+                "/F1 12 Tf\n{:.1} 240.0 Td\n({}) Tj\n",
+                auth_x, safe_author
+            ));
+        }
+        stream.push_str("ET\n");
+        page_streams.push(stream);
+    }
+
+    // --- Páginas de Conteúdo (Preliminares, Capítulos, Cenas e Pós-textuais) ---
+    let mut current_stream = String::new();
+    let mut cursor_y = 535.0f32;
+    let leading = 14.5f32;
+    let margin_left = 48.0f32;
+    let text_indent = if is_poetry { 0.0f32 } else { 16.0f32 };
+
+    let mut start_new_page = |stream: &mut String, p_num: &mut usize| {
+        let footer = format!("BT\n/F1 9 Tf\n205.0 36.0 Td\n({}) Tj\nET\n", *p_num);
+        stream.push_str(&footer);
+        page_streams.push(std::mem::take(stream));
+        *p_num += 1;
+        535.0f32
+    };
+
+    for sec in &compiled.sections {
+        let force_new_page = sec.kind == "chapter"
+            || sec.kind == "frontmatter"
+            || sec.kind == "backmatter"
+            || sec.id == "dedication"
+            || sec.id == "epigraph";
+        if force_new_page && cursor_y < 500.0 {
+            cursor_y = start_new_page(&mut current_stream, &mut page_number);
+        }
+
+        if sec.id == "dedication" || sec.id == "epigraph" {
+            let lines: Vec<&str> = sec.content.lines().collect();
+            let mut y = 340.0f32;
+            current_stream.push_str("BT\n/F3 11 Tf\n16 TL\n");
+            for l in lines {
+                let trimmed = l.trim();
+                if !trimmed.is_empty() {
+                    let safe = pdf_escape_text(trimmed);
+                    let len = trimmed.chars().count();
+                    let x = (210.0 - (len as f32 * 3.0)).max(60.0);
+                    current_stream.push_str(&format!("{:.1} {:.1} Td\n({}) Tj\n", x, y, safe));
+                    y -= 16.0;
+                }
+            }
+            current_stream.push_str("ET\n");
+            cursor_y = start_new_page(&mut current_stream, &mut page_number);
+            continue;
+        }
+
+        if !sec.title.trim().is_empty() {
+            if cursor_y < 120.0 {
+                cursor_y = start_new_page(&mut current_stream, &mut page_number);
+            }
+            let safe_title = pdf_escape_text(sec.title.trim());
+            cursor_y -= 24.0;
+            current_stream.push_str(&format!(
+                "BT\n/F2 15 Tf\n{:.1} {:.1} Td\n({}) Tj\nET\n",
+                margin_left, cursor_y, safe_title
+            ));
+            cursor_y -= 18.0;
+        }
+
+        for para in sec.content.split("\n\n") {
+            let trimmed = para.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+
+            if trimmed == "* * *" || trimmed == "---" {
+                if cursor_y < 85.0 {
+                    cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                }
+                cursor_y -= 12.0;
+                current_stream.push_str(&format!(
+                    "BT\n/F1 11 Tf\n190.0 {:.1} Td\n(*  *  *) Tj\nET\n",
+                    cursor_y
+                ));
+                cursor_y -= 16.0;
+                continue;
+            }
+
+            let lines = wrap_words(trimmed, 62);
+            for (idx, line) in lines.iter().enumerate() {
+                if cursor_y < 65.0 {
+                    cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                }
+                let line_indent = if idx == 0 { text_indent } else { 0.0f32 };
+                let x = margin_left + line_indent;
+                let safe_line = pdf_escape_text(line);
+                current_stream.push_str(&format!(
+                    "BT\n/F1 10.5 Tf\n{:.1} {:.1} Td\n({}) Tj\nET\n",
+                    x, cursor_y, safe_line
+                ));
+                cursor_y -= leading;
+            }
+            if is_poetry {
+                cursor_y -= 6.0;
+            } else {
+                cursor_y -= 3.0;
+            }
+        }
+    }
+
+    if !current_stream.trim().is_empty() {
+        let footer = format!("BT\n/F1 9 Tf\n205.0 36.0 Td\n({}) Tj\nET\n", page_number);
+        current_stream.push_str(&footer);
+        page_streams.push(current_stream);
+    }
+
+    // --- Montagem dos Objetos PDF ---
+    let page_count = page_streams.len();
+    let mut page_obj_ids = Vec::new();
+    let mut current_obj_id = 6usize;
+    for _ in 0..page_count {
+        page_obj_ids.push(current_obj_id);
+        current_obj_id += 2;
+    }
+
+    let mut pdf = Vec::new();
+    pdf.extend_from_slice(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n");
+
+    let mut offsets = Vec::new();
+
+    // 1 0 obj: Catalog
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+    // 2 0 obj: Pages
+    offsets.push(pdf.len());
+    let mut kids = String::new();
+    for id in &page_obj_ids {
+        kids.push_str(&format!("{} 0 R ", id));
+    }
+    let pages_dict = format!(
+        "2 0 obj\n<< /Type /Pages /Kids [{}] /Count {} >>\nendobj\n",
+        kids.trim(),
+        page_count
+    );
+    pdf.extend_from_slice(pages_dict.as_bytes());
+
+    // 3 0 obj: Font F1 (Times-Roman)
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+    // 4 0 obj: Font F2 (Times-Bold)
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Times-Bold /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+    // 5 0 obj: Font F3 (Times-Italic)
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+    // Páginas e Streams de Conteúdo
+    for (idx, stream_content) in page_streams.iter().enumerate() {
+        let page_id = page_obj_ids[idx];
+        let content_id = page_id + 1;
+
+        offsets.push(pdf.len());
+        let page_str = format!(
+            "{} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 419.53 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents {} 0 R >>\nendobj\n",
+            page_id, content_id
+        );
+        pdf.extend_from_slice(page_str.as_bytes());
+
+        offsets.push(pdf.len());
+        let stream_bytes = stream_content.as_bytes();
+        let content_str = format!(
+            "{} 0 obj\n<< /Length {} >>\nstream\n{}\nendstream\nendobj\n",
+            content_id,
+            stream_bytes.len(),
+            stream_content
+        );
+        pdf.extend_from_slice(content_str.as_bytes());
+    }
+
+    // Tabela XREF
+    let xref_offset = pdf.len();
+    let total_objects = 5 + (page_count * 2);
+    let mut xref = format!("xref\n0 {}\n0000000000 65535 f \n", total_objects + 1);
+    for off in offsets {
+        xref.push_str(&format!("{:010} 00000 n \n", off));
+    }
+    pdf.extend_from_slice(xref.as_bytes());
+
+    // Trailer
+    let trailer = format!(
+        "trailer\n<< /Size {} /Root 1 0 R >>\nstartxref\n{}\n%%EOF\n",
+        total_objects + 1,
+        xref_offset
+    );
+    pdf.extend_from_slice(trailer.as_bytes());
+
+    Ok(pdf)
+}
+
+/// M6-05: Exporta para PDF direto (.pdf) ou HTML diagramado com Print CSS.
 pub fn export_pdf_html_internal(
     vault: &UnlockedVault,
     destination_file: &Path,
     settings: Option<CompilerSettings>,
 ) -> Result<ExportDocumentResult, VaultError> {
     let compiled = compile_manuscript_internal(vault, settings)?;
+
+    // Se o arquivo tiver extensão .pdf (ou padrão nativo), gera binário PDF nativo diretamente!
+    if destination_file
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.eq_ignore_ascii_case("pdf"))
+        .unwrap_or(false)
+    {
+        let pdf_bytes = generate_direct_pdf(&compiled)?;
+        fs::write(destination_file, &pdf_bytes).map_err(|e| VaultError::Io(e.to_string()))?;
+        let meta = fs::metadata(destination_file).map_err(|e| VaultError::Io(e.to_string()))?;
+        return Ok(ExportDocumentResult {
+            file_path: destination_file.to_string_lossy().to_string(),
+            format: "pdf".to_string(),
+            byte_size: meta.len(),
+        });
+    }
     let title = compiled.settings.title.as_deref().unwrap_or("Manuscrito");
     let author = compiled.settings.author.as_deref().unwrap_or("");
 
