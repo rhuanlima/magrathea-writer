@@ -87,45 +87,11 @@
 
       <!-- Cartão Principal de Doação PIX -->
       <div class="donation-card">
-        <!-- QR Code Estilizado em SVG Vetorial Puro -->
+        <!-- QR Code Oficial Real -->
         <div class="qr-container" title={t('support.qrAlt')}>
-          <svg class="qr-svg" viewBox="0 0 100 100" fill="currentColor" aria-hidden="true">
-            <!-- Marcadores angulares de posicionamento de precisão -->
-            <rect x="6" y="6" width="24" height="24" rx="4" fill="var(--color-olive)" />
-            <rect x="11" y="11" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
-            <rect x="14" y="14" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
-
-            <rect x="70" y="6" width="24" height="24" rx="4" fill="var(--color-olive)" />
-            <rect x="75" y="11" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
-            <rect x="78" y="14" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
-
-            <rect x="6" y="70" width="24" height="24" rx="4" fill="var(--color-olive)" />
-            <rect x="11" y="75" width="14" height="14" rx="2" fill="var(--color-paper-base)" />
-            <rect x="14" y="78" width="8" height="8" rx="1.5" fill="var(--color-olive)" />
-
-            <!-- Padrão vetorial geométrico limpo -->
-            <rect x="36" y="8" width="8" height="8" rx="1" fill="var(--color-terracotta)" />
-            <rect x="52" y="8" width="10" height="6" rx="1" fill="var(--color-ink-charcoal)" />
-
-            <rect x="36" y="22" width="6" height="8" rx="1" fill="var(--color-ink-charcoal)" />
-            <rect x="48" y="20" width="12" height="6" rx="1" fill="var(--color-olive)" />
-
-            <rect x="8" y="38" width="8" height="8" rx="1" fill="var(--color-ink-charcoal)" />
-            <rect x="22" y="36" width="8" height="6" rx="1" fill="var(--color-olive)" />
-            <rect x="38" y="38" width="14" height="14" rx="2" fill="var(--color-terracotta)" />
-            <rect x="58" y="36" width="10" height="10" rx="1.5" fill="var(--color-olive)" />
-            <rect x="76" y="38" width="16" height="8" rx="1" fill="var(--color-ink-charcoal)" />
-
-            <rect x="38" y="58" width="8" height="10" rx="1" fill="var(--color-ink-charcoal)" />
-            <rect x="52" y="56" width="12" height="14" rx="2" fill="var(--color-olive)" />
-            <rect x="72" y="56" width="8" height="8" rx="1" fill="var(--color-terracotta)" />
-            <rect x="86" y="56" width="8" height="12" rx="1" fill="var(--color-ink-charcoal)" />
-
-            <rect x="36" y="76" width="14" height="8" rx="1" fill="var(--color-olive)" />
-            <rect x="56" y="78" width="8" height="14" rx="1" fill="var(--color-ink-charcoal)" />
-            <rect x="72" y="74" width="20" height="8" rx="1" fill="var(--color-olive)" />
-            <rect x="74" y="88" width="14" height="6" rx="1" fill="var(--color-terracotta)" />
-          </svg>
+          <div class="qr-frame">
+            <img src="/pix-qrcode.png" alt={t('support.qrAlt')} class="qr-real-img" />
+          </div>
           <span class="qr-caption font-mono">PIX / BRASIL</span>
         </div>
 
@@ -358,9 +324,22 @@
     flex-shrink: 0;
   }
 
-  .qr-svg {
-    width: 104px;
-    height: 104px;
+  .qr-frame {
+    width: 108px;
+    height: 108px;
+    background: #ffffff;
+    padding: 4px;
+    border-radius: var(--rounded-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .qr-real-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
   }
 
   .qr-caption {
