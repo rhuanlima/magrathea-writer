@@ -306,18 +306,35 @@
   }
 
   .dialog-close-btn {
-    border: none;
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-paper-border, #E5E0D8);
     background: transparent;
     cursor: pointer;
-    font-size: 16px;
-    color: var(--color-ink-muted);
-    padding: 4px 8px;
-    border-radius: var(--rounded-sm);
+    font-size: 14px;
+    color: var(--color-ink-muted, #6B7280);
+    border-radius: 8px;
+    transition: all 0.15s ease;
   }
 
   .dialog-close-btn:hover {
-    background-color: var(--color-paper-hover);
-    color: var(--color-ink-charcoal);
+    background-color: var(--color-paper-hover, rgba(0, 0, 0, 0.05));
+    color: var(--color-ink-charcoal, #111827);
+    border-color: var(--color-ink-faded, #9CA3AF);
+  }
+
+  :global(.dark) .dialog-close-btn {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .dialog-close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border-color: #555A4E;
   }
 
   .dialog-content {

@@ -190,11 +190,35 @@
   }
 
   .btn-close {
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: transparent;
-    border: none;
-    font-size: 14px;
-    color: var(--color-ink-muted);
+    border: 1px solid var(--color-paper-border, #E5E0D8);
+    font-size: 13px;
+    color: var(--color-ink-muted, #6B7280);
+    border-radius: 8px;
     cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .btn-close:hover {
+    color: var(--color-ink-charcoal, #111827);
+    background-color: var(--color-paper-hover, rgba(0, 0, 0, 0.05));
+    border-color: var(--color-ink-faded, #9CA3AF);
+  }
+
+  :global(.dark) .btn-close {
+    border-color: #383C32;
+    color: #A4A89E;
+  }
+
+  :global(.dark) .btn-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #FFFFFF;
+    border-color: #555A4E;
   }
 
   .modal-body {
