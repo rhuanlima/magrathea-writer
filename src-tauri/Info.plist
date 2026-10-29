@@ -9,6 +9,8 @@
             <string>Mundo Literário Magrathea</string>
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
+            <key>CFBundleTypeIconFile</key>
+            <string>world-document.icns</string>
             <key>LSHandlerRank</key>
             <string>Owner</string>
             <key>CFBundleTypeExtensions</key>

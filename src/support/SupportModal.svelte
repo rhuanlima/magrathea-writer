@@ -44,7 +44,9 @@
   <div class="support-dialog" role="dialog" aria-modal="true" aria-labelledby="support-title">
     <!-- Cabeçalho -->
     <div class="support-header">
-      <div class="header-icon-box">🪐</div>
+      <div class="header-icon-box">
+        <img src="/app-icon.png" alt="Magrathea Writer" class="support-header-logo" />
+      </div>
       <div class="header-text-col">
         <h2 id="support-title" class="support-title">{t('support.modalTitle')}</h2>
         <p class="support-subtitle">{t('support.subtitle')}</p>
@@ -205,15 +207,22 @@
   }
 
   .header-icon-box {
-    font-size: 1.9rem;
     line-height: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 44px;
     height: 44px;
-    background: var(--color-olive-subtle);
+    background: transparent;
     border-radius: var(--rounded-lg);
+  }
+
+  .support-header-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: 9px;
+    object-fit: cover;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
   }
 
   .header-text-col {
