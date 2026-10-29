@@ -29,8 +29,21 @@ O app **não está danificado**. Para abri-lo pela primeira vez, escolha uma das
   2. Segure a tecla `Control`, clique com o **botão direito** no aplicativo **Magrathea Writer** e clique em **Abrir**.
   3. No diálogo de confirmação, clique em **Abrir**. (Ou acesse *Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim*).
 
-### 🪟 No Windows
-Baixe o instalador `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe`. Caso o Windows SmartScreen apresente o alerta azul, clique em **"Mais informações"** e em seguida **"Executar assim mesmo"**.
+### 🪟 No Windows (SmartScreen & Controle Inteligente de Aplicativos)
+Como o instalador é um executável recente e independente, o Windows 11 pode exibir a tela do **Controle Inteligente de Aplicativos (Smart App Control)** ou do **SmartScreen** informando que *"o aplicativo pode não ser seguro"*.
+
+Para liberar a execução em poucos segundos:
+* **Opção 1 (Pelo Windows Explorer — 3 cliques):**
+  1. Vá até a sua pasta de **Downloads**.
+  2. Clique com o **botão direito** no arquivo `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe` e selecione **Propriedades** (*Properties*).
+  3. Na aba **Geral**, na parte inferior (seção *Segurança*), marque a caixinha **☑ Desbloquear** (*Unblock*).
+  4. Clique em **Aplicar** e **OK**. O instalador abrirá normalmente no duplo-clique!
+* **Opção 2 (Via PowerShell — 1 linha):**
+  Execute no PowerShell:
+  ```powershell
+  Unblock-File -Path "$HOME\Downloads\Magrathea.Writer*.exe"
+  ```
+*(Se o seu Windows exibir apenas o SmartScreen tradicional com tela azul, basta clicar em **"Mais informações"** e depois em **"Executar assim mesmo"**).*
 
 ### 🐧 No Linux
 * **Debian / Ubuntu / Mint:** `sudo dpkg -i Magrathea.Writer_0.9.0-beta.1_amd64.deb`

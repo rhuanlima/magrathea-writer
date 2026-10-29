@@ -29,8 +29,21 @@ The application is **not damaged**. To launch it for the first time:
   2. Hold `Control` and **right-click** `Magrathea Writer`, then select **Open**.
   3. In the confirmation dialog, click **Open**. (Or open *System Settings → Privacy & Security → Open Anyway*).
 
-### 🪟 On Windows
-Download `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe`. If Windows SmartScreen shows a protective prompt, click **"More info"** and then **"Run anyway"**.
+### 🪟 On Windows (SmartScreen & Smart App Control)
+Because the installer is a newly released independent executable, Windows 11 may present the **Smart App Control** or **SmartScreen** prompt indicating that *"the app may not be safe"*.
+
+To unblock and launch it in seconds:
+* **Option 1 (Via File Explorer — 3 clicks):**
+  1. Open your **Downloads** folder.
+  2. **Right-click** `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe` and select **Properties**.
+  3. Under the **General** tab, at the bottom (*Security* section), check the **☑ Unblock** box.
+  4. Click **Apply** and **OK**. Double-click the installer to run normally!
+* **Option 2 (Via PowerShell — 1 line):**
+  Run in PowerShell:
+  ```powershell
+  Unblock-File -Path "$HOME\Downloads\Magrathea.Writer*.exe"
+  ```
+*(If your Windows displays standard SmartScreen with a blue screen, simply click **"More info"** and then **"Run anyway"**).*
 
 ### 🐧 On Linux
 * **Debian / Ubuntu / Mint:** `sudo dpkg -i Magrathea.Writer_0.9.0-beta.1_amd64.deb`
