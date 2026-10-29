@@ -10,7 +10,7 @@
   import { supportStore } from './support.svelte';
   import { t } from '../i18n';
 
-  const pixKey = 'rhuan.lima@gmail.com';
+  const pixKey = 'rhuan@rhuanlima.com.br';
   let copied = $state(false);
 
   async function handleCopyPix() {
