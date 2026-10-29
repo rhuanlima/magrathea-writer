@@ -1126,14 +1126,20 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
         let safe_title = pdf_escape_text(title);
         let title_len = title.chars().count();
         let title_x = (210.0 - (title_len as f32 * 5.5)).max(48.0);
-        stream.push_str(&format!("{:.1} 360.0 Td\n({}) Tj\nT*\n", title_x, safe_title));
+        stream.push_str(&format!(
+            "{:.1} 360.0 Td\n({}) Tj\nT*\n",
+            title_x, safe_title
+        ));
 
         if let Some(sub) = subtitle {
             if !sub.trim().is_empty() {
                 let safe_sub = pdf_escape_text(sub.trim());
                 let sub_len = sub.trim().chars().count();
                 let sub_x = (210.0 - (sub_len as f32 * 3.5)).max(48.0);
-                stream.push_str(&format!("/F3 12 Tf\n18 TL\n{:.1} 320.0 Td\n({}) Tj\nT*\n", sub_x, safe_sub));
+                stream.push_str(&format!(
+                    "/F3 12 Tf\n18 TL\n{:.1} 320.0 Td\n({}) Tj\nT*\n",
+                    sub_x, safe_sub
+                ));
             }
         }
 
@@ -1141,7 +1147,10 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
             let safe_author = pdf_escape_text(author.trim());
             let auth_len = author.trim().chars().count();
             let auth_x = (210.0 - (auth_len as f32 * 3.2)).max(48.0);
-            stream.push_str(&format!("/F1 12 Tf\n{:.1} 240.0 Td\n({}) Tj\n", auth_x, safe_author));
+            stream.push_str(&format!(
+                "/F1 12 Tf\n{:.1} 240.0 Td\n({}) Tj\n",
+                auth_x, safe_author
+            ));
         }
         stream.push_str("ET\n");
         page_streams.push(stream);
@@ -1346,7 +1355,12 @@ pub fn export_pdf_html_internal(
     let compiled = compile_manuscript_internal(vault, settings)?;
 
     // Se o arquivo tiver extensão .pdf (ou padrão nativo), gera binário PDF nativo diretamente!
-    if destination_file.extension().and_then(|s| s.to_str()).map(|s| s.eq_ignore_ascii_case("pdf")).unwrap_or(false) {
+    if destination_file
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.eq_ignore_ascii_case("pdf"))
+        .unwrap_or(false)
+    {
         let pdf_bytes = generate_direct_pdf(&compiled)?;
         fs::write(destination_file, &pdf_bytes).map_err(|e| VaultError::Io(e.to_string()))?;
         let meta = fs::metadata(destination_file).map_err(|e| VaultError::Io(e.to_string()))?;
