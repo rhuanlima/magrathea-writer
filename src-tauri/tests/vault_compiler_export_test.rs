@@ -143,16 +143,31 @@ fn test_compiler_and_export_lifecycle() {
     assert!(epub_res.byte_size > 500);
     assert!(epub_file.exists());
 
-    // 8. M6-05: Exportar PDF / HTML Diagramado
-    let pdf_html_file = temp_dir.join("livro_diagramado.html");
+    // 8. M6-05: Exportar PDF Nativo (.pdf)
+    let pdf_direct_file = temp_dir.join("livro_nativo.pdf");
     let pdf_res = export_pdf_html_internal(
+        &state,
+        &pdf_direct_file.display().to_string(),
+        Some(settings.clone()),
+    )
+    .expect("deve exportar pdf nativo");
+
+    assert_eq!(pdf_res.format, "pdf");
+    assert!(pdf_direct_file.exists());
+    let pdf_bytes = fs::read(&pdf_direct_file).unwrap();
+    assert!(pdf_bytes.starts_with(b"%PDF-1.4"));
+    assert!(pdf_bytes.len() > 800);
+
+    // 8.1. Exportar HTML para compatibilidade com Print CSS
+    let pdf_html_file = temp_dir.join("livro_diagramado.html");
+    let html_res = export_pdf_html_internal(
         &state,
         &pdf_html_file.display().to_string(),
         Some(settings.clone()),
     )
     .expect("deve exportar pdf html");
 
-    assert_eq!(pdf_res.format, "html_pdf");
+    assert_eq!(html_res.format, "html_pdf");
     assert!(pdf_html_file.exists());
     let html_content = fs::read_to_string(&pdf_html_file).unwrap();
     assert!(html_content.contains("dedication-box"));

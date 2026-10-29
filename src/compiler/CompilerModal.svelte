@@ -480,21 +480,8 @@
                   bind:group={compilerStore.settings.theme_preset}
                 />
                 <div>
-                  <div class="preset-title">Romance Clássico</div>
+                  <div class="preset-title">Romance Clássico & Ficção Narrativa</div>
                   <div class="preset-desc">{t('compiler.presetNovel')}</div>
-                </div>
-              </label>
-
-              <label class="preset-option" class:selected={compilerStore.settings.theme_preset === 'essay'}>
-                <input
-                  type="radio"
-                  name="preset"
-                  value="essay"
-                  bind:group={compilerStore.settings.theme_preset}
-                />
-                <div>
-                  <div class="preset-title">Ensaio / Artigo</div>
-                  <div class="preset-desc">{t('compiler.presetEssay')}</div>
                 </div>
               </label>
 
@@ -506,7 +493,7 @@
                   bind:group={compilerStore.settings.theme_preset}
                 />
                 <div>
-                  <div class="preset-title">Poesia / Livre</div>
+                  <div class="preset-title">Poesia & Versos Livres</div>
                   <div class="preset-desc">{t('compiler.presetPoetry')}</div>
                 </div>
               </label>
@@ -660,23 +647,23 @@
               </button>
             </div>
 
-            <!-- Impressão PDF / HTML -->
+            <!-- Livro em PDF Direto -->
             <div class="format-card">
               <div class="format-card-top">
-                <div class="format-icon icon-rose">🖨️</div>
+                <div class="format-icon icon-rose">📕</div>
                 <div>
-                  <h4 class="format-title">Impressão / PDF</h4>
-                  <span class="format-ext">.html / .pdf</span>
+                  <h4 class="format-title">Livro em PDF</h4>
+                  <span class="format-ext">.pdf</span>
                 </div>
               </div>
-              <p class="format-desc">Arquivo diagramado com quebras de página pré-configuradas para impressão.</p>
+              <p class="format-desc">Documento PDF nativo diagramado em formato A5 com paginação para leitura ou gráfica.</p>
               <button
                 type="button"
                 onclick={() => handleQuickExport('pdf')}
                 disabled={compilerStore.isExporting}
                 class="btn-format btn-format-rose"
               >
-                {compilerStore.isExporting && selectedExportFormat === 'pdf' ? 'Exportando...' : 'Salvar para PDF'}
+                {compilerStore.isExporting && selectedExportFormat === 'pdf' ? 'Exportando...' : 'Salvar PDF (.pdf)'}
               </button>
             </div>
 

@@ -235,11 +235,11 @@ export function createCompilerStore() {
         }
       }
     } else if (format === 'pdf') {
-      chosen = await pickSaveExportPath('Salvar para Leitura / PDF (.html)', `${raw}.html`, 'html');
+      chosen = await pickSaveExportPath('Salvar Livro em PDF (.pdf)', `${raw}.pdf`, 'pdf');
       if (chosen) {
         const ok = await runExportPdf(chosen);
         if (ok) {
-          showToast(`✓ Documento para leitura gerado: ${chosen}`);
+          showToast(`✓ Livro em PDF gerado: ${chosen}`);
           return chosen;
         }
       }
