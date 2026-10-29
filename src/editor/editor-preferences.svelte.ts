@@ -18,6 +18,9 @@ class EditorPreferencesStore {
   fontFamily = $state<FontFamilyChoice>('garamond');
   lineHeight = $state<number>(1.8);
   columnWidth = $state<ColumnWidthChoice>('medium');
+  typewriterSound = $state<boolean>(false);
+  typewriterVolume = $state<number>(0.6);
+  typewriterScrolling = $state<boolean>(false);
   isModalOpen = $state<boolean>(false);
 
   constructor() {
@@ -35,6 +38,9 @@ class EditorPreferencesStore {
         if (['garamond', 'sans', 'mono'].includes(parsed.fontFamily)) this.fontFamily = parsed.fontFamily;
         if (typeof parsed.lineHeight === 'number') this.lineHeight = parsed.lineHeight;
         if (['narrow', 'medium', 'wide', 'full'].includes(parsed.columnWidth)) this.columnWidth = parsed.columnWidth;
+        if (typeof parsed.typewriterSound === 'boolean') this.typewriterSound = parsed.typewriterSound;
+        if (typeof parsed.typewriterVolume === 'number') this.typewriterVolume = parsed.typewriterVolume;
+        if (typeof parsed.typewriterScrolling === 'boolean') this.typewriterScrolling = parsed.typewriterScrolling;
       }
     } catch {
       // Ignora falhas de parse
@@ -52,6 +58,9 @@ class EditorPreferencesStore {
           fontFamily: this.fontFamily,
           lineHeight: this.lineHeight,
           columnWidth: this.columnWidth,
+          typewriterSound: this.typewriterSound,
+          typewriterVolume: this.typewriterVolume,
+          typewriterScrolling: this.typewriterScrolling,
         })
       );
     } catch {
@@ -61,6 +70,21 @@ class EditorPreferencesStore {
 
   toggleLineNumbers(): void {
     this.showLineNumbers = !this.showLineNumbers;
+    this.saveToStorage();
+  }
+
+  toggleTypewriterSound(): void {
+    this.typewriterSound = !this.typewriterSound;
+    this.saveToStorage();
+  }
+
+  setTypewriterVolume(vol: number): void {
+    this.typewriterVolume = Math.min(Math.max(vol, 0.1), 1.0);
+    this.saveToStorage();
+  }
+
+  toggleTypewriterScrolling(): void {
+    this.typewriterScrolling = !this.typewriterScrolling;
     this.saveToStorage();
   }
 

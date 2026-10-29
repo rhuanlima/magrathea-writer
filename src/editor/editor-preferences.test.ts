@@ -47,4 +47,17 @@ describe('Editor Preferences Store', () => {
     editorPreferences.closeModal();
     expect(editorPreferences.isModalOpen).toBe(false);
   });
+
+  it('permite alternar modo typewriter (sons mecânicos, volume e rolagem centralizada)', () => {
+    expect(editorPreferences.typewriterSound).toBe(false);
+    editorPreferences.toggleTypewriterSound();
+    expect(editorPreferences.typewriterSound).toBe(true);
+
+    editorPreferences.setTypewriterVolume(0.8);
+    expect(editorPreferences.typewriterVolume).toBe(0.8);
+
+    expect(editorPreferences.typewriterScrolling).toBe(false);
+    editorPreferences.toggleTypewriterScrolling();
+    expect(editorPreferences.typewriterScrolling).toBe(true);
+  });
 });
