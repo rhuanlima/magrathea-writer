@@ -38,7 +38,7 @@
 <div class="welcome-container" role="main" aria-label={t('vault.open.welcomeTitle')}>
   <div class="welcome-card">
     <div class="brand-hero">
-      <div class="hero-icon">◈</div>
+      <img src="/app-icon.png" alt="Magrathea Writer" class="hero-app-icon" />
       <h1 class="hero-title">{t('vault.open.welcomeTitle')}</h1>
       <p class="hero-subtitle">{t('vault.open.welcomeSubtitle')}</p>
     </div>
@@ -50,7 +50,7 @@
         class="action-card primary"
         onclick={() => onOpenVault()}
       >
-        <span class="card-icon">🌍</span>
+        <img src="/world-file-dark.png" alt="" class="card-world-icon" />
         <div class="card-texts">
           <strong class="card-title">{t('vault.open.welcomeOpenButton')}</strong>
           <span class="card-desc">Abra um mundo existente (.magrathea) no seu computador</span>
@@ -83,7 +83,7 @@
               title={item.path}
             >
               <div class="recent-card-header">
-                <span class="recent-folder-icon">🔒</span>
+                <img src="/world-file-dark.png" alt="" class="recent-file-icon" />
                 <strong class="recent-name">{item.title}</strong>
               </div>
               <p class="recent-path">{item.path}</p>
@@ -128,11 +128,13 @@
     gap: 8px;
   }
 
-  .hero-icon {
-    font-size: 40px;
-    color: var(--color-olive, #5E6F45);
-    line-height: 1;
+  .hero-app-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
     margin-bottom: 4px;
+    object-fit: cover;
   }
 
   .hero-title {
@@ -194,6 +196,13 @@
 
   .card-icon {
     font-size: 26px;
+  }
+
+  .card-world-icon {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .card-texts {
@@ -265,8 +274,11 @@
     gap: 6px;
   }
 
-  .recent-folder-icon {
-    font-size: 12px;
+  .recent-file-icon {
+    width: 16px;
+    height: 16px;
+    object-fit: contain;
+    flex-shrink: 0;
   }
 
   .recent-name {

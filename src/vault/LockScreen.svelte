@@ -58,7 +58,8 @@
 <div class="lock-backdrop" role="dialog" aria-modal="true" aria-labelledby="lock-title">
   <div class="lock-card">
     <div class="lock-icon-wrapper">
-      <span class="lock-icon">🔒</span>
+      <img src="/app-icon.png" alt="Magrathea" class="lock-app-icon" />
+      <span class="lock-badge-icon">🔒</span>
     </div>
 
     <h2 id="lock-title" class="lock-title">
@@ -194,19 +195,32 @@
   }
 
   .lock-icon-wrapper {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: var(--color-paper-elevated);
-    border: 1px solid var(--color-paper-border);
+    position: relative;
+    width: 64px;
+    height: 64px;
     display: flex;
     align-items: center;
     justify-content: center;
     margin-bottom: var(--space-md);
   }
 
-  .lock-icon {
-    font-size: 24px;
+  .lock-app-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    object-fit: cover;
+  }
+
+  .lock-badge-icon {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    font-size: 16px;
+    background: var(--color-paper-elevated);
+    border-radius: 50%;
+    padding: 2px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
   }
 
   .lock-title {

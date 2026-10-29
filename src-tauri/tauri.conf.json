@@ -37,6 +37,14 @@
     "shortDescription": "Oficina particular de criação de mundos literários.",
     "longDescription": "Ambiente de escrita e segundo cérebro literário local-first, offline e cifrado para autores e worldbuilders.",
     "copyright": "Copyright (C) 2026 Rhuan Lima. Distribuído sob a licença GNU AGPLv3.",
+    "fileAssociations": [
+      {
+        "ext": ["magrathea"],
+        "name": "Mundo Magrathea Writer",
+        "description": "Arquivo de Cofre Literário Soberano",
+        "role": "Editor"
+      }
+    ],
     "macOS": {
       "infoPlist": "Info.plist",
       "minimumSystemVersion": "10.15"
