@@ -6,13 +6,14 @@ describe('OnboardingStore: Curso Básico do Magrathea Writer', () => {
     onboardingStore.close();
   });
 
-  it('possui 5 lições essenciais bem estruturadas', () => {
-    expect(COURSE_LESSONS.length).toBe(5);
+  it('possui 6 lições essenciais bem estruturadas (incluindo encorajamento de café/apoio)', () => {
+    expect(COURSE_LESSONS.length).toBe(6);
     expect(COURSE_LESSONS[0].title).toContain('Filosofia');
     expect(COURSE_LESSONS[1].title).toContain('Manuscrito');
     expect(COURSE_LESSONS[2].title).toContain('Segundo Cérebro');
     expect(COURSE_LESSONS[3].title).toContain('Ergonomia');
     expect(COURSE_LESSONS[4].title).toContain('Compilação');
+    expect(COURSE_LESSONS[5].title).toContain('Café');
   });
 
   it('permite abrir, navegar entre lições e avançar sequencialmente', () => {
@@ -26,13 +27,13 @@ describe('OnboardingStore: Curso Básico do Magrathea Writer', () => {
     onboardingStore.prevLesson();
     expect(onboardingStore.currentLessonIndex).toBe(0);
 
-    onboardingStore.goToLesson(4);
-    expect(onboardingStore.currentLessonIndex).toBe(4);
-    expect(onboardingStore.currentLesson.id).toBe(5);
+    onboardingStore.goToLesson(5);
+    expect(onboardingStore.currentLessonIndex).toBe(5);
+    expect(onboardingStore.currentLesson.id).toBe(6);
   });
 
   it('encerra o curso ao avançar além da última lição', () => {
-    onboardingStore.open(4);
+    onboardingStore.open(5);
     expect(onboardingStore.isOpen).toBe(true);
 
     onboardingStore.nextLesson();

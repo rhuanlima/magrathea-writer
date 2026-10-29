@@ -7,6 +7,21 @@
 
   import { onboardingStore, COURSE_LESSONS } from './onboarding.svelte';
 
+  const pixKey = 'rhuan@rhuanlima.com.br';
+  let copiedPix = $state(false);
+
+  async function handleCopyPix() {
+    try {
+      await navigator.clipboard.writeText(pixKey);
+      copiedPix = true;
+      setTimeout(() => {
+        copiedPix = false;
+      }, 3500);
+    } catch {
+      // Fallback
+    }
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (!onboardingStore.isOpen) return;
     if (e.key === 'Escape') {
@@ -66,6 +81,55 @@
 
     <!-- Conteúdo da Lição -->
     <div class="onboarding-body">
+      {#if onboardingStore.currentLesson.id === 6}
+        <!-- Destaque Especial: Encorajamento de Pagar um Café com QR Code PIX -->
+        <div class="coffee-support-container">
+          <div class="coffee-qr-column">
+            <div class="coffee-qr-frame">
+              <img
+                src="/pix-qrcode.png"
+                alt="QR Code PIX para apoio ao Magrathea Writer"
+                class="coffee-qr-img"
+              />
+            </div>
+            <span class="qr-caption">Aponte a câmera do seu banco</span>
+          </div>
+
+          <div class="coffee-info-column">
+            <div class="coffee-copy-box">
+              <label for="pix-key-input" class="pix-label">Chave PIX (E-mail)</label>
+              <div class="pix-input-row">
+                <input
+                  id="pix-key-input"
+                  type="text"
+                  readonly
+                  value={pixKey}
+                  class="pix-key-input"
+                  aria-label="Chave PIX do autor"
+                />
+                <button
+                  type="button"
+                  class="pix-copy-btn"
+                  onclick={handleCopyPix}
+                  title="Copiar chave PIX"
+                >
+                  {copiedPix ? '✓ Copiado!' : 'Copiar'}
+                </button>
+              </div>
+              {#if copiedPix}
+                <span class="copy-success-badge">Chave copiada para a área de transferência!</span>
+              {/if}
+            </div>
+
+            <div class="coffee-perks">
+              <span class="coffee-perk">☕ Um café quente</span>
+              <span class="coffee-perk">🛡️ Zero anúncios</span>
+              <span class="coffee-perk">🪐 100% livre</span>
+            </div>
+          </div>
+        </div>
+      {/if}
+
       <div class="cards-grid">
         {#each onboardingStore.currentLesson.bullets as bullet}
           <div class="feature-card">
@@ -274,6 +338,144 @@
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
+  }
+
+  .coffee-support-container {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    background: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-lg);
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .coffee-qr-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+  }
+
+  .coffee-qr-frame {
+    width: 130px;
+    height: 130px;
+    background: #ffffff;
+    padding: 6px;
+    border-radius: var(--rounded-md);
+    border: 1px solid var(--color-paper-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .coffee-qr-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .qr-caption {
+    font-family: var(--font-mono);
+    font-size: 0.68rem;
+    color: var(--color-ink-muted);
+  }
+
+  .coffee-info-column {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .coffee-copy-box {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .pix-label {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-olive);
+  }
+
+  .pix-input-row {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .pix-key-input {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.82rem;
+    background: var(--color-paper-base);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-md);
+    color: var(--color-ink-charcoal);
+  }
+
+  .pix-copy-btn {
+    padding: 0.5rem 1rem;
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: var(--color-olive);
+    color: #ffffff;
+    border: none;
+    border-radius: var(--rounded-md);
+    cursor: pointer;
+    transition: all 120ms ease;
+    white-space: nowrap;
+  }
+
+  .pix-copy-btn:hover {
+    background: var(--color-olive-hover);
+  }
+
+  .copy-success-badge {
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--color-olive);
+  }
+
+  .coffee-perks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .coffee-perk {
+    font-family: var(--font-ui);
+    font-size: 0.74rem;
+    padding: 0.25rem 0.6rem;
+    background: var(--color-paper-base);
+    border: 1px solid var(--color-paper-border);
+    border-radius: 9999px;
+    color: var(--color-ink-muted);
+  }
+
+  @media (max-width: 580px) {
+    .coffee-support-container {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .pix-input-row {
+      flex-direction: column;
+    }
   }
 
   .feature-card {

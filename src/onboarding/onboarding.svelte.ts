@@ -19,7 +19,7 @@ export interface CourseLesson {
 export const COURSE_LESSONS: CourseLesson[] = [
   {
     id: 1,
-    badge: 'Módulo 1 de 5',
+    badge: 'Módulo 1 de 6',
     icon: '🪐',
     title: 'A Filosofia Magrathea: Privacidade Sagrada',
     subtitle: 'Um refúgio de escrita 100% offline, ético e imune à espionagem de terceiros.',
@@ -43,7 +43,7 @@ export const COURSE_LESSONS: CourseLesson[] = [
   },
   {
     id: 2,
-    badge: 'Módulo 2 de 5',
+    badge: 'Módulo 2 de 6',
     icon: '🌲',
     title: 'Estrutura do Manuscrito & Lixeira Cifrada',
     subtitle: 'Hierarquia flexível para romances, contos, sagas e não-ficção.',
@@ -67,7 +67,7 @@ export const COURSE_LESSONS: CourseLesson[] = [
   },
   {
     id: 3,
-    badge: 'Módulo 3 de 5',
+    badge: 'Módulo 3 de 6',
     icon: '🧠',
     title: 'O Segundo Cérebro: Conexões Literárias',
     subtitle: 'Worldbuilding vivo com hiperlinks bidirecionais e imagens cifradas.',
@@ -96,7 +96,7 @@ export const COURSE_LESSONS: CourseLesson[] = [
   },
   {
     id: 4,
-    badge: 'Módulo 4 de 5',
+    badge: 'Módulo 4 de 6',
     icon: '✍️',
     title: 'Ergonomia Literária & Foco Total',
     subtitle: 'Tipografia calibrada e atalhos pensados para a mente do escritor.',
@@ -125,7 +125,7 @@ export const COURSE_LESSONS: CourseLesson[] = [
   },
   {
     id: 5,
-    badge: 'Módulo 5 de 5',
+    badge: 'Módulo 5 de 6',
     icon: '📖',
     title: 'Compilação Editorial & Partes do Livro',
     subtitle: 'Do primeiro rascunho ao livro publicado em formatos profissionais.',
@@ -149,6 +149,30 @@ export const COURSE_LESSONS: CourseLesson[] = [
         icon: '💎',
         title: 'Cofres Abertos e Texto Puro (.md & .txt)',
         desc: 'Exporte com fidelidade para o Obsidian Markdown com links ou em texto consolidado com dossiê de criação.',
+      },
+    ],
+  },
+  {
+    id: 6,
+    badge: 'Apoie o Criador • Sem Publicidade',
+    icon: '☕',
+    title: 'Gostou do Magrathea Writer? Pague um Café!',
+    subtitle: '100% gratuito, de código aberto, livre de anúncios e sem telemetria.',
+    bullets: [
+      {
+        icon: '🛡️',
+        title: 'Zero Publicidade, Sempre',
+        desc: 'Sua paz de espírito e foco literário vêm em primeiro lugar. O app nunca terá anúncios intrusivos nem cobranças forçadas.',
+      },
+      {
+        icon: '☕',
+        title: 'Um Cafézinho Interestelar',
+        desc: 'Se o aplicativo estiver sendo útil para dar vida às suas histórias, considere retribuir com um café para apoiar o desenvolvimento independente!',
+      },
+      {
+        icon: '✨',
+        title: 'Criado por Humanos Felizes & IA',
+        desc: 'Construído com carinho para romancistas, poetas e contistas que prezam pela soberania sobre suas próprias palavras.',
       },
     ],
   },
