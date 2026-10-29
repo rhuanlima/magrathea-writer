@@ -129,12 +129,17 @@
   }
 
   .hero-app-icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 14px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-    margin-bottom: 4px;
+    width: 136px;
+    height: 136px;
+    border-radius: 28px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.16);
+    margin-bottom: 12px;
     object-fit: cover;
+    transition: transform 200ms ease;
+  }
+
+  .hero-app-icon:hover {
+    transform: scale(1.02);
   }
 
   .hero-title {
