@@ -13,6 +13,31 @@ Este guia foi elaborado para acompanhar você nos primeiros passos com a ferrame
 
 ---
 
+## 📦 Instalação & Como Abrir no seu Sistema
+
+### 🍎 No macOS (Aviso do Gatekeeper)
+Como o Magrathea Writer é um software livre independente e ainda não possui o certificado pago da Apple Developer (\$99/ano), o macOS exibe o aviso preventivo: *"Magrathea Writer está danificado e não pode ser aberto. Você deve movê-lo para o Lixo"*.
+
+O app **não está danificado**. Para abri-lo pela primeira vez, escolha uma das opções:
+* **Opção 1 (Via Terminal — 1 linha):**
+  Após arrastar para a pasta Aplicativos, execute no Terminal:
+  ```bash
+  xattr -cr "/Applications/Magrathea Writer.app"
+  ```
+* **Opção 2 (Sem Terminal — Interface do Mac):**
+  1. Vá até a pasta **Aplicativos** (`/Applications`).
+  2. Segure a tecla `Control`, clique com o **botão direito** no aplicativo **Magrathea Writer** e clique em **Abrir**.
+  3. No diálogo de confirmação, clique em **Abrir**. (Ou acesse *Ajustes do Sistema → Privacidade e Segurança → Abrir Mesmo Assim*).
+
+### 🪟 No Windows
+Baixe o instalador `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe`. Caso o Windows SmartScreen apresente o alerta azul, clique em **"Mais informações"** e em seguida **"Executar assim mesmo"**.
+
+### 🐧 No Linux
+* **Debian / Ubuntu / Mint:** `sudo dpkg -i Magrathea.Writer_0.9.0-beta.1_amd64.deb`
+* **AppImage Portátil:** `chmod +x Magrathea.Writer_0.9.0-beta.1_amd64.AppImage && ./Magrathea.Writer_0.9.0-beta.1_amd64.AppImage`
+
+---
+
 ## 🧭 As 5 Missões de Exploração Literária
 
 Sugerimos que você experimente as 5 missões abaixo em um projeto de romance, conto ou novela:
