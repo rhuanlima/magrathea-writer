@@ -52,4 +52,4 @@ O Magrathea Writer opera com cofres cifrados locais com criptografia de conhecim
 ## 5. Dúvidas e Contato
 
 Para esclarecimento de dúvidas sobre o uso da marca ou solicitações comerciais específicas, contate:
-**Rhuan Lima** — `rhuan.lima@gmail.com`
+**Rhuan Lima** — `rhuan@rhuanlima.com.br`

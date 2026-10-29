@@ -99,6 +99,6 @@ Após experimentar o aplicativo por alguns dias, gostaríamos de ouvir suas impr
 
 Envie suas anotações, impressões, sugestões ou relatos de bugs diretamente para:
 
-📧 **Rhuan Lima** — `rhuan.lima@gmail.com`
+📧 **Rhuan Lima** — `rhuan@rhuanlima.com.br`
 
 *Muito obrigado por nos ajudar a moldar o Magrathea Writer! Boas escritas e que seus mundos prosperem.*

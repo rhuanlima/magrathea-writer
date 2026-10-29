@@ -52,4 +52,4 @@ Magrathea Writer enforces authenticated zero-knowledge cryptographic vaults (**X
 ## 5. Inquiries & Permissions
 
 For questions regarding brand usage or licensing inquiries beyond this policy, please contact:
-**Rhuan Lima** — `rhuan.lima@gmail.com`
+**Rhuan Lima** — `rhuan@rhuanlima.com.br`

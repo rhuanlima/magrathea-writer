@@ -99,6 +99,6 @@ After using the app for a few writing sessions, please share your thoughts on th
 
 Please email your feedback, questions, or bug reports directly to:
 
-📧 **Rhuan Lima** — `rhuan.lima@gmail.com`
+📧 **Rhuan Lima** — `rhuan@rhuanlima.com.br`
 
 *Thank you for helping us shape Magrathea Writer! May your literary worlds flourish.*

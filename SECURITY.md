@@ -8,7 +8,7 @@ If you believe you have discovered a vulnerability, **do not open a public GitHu
 
 👉 [Report a security vulnerability](https://github.com/rhuanlima/magrathea-writer/security/advisories/new)
 
-If you cannot access GitHub Private Vulnerability Reporting, send an encrypted email directly to the maintainer at **rhuan.lima@gmail.com**.
+If you cannot access GitHub Private Vulnerability Reporting, send an encrypted email directly to the maintainer at **rhuan@rhuanlima.com.br**.
 
 ---
 
