@@ -102,4 +102,21 @@ describe('Compiler Store and Multi-format Export (M6)', () => {
       expect(store.exportResult.format).toBe('txt');
     }
   });
+
+  it('deve suportar opções de escopo (tudo vs final) e inclusão de fichas', async () => {
+    await store.openExportWithOptions();
+    expect(store.isOpen).toBe(true);
+    expect(store.activeTab).toBe('export');
+
+    store.settings.only_final_scenes = true;
+    store.settings.include_worldbuilding_dossier = true;
+    await store.saveSettingsNow();
+    await store.compile();
+
+    expect(store.settings.only_final_scenes).toBe(true);
+    expect(store.settings.include_worldbuilding_dossier).toBe(true);
+
+    await store.openMatterTab();
+    expect(store.activeTab).toBe('matter');
+  });
 });

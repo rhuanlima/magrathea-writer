@@ -338,7 +338,7 @@ export const enUS: TranslationSchema = {
   compiler: {
     modalTitle: 'Compiler & Publishing Export',
     tabPreview: 'Compilation & Preview',
-    tabMatter: 'Front & Back Matter',
+    tabMatter: 'Book Parts (References...)',
     tabDesign: 'Typesetting & Styles',
     tabExport: 'Export Book',
     recompileButton: 'Recompile Manuscript',

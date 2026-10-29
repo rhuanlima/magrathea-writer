@@ -369,7 +369,40 @@
           <div class="export-backdrop" onclick={() => (isExportMenuOpen = false)}></div>
 
           <div class="export-dropdown-popover" role="menu">
-            <div class="export-dropdown-title">Exportar Manuscrito</div>
+            <div class="export-dropdown-title">Exportação Editorial</div>
+
+            <button
+              type="button"
+              class="export-dropdown-item primary-highlight"
+              onclick={() => {
+                isExportMenuOpen = false;
+                void compilerStore.openExportWithOptions();
+              }}
+            >
+              <span class="export-item-icon">⚙️</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Opções de Exportação...</span>
+                <span class="export-item-ext">Tudo vs Final • Incluir Fichas</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              class="export-dropdown-item"
+              onclick={() => {
+                isExportMenuOpen = false;
+                void compilerStore.openMatterTab();
+              }}
+            >
+              <span class="export-item-icon">✍️</span>
+              <div class="export-item-info">
+                <span class="export-item-name">Partes do Livro...</span>
+                <span class="export-item-ext">Referências, Agradecimentos, Epígrafe</span>
+              </div>
+            </button>
+
+            <div class="export-dropdown-divider"></div>
+
             <button
               type="button"
               class="export-dropdown-item"
@@ -649,6 +682,14 @@
 
   .export-dropdown-item:hover {
     background-color: var(--color-paper-hover);
+  }
+
+  .export-dropdown-item.primary-highlight {
+    background-color: rgba(217, 119, 6, 0.08);
+  }
+
+  .export-dropdown-item.primary-highlight:hover {
+    background-color: rgba(217, 119, 6, 0.16);
   }
 
   .export-item-icon {

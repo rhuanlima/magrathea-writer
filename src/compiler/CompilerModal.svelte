@@ -261,9 +261,9 @@
           <div class="space-y-6">
             <div class="flex items-center justify-between">
               <div>
-                <h3 class="font-semibold text-lg">Seções Editoriais</h3>
+                <h3 class="font-semibold text-lg">Partes do Livro (Pré e Pós-Textuais)</h3>
                 <p class="text-xs text-stone-500 dark:text-stone-400">
-                  Adicione e edite partes formais do livro. Tudo é cifrado com segurança no cofre.
+                  Adicione e edite referências, agradecimentos, dedicatória, epígrafe e posfácio. Tudo é cifrado com segurança no cofre.
                 </p>
               </div>
               <button
@@ -540,6 +540,98 @@
                   </span>
                 </div>
               {/if}
+            </div>
+
+            <!-- Opções Rápidas de Compilação & Escopo Editorial (Ajuste 2) -->
+            <div class="p-4 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-50 dark:bg-stone-950/60 space-y-4">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="text-base">⚙️</span>
+                  <h4 class="font-bold text-sm text-stone-900 dark:text-stone-100">Opções de Conteúdo da Exportação</h4>
+                </div>
+                <span class="text-[11px] text-stone-500">Salvo automaticamente</span>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- Escopo do Manuscrito: Tudo vs Apenas Final -->
+                <div class="p-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900">
+                  <div class="text-xs font-semibold mb-2 text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                    <span>🎯</span> Escopo do Manuscrito
+                  </div>
+                  <label class="flex items-center gap-2 text-xs cursor-pointer py-1 text-stone-800 dark:text-stone-200">
+                    <input
+                      type="radio"
+                      name="export-scope"
+                      checked={!compilerStore.settings.only_final_scenes}
+                      onchange={async () => {
+                        compilerStore.settings.only_final_scenes = false;
+                        await compilerStore.saveSettingsNow();
+                        await compilerStore.compile();
+                      }}
+                      class="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span><strong>Manuscrito Completo</strong> (Rascunhos, revisados e finais)</span>
+                  </label>
+                  <label class="flex items-center gap-2 text-xs cursor-pointer py-1 text-stone-800 dark:text-stone-200">
+                    <input
+                      type="radio"
+                      name="export-scope"
+                      checked={compilerStore.settings.only_final_scenes}
+                      onchange={async () => {
+                        compilerStore.settings.only_final_scenes = true;
+                        await compilerStore.saveSettingsNow();
+                        await compilerStore.compile();
+                      }}
+                      class="text-amber-600 focus:ring-amber-500"
+                    />
+                    <span><strong>Apenas Cenas Finais</strong> (Somente status "Final")</span>
+                  </label>
+                </div>
+
+                <!-- Fichas do Segundo Cérebro (Worldbuilding) -->
+                <div class="p-3 rounded-lg border border-stone-200 dark:border-stone-800 bg-white dark:bg-stone-900 flex flex-col justify-between">
+                  <div>
+                    <div class="text-xs font-semibold mb-2 text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
+                      <span>🧠</span> Fichas do Segundo Cérebro
+                    </div>
+                    <label class="flex items-start gap-2 text-xs cursor-pointer text-stone-800 dark:text-stone-200">
+                      <input
+                        type="checkbox"
+                        checked={compilerStore.settings.include_worldbuilding_dossier}
+                        onchange={async (e) => {
+                          compilerStore.settings.include_worldbuilding_dossier = (e.target as HTMLInputElement).checked;
+                          await compilerStore.saveSettingsNow();
+                          await compilerStore.compile();
+                        }}
+                        class="mt-0.5 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <strong>Incluir Fichas como Apêndice</strong>
+                        <p class="text-[11px] text-stone-500 dark:text-stone-400 mt-0.5 leading-normal">
+                          Anexa personagens, locais e itens compilados ao final do livro.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Acesso Rápido às Partes do Livro (Referências, Agradecimentos, Dedicatória...) -->
+              <div class="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-xs">
+                <div class="flex items-center gap-2 text-amber-900 dark:text-amber-300">
+                  <span class="text-base">✍️</span>
+                  <div>
+                    <strong>Partes do Livro:</strong> Dedicatória, Epígrafe, Prefácio, Agradecimentos, Referências, etc.
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onclick={() => compilerStore.setActiveTab('matter')}
+                  class="px-2.5 py-1 rounded-md bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs transition-colors flex-shrink-0"
+                >
+                  Editar Partes do Livro →
+                </button>
+              </div>
             </div>
 
             <!-- Feedback de Sucesso / Erro / Andamento em Destaque -->

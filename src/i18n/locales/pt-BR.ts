@@ -338,7 +338,7 @@ export const ptBR: TranslationSchema = {
   compiler: {
     modalTitle: 'Compilador & Exportação Editorial',
     tabPreview: 'Compilação & Pré-visualização',
-    tabMatter: 'Pré & Pós-Textuais',
+    tabMatter: 'Partes do Livro (Referências...)',
     tabDesign: 'Diagramação & Estilos',
     tabExport: 'Exportar Livro',
     recompileButton: 'Recompilar Manuscrito',
