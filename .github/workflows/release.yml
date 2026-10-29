@@ -1,0 +1,75 @@
+name: Release Multi-Platform Bundles
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag de release para compilar e anexar (ex: v0.9.0-beta.1)'
+        required: true
+        default: 'v0.9.0-beta.1'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos'
+            os: macos-latest
+          - platform: 'windows'
+            os: windows-latest
+          - platform: 'linux'
+            os: ubuntu-22.04
+
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Setup Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Setup Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install Linux System Dependencies (Tauri 2)
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update -q
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Desktop Application and Attach to Release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.event.inputs.tag || github.ref_name }}
+          releaseName: 'Magrathea Writer ${{ github.event.inputs.tag || github.ref_name }} — Beta Fechado'
+          releaseBody: 'Executáveis oficiais multi-plataforma (.dmg para macOS, .exe para Windows, .deb para Linux).'
+          releaseDraft: false
+          prerelease: true
