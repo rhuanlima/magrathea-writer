@@ -13,6 +13,31 @@ This guide is designed to accompany you through your initial steps during our **
 
 ---
 
+## 📦 Installation & First Launch
+
+### 🍎 On macOS (Gatekeeper Notice)
+Because Magrathea Writer is an independent open-source project that does not yet carry a paid Apple Developer certificate ($99/year), macOS may display a false security warning: *"Magrathea Writer is damaged and can't be opened. You should move it to the Trash."*
+
+The application is **not damaged**. To launch it for the first time:
+* **Option 1 (Via Terminal — 1 line):**
+  After dragging to the Applications folder, run:
+  ```bash
+  xattr -cr "/Applications/Magrathea Writer.app"
+  ```
+* **Option 2 (Without Terminal — Mac Interface):**
+  1. Open `/Applications`.
+  2. Hold `Control` and **right-click** `Magrathea Writer`, then select **Open**.
+  3. In the confirmation dialog, click **Open**. (Or open *System Settings → Privacy & Security → Open Anyway*).
+
+### 🪟 On Windows
+Download `Magrathea.Writer_0.9.0-beta.1_x64-setup.exe`. If Windows SmartScreen shows a protective prompt, click **"More info"** and then **"Run anyway"**.
+
+### 🐧 On Linux
+* **Debian / Ubuntu / Mint:** `sudo dpkg -i Magrathea.Writer_0.9.0-beta.1_amd64.deb`
+* **Portable AppImage:** `chmod +x Magrathea.Writer_0.9.0-beta.1_amd64.AppImage && ./Magrathea.Writer_0.9.0-beta.1_amd64.AppImage`
+
+---
+
 ## 🧭 The 5 Literary Exploration Quests
 
 We encourage you to experiment with these 5 quests in an active novel, novella, or short story project:
