@@ -201,7 +201,8 @@ export class TypewriterAudioEngine {
   }
 
   /**
-   * Toca o som oco e mecânico da barra de espaço.
+   * Toca o som da barra de espaço utilizando a gravação mecânica real.
+   * Sem graves artificiais adicionados.
    */
   playSpacebar(volume = 0.6): void {
     const ctx = this.getContext();
@@ -210,25 +211,13 @@ export class TypewriterAudioEngine {
     try {
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // Dispara amostra real gravada em pitch mais grave
-      this.playRecordedSample(ctx, effectiveVol * 0.85, 0.82, 0.88);
+      // Toca amostra real gravada pura, sem osciladores senoidais artificiais
+      if (this.playRecordedSample(ctx, effectiveVol, 0.90, 0.96)) {
+        return;
+      }
 
-      // Acrescenta corpo ressonante oco
-      const now = ctx.currentTime;
-      const osc = ctx.createOscillator();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(280, now);
-      osc.frequency.exponentialRampToValueAtTime(70, now + 0.04);
-
-      const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0.45 * effectiveVol, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
-
-      osc.connect(oscGain);
-      oscGain.connect(ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.05);
+      // Fallback sutil caso as gravações não estejam prontas
+      this.playKeyClick(effectiveVol);
     } catch {
       // Ignora erro
     }
@@ -243,7 +232,6 @@ export class TypewriterAudioEngine {
     if (!ctx) return;
 
     try {
-      const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
       // 1. Tecla mecânica de retorno
@@ -252,69 +240,59 @@ export class TypewriterAudioEngine {
       // 2. Sineta "Ding!" de bronze
       const bell1 = ctx.createOscillator();
       bell1.type = 'sine';
-      bell1.frequency.setValueAtTime(2380, now);
+      bell1.frequency.setValueAtTime(2380, now());
 
       const bellGain1 = ctx.createGain();
-      bellGain1.gain.setValueAtTime(0.35 * effectiveVol, now);
-      bellGain1.gain.exponentialRampToValueAtTime(0.0001, now + 0.45);
+      bellGain1.gain.setValueAtTime(0.35 * effectiveVol, now());
+      bellGain1.gain.exponentialRampToValueAtTime(0.0001, now() + 0.45);
 
       bell1.connect(bellGain1);
       bellGain1.connect(ctx.destination);
 
-      bell1.start(now);
-      bell1.stop(now + 0.5);
+      bell1.start(now());
+      bell1.stop(now() + 0.5);
 
       // Harmônico superior
       const bell2 = ctx.createOscillator();
       bell2.type = 'sine';
-      bell2.frequency.setValueAtTime(3580, now);
+      bell2.frequency.setValueAtTime(3580, now());
 
       const bellGain2 = ctx.createGain();
-      bellGain2.gain.setValueAtTime(0.18 * effectiveVol, now);
-      bellGain2.gain.exponentialRampToValueAtTime(0.0001, now + 0.35);
+      bellGain2.gain.setValueAtTime(0.18 * effectiveVol, now());
+      bellGain2.gain.exponentialRampToValueAtTime(0.0001, now() + 0.35);
 
       bell2.connect(bellGain2);
       bellGain2.connect(ctx.destination);
 
-      bell2.start(now);
-      bell2.stop(now + 0.4);
+      bell2.start(now());
+      bell2.stop(now() + 0.4);
     } catch {
       // Ignora erro
+    }
+
+    function now(): number {
+      return ctx?.currentTime ?? 0;
     }
   }
 
   /**
-   * Toca o som mecânico de recuo de catraca (Backspace / Delete).
+   * Toca o som mecânico da tecla de apagar (Backspace / Delete).
+   * Dispara som nítido e presente para toda ação de deleção.
    */
   playBackspace(volume = 0.6): void {
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
-      const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // Dispara amostra real acelerada (1.18x) para dar efeito mecânico de clique de recuo
-      this.playRecordedSample(ctx, effectiveVol * 0.9, 1.15, 1.25);
+      // Toca amostra mecânica gravada real com resposta percussiva imediata
+      if (this.playRecordedSample(ctx, effectiveVol, 1.02, 1.10)) {
+        return;
+      }
 
-      // Leve clique de catraca complementar
-      const noise = ctx.createBufferSource();
-      noise.buffer = this.getNoiseBuffer(ctx);
-
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'highpass';
-      filter.frequency.setValueAtTime(2600, now);
-
-      const gain = ctx.createGain();
-      gain.gain.setValueAtTime(0.2 * effectiveVol, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
-
-      noise.connect(filter);
-      filter.connect(gain);
-      gain.connect(ctx.destination);
-
-      noise.start(now);
-      noise.stop(now + 0.025);
+      // Fallback percussivo direto
+      this.playKeyClick(effectiveVol);
     } catch {
       // Ignora erro
     }

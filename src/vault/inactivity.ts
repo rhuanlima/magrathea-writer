@@ -99,6 +99,16 @@ export class InactivityTracker {
   }
 
   /**
+   * Atualiza dinamicamente o tempo de tolerância de inatividade.
+   */
+  setTimeoutMs(ms: number): void {
+    this.timeoutMs = ms;
+    if (this.isRunning) {
+      this.reset();
+    }
+  }
+
+  /**
    * Retorna se o monitor está em execução ativa.
    */
   isActive(): boolean {

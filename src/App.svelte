@@ -20,6 +20,7 @@
   import BackupSettingsModal from './backup/BackupSettingsModal.svelte';
   import TimelineModal from './timeline/TimelineModal.svelte';
   import GraphCanvasModal from './graph/GraphCanvasModal.svelte';
+  import CompilerModal from './compiler/CompilerModal.svelte';
   import CommandPalette from './commands/CommandPalette.svelte';
   import SupportModal from './support/SupportModal.svelte';
   import PreferencesModal from './preferences/PreferencesModal.svelte';
@@ -33,6 +34,7 @@
   import { timelineStore } from './timeline/timeline.svelte';
   import { graphStore } from './graph/graph.svelte';
   import { supportStore } from './support/support.svelte';
+  import { focusPreferences } from './preferences/focus-preferences.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
   import { listenToEvent } from './tauri/bridge';
@@ -143,16 +145,34 @@
       }
     })();
 
+    const initialMins = focusPreferences.autoLockMinutes;
     tracker = new InactivityTracker({
-      timeoutMs: 30 * 60 * 1000, // 30 minutos de inatividade real
+      timeoutMs: (initialMins > 0 ? initialMins : 30) * 60 * 1000,
       onTimeout: () => {
-        if (vault.isOpen && !vault.isLocked) {
+        if (vault.isOpen && !vault.isLocked && focusPreferences.autoLockMinutes > 0) {
           void vault.lockVault();
         }
       },
       lockOnHidden: false, // Não tranca ao alternar para outro app (navegador, etc)
     });
-    tracker.start();
+
+    if (initialMins > 0) {
+      tracker.start();
+    }
+  });
+
+  // Reage dinamicamente a mudanças no tempo de inatividade das preferências
+  $effect(() => {
+    const mins = focusPreferences.autoLockMinutes;
+    if (!tracker) return;
+    if (mins === 0) {
+      tracker.stop();
+    } else {
+      tracker.setTimeoutMs(mins * 60 * 1000);
+      if (!tracker.isActive()) {
+        tracker.start();
+      }
+    }
   });
 
   onDestroy(() => {
@@ -373,6 +393,8 @@
 
   <GraphCanvasModal />
 
+  <CompilerModal />
+
   <CommandPalette />
 
   <SupportModal />
@@ -385,6 +407,20 @@
     <aside class="export-toast-notification" role="status" aria-live="polite">
       <span class="toast-check">✓</span>
       <span>{compilerStore.toastMessage}</span>
+    </aside>
+  {/if}
+
+  {#if focusPreferences.goalToastMessage}
+    <aside class="goal-toast-notification" role="status" aria-live="polite">
+      <span>{focusPreferences.goalToastMessage}</span>
+      <button
+        type="button"
+        class="toast-close"
+        onclick={() => focusPreferences.dismissToast()}
+        aria-label="Fechar"
+      >
+        ✕
+      </button>
     </aside>
   {/if}
 
@@ -610,6 +646,40 @@
     font-weight: 500;
     box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.2);
     animation: toast-fade 0.2s ease-out;
+  }
+
+  .goal-toast-notification {
+    position: fixed;
+    top: 60px;
+    right: 20px;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    border-radius: var(--rounded-md);
+    background-color: var(--color-paper-elevated);
+    border: 1px solid var(--color-olive);
+    color: var(--color-ink-charcoal);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 500;
+    animation: toast-fade 0.2s ease-out;
+  }
+
+  .toast-close {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    padding: 2px 4px;
+    border-radius: 4px;
+  }
+
+  .toast-close:hover {
+    color: var(--color-ink-charcoal);
   }
 
   @keyframes toast-fade {

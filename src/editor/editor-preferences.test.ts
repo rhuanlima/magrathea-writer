@@ -60,4 +60,12 @@ describe('Editor Preferences Store', () => {
     editorPreferences.toggleTypewriterScrolling();
     expect(editorPreferences.typewriterScrolling).toBe(true);
   });
+
+  it('permite alternar modo Vim de numeração relativa decrescente', () => {
+    expect(editorPreferences.relativeLineNumbers).toBe(false);
+    editorPreferences.toggleRelativeLineNumbers();
+    expect(editorPreferences.relativeLineNumbers).toBe(true);
+    editorPreferences.toggleRelativeLineNumbers();
+    expect(editorPreferences.relativeLineNumbers).toBe(false);
+  });
 });

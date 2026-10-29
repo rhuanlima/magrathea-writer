@@ -64,4 +64,23 @@ describe('InactivityTracker (Monitor de Inatividade)', () => {
 
     tracker.stop();
   });
+
+  it('permite reconfigurar dinamicamente o tempo de timeout via setTimeoutMs', () => {
+    const onTimeout = vi.fn();
+    const tracker = new InactivityTracker({
+      timeoutMs: 1000,
+      onTimeout,
+    });
+
+    tracker.start();
+    tracker.setTimeoutMs(500);
+
+    vi.advanceTimersByTime(499);
+    expect(onTimeout).not.toHaveBeenCalled();
+
+    vi.advanceTimersByTime(2);
+    expect(onTimeout).toHaveBeenCalledTimes(1);
+
+    tracker.stop();
+  });
 });

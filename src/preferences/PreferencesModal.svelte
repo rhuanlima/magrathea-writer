@@ -10,6 +10,7 @@
    */
 
   import { preferences } from './preferences.svelte';
+  import { focusPreferences } from './focus-preferences.svelte';
   import { editorPreferences } from '../editor/editor-preferences.svelte';
   import { typewriterAudio } from '../editor/typewriter-audio';
   import { vault } from '../vault/vault.svelte';
@@ -203,6 +204,37 @@
             <span>{editorPreferences.showLineNumbers ? 'Exibindo' : 'Oculto'}</span>
           </button>
         </div>
+
+        {#if editorPreferences.showLineNumbers}
+          <div class="pref-row sub-row">
+            <div class="pref-label-col">
+              <span class="pref-label">Modo Vim (Numeração Relativa)</span>
+              <span class="pref-hint">Números decrescentes até a linha onde o cursor está</span>
+            </div>
+            <div class="font-choices" role="radiogroup">
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={!editorPreferences.relativeLineNumbers}
+                onclick={() => {
+                  if (editorPreferences.relativeLineNumbers) editorPreferences.toggleRelativeLineNumbers();
+                }}
+              >
+                1, 2, 3 Absoluto
+              </button>
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={editorPreferences.relativeLineNumbers}
+                onclick={() => {
+                  if (!editorPreferences.relativeLineNumbers) editorPreferences.toggleRelativeLineNumbers();
+                }}
+              >
+                ⚡ Vim Relativo
+              </button>
+            </div>
+          </div>
+        {/if}
 
         <!-- 2. Família Tipográfica -->
         <div class="pref-row">
@@ -517,22 +549,205 @@
         {/if}
 
       {:else if preferences.activeTab === 'focus'}
+        <!-- 1. Bloqueio Automático por Inatividade -->
         <div class="pref-row">
           <div class="pref-label-col">
             <span class="pref-label">Bloqueio Automático por Inatividade</span>
-            <span class="pref-hint">Tranca o mundo em memória após 30 minutos de ausência real</span>
+            <span class="pref-hint">
+              {focusPreferences.autoLockMinutes === 0
+                ? 'Bloqueio automático desativado. O cofre só tranca manualmente.'
+                : `Tranca o mundo em memória após ${focusPreferences.autoLockMinutes} minutos de ausência.`}
+            </span>
           </div>
-          <span class="badge-active">Ativo (30 min)</span>
+          <div class="font-choices" role="radiogroup">
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.autoLockMinutes === 0}
+              onclick={() => focusPreferences.setAutoLockMinutes(0)}
+            >
+              Desligado
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.autoLockMinutes === 5}
+              onclick={() => focusPreferences.setAutoLockMinutes(5)}
+            >
+              5 min
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.autoLockMinutes === 15}
+              onclick={() => focusPreferences.setAutoLockMinutes(15)}
+            >
+              15 min
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.autoLockMinutes === 30}
+              onclick={() => focusPreferences.setAutoLockMinutes(30)}
+            >
+              30 min
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.autoLockMinutes === 60}
+              onclick={() => focusPreferences.setAutoLockMinutes(60)}
+            >
+              1 hora
+            </button>
+          </div>
         </div>
 
+        <!-- 2. Temporizador Pomodoro -->
         <div class="pref-row">
           <div class="pref-label-col">
-            <span class="pref-label">Bloqueio ao Alternar Janela</span>
-            <span class="pref-hint">Não bloqueia ao trocar rapidamente para o navegador ou referências</span>
+            <span class="pref-label">Temporizador Pomodoro de Escrita</span>
+            <span class="pref-hint">
+              {focusPreferences.pomodoroEnabled
+                ? `Ciclos de ${focusPreferences.pomodoroWorkMinutes} min de foco com ${focusPreferences.pomodoroBreakMinutes} min de pausa revigorante.`
+                : 'Mantenha blocos rítmicos de escrita profunda com alertas suaves de pausa.'}
+            </span>
           </div>
-          <span class="badge-neutral">Desativado para fluidez</span>
+          <button
+            type="button"
+            class="toggle-btn"
+            class:active={focusPreferences.pomodoroEnabled}
+            onclick={() => focusPreferences.togglePomodoro()}
+            role="switch"
+            aria-checked={focusPreferences.pomodoroEnabled}
+          >
+            <span class="toggle-indicator"></span>
+            <span>{focusPreferences.pomodoroEnabled ? 'Ativado' : 'Desativado'}</span>
+          </button>
         </div>
 
+        {#if focusPreferences.pomodoroEnabled}
+          <div class="pref-row sub-row">
+            <div class="pref-label-col">
+              <span class="pref-label">Duração do Bloco de Foco</span>
+              <span class="pref-hint">Tempo contínuo sem distrações</span>
+            </div>
+            <div class="font-choices" role="radiogroup">
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={focusPreferences.pomodoroWorkMinutes === 15}
+                onclick={() => focusPreferences.setPomodoroWorkMinutes(15)}
+              >
+                15 min
+              </button>
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={focusPreferences.pomodoroWorkMinutes === 25}
+                onclick={() => focusPreferences.setPomodoroWorkMinutes(25)}
+              >
+                25 min
+              </button>
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={focusPreferences.pomodoroWorkMinutes === 45}
+                onclick={() => focusPreferences.setPomodoroWorkMinutes(45)}
+              >
+                45 min
+              </button>
+            </div>
+          </div>
+
+          <div class="pref-row sub-row">
+            <div class="pref-label-col">
+              <span class="pref-label">Duração da Pausa Curta</span>
+              <span class="pref-hint">Momento para esticar e tomar água</span>
+            </div>
+            <div class="font-choices" role="radiogroup">
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={focusPreferences.pomodoroBreakMinutes === 5}
+                onclick={() => focusPreferences.setPomodoroBreakMinutes(5)}
+              >
+                5 min
+              </button>
+              <button
+                type="button"
+                class="choice-btn"
+                class:active={focusPreferences.pomodoroBreakMinutes === 10}
+                onclick={() => focusPreferences.setPomodoroBreakMinutes(10)}
+              >
+                10 min
+              </button>
+            </div>
+          </div>
+        {/if}
+
+        <!-- 3. Foco na Meta Diária e Alertas -->
+        <div class="pref-row">
+          <div class="pref-label-col">
+            <span class="pref-label">Meta Diária de Palavras</span>
+            <span class="pref-hint">Objetivo diário para alimentar sua disciplina criativa</span>
+          </div>
+          <div class="font-choices" role="radiogroup">
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.dailyGoalWords === 500}
+              onclick={() => focusPreferences.setDailyGoalWords(500)}
+            >
+              500 pal.
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.dailyGoalWords === 1000}
+              onclick={() => focusPreferences.setDailyGoalWords(1000)}
+            >
+              1.000 pal.
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.dailyGoalWords === 1667}
+              onclick={() => focusPreferences.setDailyGoalWords(1667)}
+              title="Meta oficial do NaNoWriMo (50k / 30 dias)"
+            >
+              1.667 pal. (NaNo)
+            </button>
+            <button
+              type="button"
+              class="choice-btn"
+              class:active={focusPreferences.dailyGoalWords === 2000}
+              onclick={() => focusPreferences.setDailyGoalWords(2000)}
+            >
+              2.000 pal.
+            </button>
+          </div>
+        </div>
+
+        <div class="pref-row sub-row">
+          <div class="pref-label-col">
+            <span class="pref-label">Alerta Comemorativo ao Concluir Meta</span>
+            <span class="pref-hint">Exibir notificação inspiradora no momento exato em que você atinge a meta</span>
+          </div>
+          <button
+            type="button"
+            class="toggle-btn"
+            class:active={focusPreferences.dailyGoalAlertEnabled}
+            onclick={() => focusPreferences.toggleDailyGoalAlert()}
+            role="switch"
+            aria-checked={focusPreferences.dailyGoalAlertEnabled}
+          >
+            <span class="toggle-indicator"></span>
+            <span>{focusPreferences.dailyGoalAlertEnabled ? 'Ativado' : 'Silencioso'}</span>
+          </button>
+        </div>
+
+        <!-- 4. Atalhos Essenciais -->
         <div class="pref-row">
           <div class="pref-label-col">
             <span class="pref-label">Atalhos Essenciais de Escrita</span>
@@ -604,6 +819,23 @@
             >
               🇺🇸 English
             </button>
+          </div>
+        </div>
+
+        <!-- Guia de Tradução Comunitária -->
+        <div class="translation-community-card">
+          <div class="community-icon">🌐</div>
+          <div class="community-text">
+            <strong>Adicionar um Novo Idioma ao Magrathea</strong>
+            <p>O aplicativo foi desenhado para ser traduzido facilmente por autores e tradutores de qualquer lugar do universo.</p>
+            <a
+              href="https://github.com/rhuanlima/magrathea-writer/blob/main/TRANSLATING.md"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="community-link"
+            >
+              📖 Guia Passo a Passo no GitHub (README) →
+            </a>
           </div>
         </div>
       {/if}
@@ -1161,24 +1393,6 @@
     margin-bottom: 0.5rem;
   }
 
-  .badge-active {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: var(--color-olive);
-    background: var(--color-olive-subtle);
-    padding: 0.25rem 0.65rem;
-    border-radius: var(--rounded-md);
-  }
-
-  .badge-neutral {
-    font-size: 0.8rem;
-    color: var(--color-ink-muted);
-    background: var(--color-paper-surface);
-    border: 1px solid var(--color-paper-border);
-    padding: 0.25rem 0.65rem;
-    border-radius: var(--rounded-md);
-  }
-
   .shortcuts-list {
     display: flex;
     flex-wrap: wrap;
@@ -1193,6 +1407,63 @@
     padding: 0.25rem 0.5rem;
     border-radius: var(--rounded-md);
     color: var(--color-ink-charcoal);
+  }
+
+  .sub-row {
+    margin-top: -0.5rem;
+    padding-left: 1rem;
+    border-left: 2px solid var(--color-olive-subtle);
+  }
+
+  .translation-community-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    background: var(--color-paper-surface);
+    border: 1px dashed var(--color-paper-border);
+    border-radius: var(--rounded-md);
+    padding: 1rem 1.25rem;
+    margin-top: 0.5rem;
+  }
+
+  .community-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .community-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .community-text strong {
+    font-family: var(--font-ui);
+    font-size: 0.9rem;
+    color: var(--color-ink-charcoal);
+  }
+
+  .community-text p {
+    margin: 0;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--color-ink-muted);
+    line-height: 1.4;
+  }
+
+  .community-link {
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--color-olive);
+    text-decoration: none;
+    margin-top: 0.2rem;
+  }
+
+  .community-link:hover {
+    text-decoration: underline;
+    color: var(--color-olive-hover);
   }
 
   .pref-footer {
