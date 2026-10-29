@@ -83,13 +83,13 @@ describe('Compiler Store and Multi-format Export (M6)', () => {
     }
   });
 
-  it('deve executar exportação em PDF/HTML', async () => {
+  it('deve executar exportação em PDF direto', async () => {
     await store.openModal('export');
-    const success = await store.runExportPdf('/tmp/manuscrito.html');
+    const success = await store.runExportPdf('/tmp/manuscrito.pdf');
     expect(success).toBe(true);
     expect(store.exportResult).toBeDefined();
     if (store.exportResult && 'format' in store.exportResult) {
-      expect(store.exportResult.format).toBe('html_pdf');
+      expect(store.exportResult.format).toBe('pdf');
     }
   });
 

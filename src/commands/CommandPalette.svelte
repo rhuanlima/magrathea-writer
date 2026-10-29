@@ -171,9 +171,9 @@
     {
       id: 'action-export-pdf',
       category: 'action',
-      title: 'Exportar para Leitura / PDF (.html)',
-      subtitle: 'Tipografia editorial para impressão ou leitura',
-      icon: '🖨️',
+      title: 'Exportar Livro em PDF (.pdf)',
+      subtitle: 'Documento PDF nativo com diagramação e paginação A5',
+      icon: '📕',
       execute: () => {
         void compilerStore.quickExportDirect('pdf');
       },

@@ -246,7 +246,7 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
             &MenuItem::with_id(
                 handle,
                 "menu_export_pdf",
-                "Exportar para Leitura / PDF (.html)...",
+                "Exportar Livro em PDF (.pdf)...",
                 true,
                 None::<&str>,
             )?,

@@ -46,9 +46,12 @@
         if (ok) lastExportedPath = chosen;
       }
     } else if (format === 'pdf') {
-      const defaultName = getSafeFilename('html');
-      const chosen = await pickSaveExportPath('Exportar para Impressão / PDF (.html)', defaultName, 'html');
+      const defaultName = getSafeFilename('pdf');
+      let chosen = await pickSaveExportPath('Salvar Livro em PDF (.pdf)', defaultName, 'pdf');
       if (chosen) {
+        if (!chosen.toLowerCase().endsWith('.pdf')) {
+          chosen += '.pdf';
+        }
         exportPathInput = chosen;
         const ok = await compilerStore.runExportPdf(chosen);
         if (ok) lastExportedPath = chosen;
@@ -137,7 +140,7 @@
     } else if (format === 'epub') {
       exportPathInput = `~/Documents/${title}.epub`;
     } else if (format === 'pdf') {
-      exportPathInput = `~/Documents/${title}.html`;
+      exportPathInput = `~/Documents/${title}.pdf`;
     } else if (format === 'txt') {
       exportPathInput = `~/Documents/${title}_txt`;
     }

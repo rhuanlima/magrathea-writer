@@ -141,9 +141,9 @@ export const COURSE_LESSONS: CourseLesson[] = [
         desc: 'Adicione partes editoriais formais clicando em "Partes do Livro..." no rodapé da barra lateral ou no compilador: dedicatória, epígrafe, prefácio, posfácio, agradecimentos e referências bibliográficas.',
       },
       {
-        icon: '📄',
+        icon: '📕',
         title: 'Formatos Prontos para Editoras e Leitores',
-        desc: 'Exporte para Microsoft Word (.docx), Livro Digital (.epub) com índice navegável, e impressão/leitura tipográfica (.pdf / .html).',
+        desc: 'Exporte para Microsoft Word (.docx), Livro Digital (.epub) com índice navegável, e Livro em PDF nativo (.pdf) diagramado para leitura ou gráfica.',
       },
       {
         icon: '💎',
