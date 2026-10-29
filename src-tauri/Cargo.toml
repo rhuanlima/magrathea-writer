@@ -1,6 +1,6 @@
 [package]
 name = "magrathea-writer"
-version = "0.1.0"
+version = "0.9.0-beta.1"
 description = "Distraction-free offline encrypted literary studio"
 authors = ["Rhuan Lima"]
 edition = "2021"
