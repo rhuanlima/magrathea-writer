@@ -575,10 +575,10 @@
               class="export-dropdown-item"
               onclick={() => handleExportDirect('pdf')}
             >
-              <span class="export-item-icon">🖨️</span>
+              <span class="export-item-icon">📕</span>
               <div class="export-item-info">
-                <span class="export-item-name">Leitura / Impressão</span>
-                <span class="export-item-ext">.html / .pdf</span>
+                <span class="export-item-name">Livro em PDF</span>
+                <span class="export-item-ext">.pdf</span>
               </div>
             </button>
 

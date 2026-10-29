@@ -1339,8 +1339,8 @@ export async function safeInvoke<T>(
     if (cmd === 'export_pdf_html') {
       const payload = args as unknown as { destination_file: string };
       return {
-        file_path: payload.destination_file || '/exports/livro.html',
-        format: 'html_pdf',
+        file_path: payload.destination_file || '/exports/livro.pdf',
+        format: 'pdf',
         byte_size: 12200,
       } as T;
     }

@@ -1354,18 +1354,30 @@ pub fn export_pdf_html_internal(
 ) -> Result<ExportDocumentResult, VaultError> {
     let compiled = compile_manuscript_internal(vault, settings)?;
 
-    // Se o arquivo tiver extensão .pdf (ou padrão nativo), gera binário PDF nativo diretamente!
-    if destination_file
+    // Verifica se a extensão solicitada é explicitamente HTML. Caso contrário, gera PDF nativo direto!
+    let is_html = destination_file
         .extension()
         .and_then(|s| s.to_str())
-        .map(|s| s.eq_ignore_ascii_case("pdf"))
-        .unwrap_or(false)
-    {
+        .map(|s| s.eq_ignore_ascii_case("html") || s.eq_ignore_ascii_case("htm"))
+        .unwrap_or(false);
+
+    if !is_html {
+        let final_path = if destination_file
+            .extension()
+            .and_then(|s| s.to_str())
+            .map(|s| s.eq_ignore_ascii_case("pdf"))
+            .unwrap_or(false)
+        {
+            destination_file.to_path_buf()
+        } else {
+            destination_file.with_extension("pdf")
+        };
+
         let pdf_bytes = generate_direct_pdf(&compiled)?;
-        fs::write(destination_file, &pdf_bytes).map_err(|e| VaultError::Io(e.to_string()))?;
-        let meta = fs::metadata(destination_file).map_err(|e| VaultError::Io(e.to_string()))?;
+        fs::write(&final_path, &pdf_bytes).map_err(|e| VaultError::Io(e.to_string()))?;
+        let meta = fs::metadata(&final_path).map_err(|e| VaultError::Io(e.to_string()))?;
         return Ok(ExportDocumentResult {
-            file_path: destination_file.to_string_lossy().to_string(),
+            file_path: final_path.to_string_lossy().to_string(),
             format: "pdf".to_string(),
             byte_size: meta.len(),
         });
