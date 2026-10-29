@@ -1,17 +1,39 @@
 /**
- * Motor de Áudio Sintético para Modo Máquina de Escrever (Typewriter).
+ * Motor de Áudio para Modo Máquina de Escrever (Typewriter).
  *
- * Utiliza Web Audio API pura de baixa latência e zero dependência de arquivos externos:
- * - 100% offline, leve e seguro para memória
- * - Tecla comum: clique percussivo com ruído metálico e variação aleatória de tom
- * - Espaço: impacto oco e mecânico mais grave
- * - Enter: a famosa sineta metálica ("Ding!") + retorno de carro analógico
- * - Backspace: duplo clique mecânico de catraca de recuo
+ * Utiliza gravações reais de teclas mecânicas integradas à Web Audio API:
+ * - 100% offline, latência ultrabaixa e zero dependência externa (amostras embutidas em Base64)
+ * - 4 variações de teclas gravadas para digitação orgânica e hiper-realista
+ * - Tecla alfanumérica: disparo aleatório entre as 4 amostras com sutil modulação de pitch (±5%)
+ * - Espaço: impacto de tecla real em registro mais encorpado + ressonância oca
+ * - Enter: impacto mecânico analógico + sineta clássica de fim de linha ("Ding!")
+ * - Backspace: impacto de catraca de recuo
+ * - Fallback transparente para síntese procedural caso decodificação de áudio não esteja pronta
  */
+
+import { TYPEWRITER_KEY_SAMPLES_BASE64 } from './typewriter-samples';
+
+/**
+ * Converte string base64 para ArrayBuffer de modo seguro e universal.
+ */
+function base64ToArrayBuffer(base64: string): ArrayBuffer {
+  if (typeof window === 'undefined' && typeof Buffer !== 'undefined') {
+    return Buffer.from(base64, 'base64').buffer;
+  }
+  const binaryString = atob(base64);
+  const len = binaryString.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes.buffer;
+}
 
 export class TypewriterAudioEngine {
   private audioCtx: AudioContext | null = null;
   private noiseBuffer: AudioBuffer | null = null;
+  private sampleBuffers: AudioBuffer[] = [];
+  private isDecodingSamples = false;
 
   /**
    * Inicializa o contexto de áudio sob demanda no primeiro evento do usuário.
@@ -37,11 +59,75 @@ export class TypewriterAudioEngine {
       void this.audioCtx.resume();
     }
 
+    if (this.audioCtx && !this.isDecodingSamples && this.sampleBuffers.length === 0) {
+      this.decodeSamples(this.audioCtx);
+    }
+
     return this.audioCtx;
   }
 
   /**
-   * Gera um buffer de ruído branco reutilizável de 0.2 segundos.
+   * Decodifica as amostras reais de teclas para a memória.
+   */
+  private decodeSamples(ctx: AudioContext): void {
+    if (this.isDecodingSamples) return;
+    this.isDecodingSamples = true;
+
+    if (!ctx.decodeAudioData) return;
+
+    for (const b64 of TYPEWRITER_KEY_SAMPLES_BASE64) {
+      try {
+        const ab = base64ToArrayBuffer(b64);
+        ctx.decodeAudioData(
+          ab,
+          (decoded) => {
+            this.sampleBuffers.push(decoded);
+          },
+          () => {
+            // Falha silenciosa na decodificação de amostra individual
+          }
+        );
+      } catch {
+        // Fallback silencioso
+      }
+    }
+  }
+
+  /**
+   * Toca uma das amostras reais gravadas se disponíveis.
+   */
+  private playRecordedSample(
+    ctx: AudioContext,
+    volume: number,
+    pitchMin = 0.95,
+    pitchMax = 1.05
+  ): boolean {
+    if (this.sampleBuffers.length === 0) return false;
+
+    try {
+      const idx = Math.floor(Math.random() * this.sampleBuffers.length);
+      const buffer = this.sampleBuffers[idx];
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const jitter = pitchMin + Math.random() * (pitchMax - pitchMin);
+      source.playbackRate.setValueAtTime(jitter, ctx.currentTime);
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(volume, ctx.currentTime);
+
+      source.connect(gain);
+      gain.connect(ctx.destination);
+
+      source.start();
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Gera um buffer de ruído branco reutilizável de 0.2 segundos (fallback).
    */
   private getNoiseBuffer(ctx: AudioContext): AudioBuffer {
     if (!this.noiseBuffer || this.noiseBuffer.sampleRate !== ctx.sampleRate) {
@@ -58,22 +144,27 @@ export class TypewriterAudioEngine {
 
   /**
    * Toca o clique mecânico característico de uma tecla alfanumérica.
+   * Utiliza preferencialmente as gravações reais fornecidas pelo autor.
    */
   playKeyClick(volume = 0.6): void {
     const ctx = this.getContext();
     if (!ctx) return;
 
     try {
-      const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // 1. Componente de Ruído Metálico (impacto da barra de tipos)
+      // Tenta tocar uma amostra real gravada
+      if (this.playRecordedSample(ctx, effectiveVol, 0.94, 1.06)) {
+        return;
+      }
+
+      // Fallback para sintetizador procedural
+      const now = ctx.currentTime;
       const noise = ctx.createBufferSource();
       noise.buffer = this.getNoiseBuffer(ctx);
 
       const filter = ctx.createBiquadFilter();
       filter.type = 'bandpass';
-      // Variação orgânica de ±12% no tom central para cada tecla
       const jitter = 0.88 + Math.random() * 0.24;
       filter.frequency.setValueAtTime(1800 * jitter, now);
       filter.Q.setValueAtTime(3.5, now);
@@ -89,7 +180,6 @@ export class TypewriterAudioEngine {
       noise.start(now);
       noise.stop(now + 0.04);
 
-      // 2. Componente Tonal de Golpe (thump do tipo contra o cilindro de borracha)
       const osc = ctx.createOscillator();
       osc.type = 'triangle';
       const oscFreq = (600 + Math.random() * 150) * jitter;
@@ -118,44 +208,27 @@ export class TypewriterAudioEngine {
     if (!ctx) return;
 
     try {
-      const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // Ruído mais grave e aberto
-      const noise = ctx.createBufferSource();
-      noise.buffer = this.getNoiseBuffer(ctx);
+      // Dispara amostra real gravada em pitch mais grave
+      this.playRecordedSample(ctx, effectiveVol * 0.85, 0.82, 0.88);
 
-      const filter = ctx.createBiquadFilter();
-      filter.type = 'bandpass';
-      filter.frequency.setValueAtTime(750, now);
-      filter.Q.setValueAtTime(1.8, now);
-
-      const noiseGain = ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.45 * effectiveVol, now);
-      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
-
-      noise.connect(filter);
-      filter.connect(noiseGain);
-      noiseGain.connect(ctx.destination);
-
-      noise.start(now);
-      noise.stop(now + 0.05);
-
-      // Thump oco
+      // Acrescenta corpo ressonante oco
+      const now = ctx.currentTime;
       const osc = ctx.createOscillator();
       osc.type = 'sine';
-      osc.frequency.setValueAtTime(320, now);
-      osc.frequency.exponentialRampToValueAtTime(80, now + 0.035);
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(70, now + 0.04);
 
       const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0.6 * effectiveVol, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+      oscGain.gain.setValueAtTime(0.45 * effectiveVol, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.045);
 
       osc.connect(oscGain);
       oscGain.connect(ctx.destination);
 
       osc.start(now);
-      osc.stop(now + 0.045);
+      osc.stop(now + 0.05);
     } catch {
       // Ignora erro
     }
@@ -163,7 +236,7 @@ export class TypewriterAudioEngine {
 
   /**
    * Toca o clássico retorno de carro ao pressionar Enter:
-   * "Ding!" límpido de campainha de bronze + impacto mecânico.
+   * Impacto mecânico real da tecla + "Ding!" límpido de campainha de bronze.
    */
   playEnterReturn(volume = 0.6): void {
     const ctx = this.getContext();
@@ -173,7 +246,10 @@ export class TypewriterAudioEngine {
       const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // 1. Sineta "Ding!" de bronze
+      // 1. Tecla mecânica de retorno
+      this.playRecordedSample(ctx, effectiveVol, 0.9, 1.0);
+
+      // 2. Sineta "Ding!" de bronze
       const bell1 = ctx.createOscillator();
       bell1.type = 'sine';
       bell1.frequency.setValueAtTime(2380, now);
@@ -188,7 +264,7 @@ export class TypewriterAudioEngine {
       bell1.start(now);
       bell1.stop(now + 0.5);
 
-      // Harmônico brilhante do sino
+      // Harmônico superior
       const bell2 = ctx.createOscillator();
       bell2.type = 'sine';
       bell2.frequency.setValueAtTime(3580, now);
@@ -202,22 +278,6 @@ export class TypewriterAudioEngine {
 
       bell2.start(now);
       bell2.stop(now + 0.4);
-
-      // 2. Impacto mecânico de retorno do carro (lever shift)
-      const osc = ctx.createOscillator();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(450, now);
-      osc.frequency.exponentialRampToValueAtTime(100, now + 0.05);
-
-      const oscGain = ctx.createGain();
-      oscGain.gain.setValueAtTime(0.5 * effectiveVol, now);
-      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
-
-      osc.connect(oscGain);
-      oscGain.connect(ctx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.07);
     } catch {
       // Ignora erro
     }
@@ -234,28 +294,27 @@ export class TypewriterAudioEngine {
       const now = ctx.currentTime;
       const effectiveVol = Math.max(0, Math.min(volume, 1));
 
-      // Duplo clique mecânico em sequência rápida
-      for (let i = 0; i < 2; i++) {
-        const offset = i * 0.018;
+      // Dispara amostra real acelerada (1.18x) para dar efeito mecânico de clique de recuo
+      this.playRecordedSample(ctx, effectiveVol * 0.9, 1.15, 1.25);
 
-        const noise = ctx.createBufferSource();
-        noise.buffer = this.getNoiseBuffer(ctx);
+      // Leve clique de catraca complementar
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.getNoiseBuffer(ctx);
 
-        const filter = ctx.createBiquadFilter();
-        filter.type = 'highpass';
-        filter.frequency.setValueAtTime(2200 + i * 400, now + offset);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.setValueAtTime(2600, now);
 
-        const gain = ctx.createGain();
-        gain.gain.setValueAtTime(0.3 * effectiveVol, now + offset);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.02);
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.2 * effectiveVol, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
 
-        noise.connect(filter);
-        filter.connect(gain);
-        gain.connect(ctx.destination);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
 
-        noise.start(now + offset);
-        noise.stop(now + offset + 0.025);
-      }
+      noise.start(now);
+      noise.stop(now + 0.025);
     } catch {
       // Ignora erro
     }
