@@ -448,6 +448,13 @@ export const ptBR: TranslationSchema = {
     deleteNode: 'Remover Cartão',
     viewDetails: 'Ver Detalhes da Ficha',
     selectEntityPlaceholder: 'Selecione uma entidade ou cena...',
+    addImage: 'Adicionar Imagem',
+    removeImage: 'Remover Imagem',
+    connectCard: 'Conectar a outro cartão',
+    connectingInstruction: 'Clique no cartão de destino para criar a conexão direcionada...',
+    cancelConnection: 'Cancelar Conexão',
+    deleteEdge: 'Excluir Conexão',
+    edgeLabelPrompt: 'Rótulo da conexão (ex: Rival de, Ocorre após):',
   },
   commands: {
     title: 'Paleta de Comandos & Quick Open',

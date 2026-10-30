@@ -55,6 +55,9 @@ pub struct CanvasNode {
     pub entity_kind: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub entity_summary: Option<String>,
+    /// URL ou data URI (base64) de imagem para nós com mídia ou post-its.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub image_url: Option<String>,
 }
 
 /// Conexão direcionada (seta) entre dois nós do Canvas.
@@ -249,6 +252,7 @@ mod tests {
             label: None,
             entity_kind: None,
             entity_summary: None,
+            image_url: Some("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=".to_string()),
         });
 
         doc.nodes.push(CanvasNode {
@@ -265,6 +269,7 @@ mod tests {
             label: Some("Jaci".to_string()),
             entity_kind: Some("character".to_string()),
             entity_summary: Some("Detetive das águas profundas".to_string()),
+            image_url: None,
         });
 
         doc.edges.push(CanvasEdge {
@@ -284,6 +289,7 @@ mod tests {
 
         assert_eq!(loaded.name, "Trama do Mistério");
         assert_eq!(loaded.nodes.len(), 2);
+        assert!(loaded.nodes[0].image_url.is_some());
         assert_eq!(loaded.edges.len(), 1);
         assert_eq!(loaded.edges[0].label.as_deref(), Some("Investigado por"));
 

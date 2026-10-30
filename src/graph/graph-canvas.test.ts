@@ -145,5 +145,41 @@ describe('M8 — Grafo Narrativo e Canvas Visual (JSON Canvas)', () => {
       canvasStore.updateNodeText(node.id, 'Novo texto de teste');
       expect(node.text).toBe('Novo texto de teste');
     });
+
+    it('deve adicionar e remover imagens em post-its com ajuste de altura', async () => {
+      await canvasStore.init('main');
+      canvasStore.addTextNode(70, 70);
+      const node = canvasStore.currentCanvas!.nodes[canvasStore.currentCanvas!.nodes.length - 1];
+
+      const sampleImage = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      canvasStore.updateNodeImage(node.id, sampleImage);
+      expect(node.image_url).toBe(sampleImage);
+      expect(node.height).toBeGreaterThanOrEqual(240);
+
+      canvasStore.updateNodeImage(node.id, null);
+      expect(node.image_url).toBeNull();
+    });
+
+    it('deve atualizar rótulo e remover arestas manualmente', async () => {
+      await canvasStore.init('main');
+      canvasStore.addTextNode(30, 30);
+      canvasStore.addTextNode(80, 80);
+
+      const nodes = canvasStore.currentCanvas!.nodes;
+      const idA = nodes[nodes.length - 2].id;
+      const idB = nodes[nodes.length - 1].id;
+
+      canvasStore.connectNodes(idA, idB, 'Inicial');
+      const edge = canvasStore.currentCanvas!.edges.find(
+        (e) => e.fromNode === idA && e.toNode === idB
+      )!;
+      expect(edge.label).toBe('Inicial');
+
+      canvasStore.updateEdgeLabel(edge.id, 'Atualizado');
+      expect(edge.label).toBe('Atualizado');
+
+      canvasStore.deleteEdge(edge.id);
+      expect(canvasStore.currentCanvas!.edges.some((e) => e.id === edge.id)).toBe(false);
+    });
   });
 });

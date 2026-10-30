@@ -448,6 +448,13 @@ export const enUS: TranslationSchema = {
     deleteNode: 'Remove Card',
     viewDetails: 'View Sheet Details',
     selectEntityPlaceholder: 'Select an entity or scene...',
+    addImage: 'Add Image',
+    removeImage: 'Remove Image',
+    connectCard: 'Connect to another card',
+    connectingInstruction: 'Click the target card to create a directed connection...',
+    cancelConnection: 'Cancel Connection',
+    deleteEdge: 'Delete Connection',
+    edgeLabelPrompt: 'Connection label (e.g., Rival of, Occurs after):',
   },
   commands: {
     title: 'Command Palette & Quick Open',
