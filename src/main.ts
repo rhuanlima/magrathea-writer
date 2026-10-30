@@ -1,6 +1,10 @@
 import './design';
 import { mount } from 'svelte';
 import App from './App.svelte';
+import { installEscapeGuard } from './ui/escape-guard';
+
+// Prevents Escape from leaving macOS fullscreen when it only dismisses an overlay.
+installEscapeGuard();
 
 const appElement = document.getElementById('app');
 

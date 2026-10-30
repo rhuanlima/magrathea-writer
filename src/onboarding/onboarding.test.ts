@@ -16,6 +16,20 @@ describe('OnboardingStore: Curso Básico do Magrathea Writer', () => {
     expect(COURSE_LESSONS[5].title).toContain('Café');
   });
 
+  it('keeps lesson ids unique and sequential so the top bar has one segment per lesson', () => {
+    const ids = COURSE_LESSONS.map((l) => l.id);
+    expect(new Set(ids).size).toBe(COURSE_LESSONS.length);
+    expect(ids).toEqual(COURSE_LESSONS.map((_, idx) => idx + 1));
+  });
+
+  it('numbers the module badges against the real total of lessons', () => {
+    const modules = COURSE_LESSONS.filter((l) => /^Módulo \d+ de \d+$/.test(l.badge));
+    expect(modules.length).toBeGreaterThan(0);
+    for (const lesson of modules) {
+      expect(lesson.badge).toBe(`Módulo ${lesson.id} de ${COURSE_LESSONS.length}`);
+    }
+  });
+
   it('permite abrir, navegar entre lições e avançar sequencialmente', () => {
     onboardingStore.open(0);
     expect(onboardingStore.isOpen).toBe(true);

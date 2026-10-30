@@ -106,7 +106,16 @@
     onSuccess();
     onClose();
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    // Step 2 shows the one-time recovery key: never dismiss it by accident.
+    if (e.key === 'Escape' && isOpen && step === 1) {
+      onClose();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if isOpen}
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-title">

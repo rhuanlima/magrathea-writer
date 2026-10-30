@@ -85,7 +85,15 @@
       errorMessage = String(err);
     }
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && vault.isRefactorModalOpen) {
+      vault.closeRefactorModal();
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if vault.isRefactorModalOpen}
   <div class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="refactor-title">

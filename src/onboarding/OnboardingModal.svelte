@@ -217,7 +217,9 @@
     transform: translate(-50%, -50%);
     width: 92%;
     max-width: 680px;
-    max-height: 88vh;
+    /* Fixed height: the dialog must not resize between lessons, so the
+       navigation buttons stay in the same place. The body scrolls instead. */
+    height: min(640px, 90vh);
     background: var(--color-paper-base);
     border: 1px solid var(--color-paper-border);
     border-radius: var(--rounded-xl);
@@ -332,6 +334,13 @@
     padding: 1.4rem 1.6rem;
     overflow-y: auto;
     flex: 1;
+    min-height: 0;
+  }
+
+  .onboarding-header,
+  .progress-bar-container,
+  .onboarding-footer {
+    flex-shrink: 0;
   }
 
   .cards-grid {
