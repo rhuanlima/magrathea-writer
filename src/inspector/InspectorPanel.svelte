@@ -155,9 +155,21 @@
           <!-- Status -->
           <div class="meta-field">
             <span class="meta-label">{t('metadata.status')}</span>
-            <span class="status-chip status-{activeItem.status || 'draft'}">
-              {activeItem.status || 'draft'}
-            </span>
+            <div class="status-selector-row">
+              <span class="status-dot-mini status-{activeItem.status || 'draft'}"></span>
+              <select
+                class="inspector-status-select"
+                value={activeItem.status || 'draft'}
+                onchange={(e) => {
+                  const target = e.target as HTMLSelectElement;
+                  void manuscript.updateSceneMetadata(activeItem.id, target.value, activeItem.tags);
+                }}
+              >
+                <option value="draft">{t('manuscript.status.draft')}</option>
+                <option value="revised">{t('manuscript.status.revised')}</option>
+                <option value="final">{t('manuscript.status.final')}</option>
+              </select>
+            </div>
           </div>
 
           <!-- Etiquetas / Tags -->
@@ -490,6 +502,36 @@
     letter-spacing: 0.5px;
   }
 
+  .status-selector-row {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--radius-sm);
+    padding: 2px 8px;
+    width: fit-content;
+  }
+
+  .status-dot-mini {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+
+  .inspector-status-select {
+    border: none;
+    background: transparent;
+    padding: 2px 4px 2px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-ink-charcoal);
+    cursor: pointer;
+    outline: none;
+  }
+
   .status-chip {
     display: inline-block;
     align-self: flex-start;
@@ -501,18 +543,18 @@
   }
 
   .status-draft {
-    background-color: rgba(194, 141, 88, 0.15);
-    color: var(--color-bronze);
+    background-color: #d97706; /* Âmbar */
+    box-shadow: 0 0 4px rgba(217, 119, 6, 0.4);
   }
 
   .status-revised {
-    background-color: rgba(94, 111, 69, 0.15);
-    color: var(--color-olive);
+    background-color: #2563eb; /* Azul */
+    box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
   }
 
   .status-final {
-    background-color: rgba(46, 125, 50, 0.15);
-    color: #2E7D32;
+    background-color: #16a34a; /* Verde */
+    box-shadow: 0 0 4px rgba(22, 163, 74, 0.4);
   }
 
   .tags-container {

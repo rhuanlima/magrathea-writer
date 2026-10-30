@@ -29,6 +29,14 @@
     }
   }
 
+  function cycleStatus() {
+    if (!scene) return;
+    const current = scene.status || 'draft';
+    const nextStatus =
+      current === 'draft' ? 'revised' : current === 'revised' ? 'final' : 'draft';
+    void manuscript.updateSceneMetadata(scene.id, nextStatus, scene.tags);
+  }
+
   function handleAddTag(e: KeyboardEvent) {
     if (e.key === 'Enter' && newTagInput.trim() && scene) {
       e.preventDefault();
@@ -127,10 +135,17 @@
     </div>
     <div class="title-row">
       <div class="title-wrapper">
-        <span
-          class="status-dot status-{scene.status || 'draft'}"
-          title="Status: {getStatusLabel(scene.status || 'draft')}"
-        ></span>
+        <button
+          type="button"
+          class="status-dot-btn"
+          onclick={cycleStatus}
+          title="Status: {getStatusLabel(scene.status || 'draft')} (clique para alternar)"
+          aria-label="{getStatusLabel(scene.status || 'draft')}"
+        >
+          <span
+            class="status-dot status-{scene.status || 'draft'}"
+          ></span>
+        </button>
         {#if isEditingTitle}
           <input
             type="text"
@@ -247,6 +262,22 @@
     gap: 10px;
     flex: 1;
     min-width: 0;
+  }
+
+  .status-dot-btn {
+    background: transparent;
+    border: none;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 0;
+    transition: transform 0.15s ease;
+  }
+
+  .status-dot-btn:hover {
+    transform: scale(1.3);
   }
 
   .status-dot {

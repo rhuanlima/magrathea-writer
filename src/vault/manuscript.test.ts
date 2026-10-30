@@ -41,6 +41,24 @@ describe('Manuscript Studio Tree, Metadata & Trash Flow (M1-06..M1-11)', () => {
     expect(updated?.tags).toEqual(['clímax', 'revisado']);
   });
 
+  it('permite ciclo completo de status literário (draft -> revised -> final -> draft)', async () => {
+    // 1. Inicia como draft
+    await manuscript.updateSceneMetadata('mock-scene-1', 'draft', []);
+    expect(manuscript.items.find((i) => i.id === 'mock-scene-1')?.status).toBe('draft');
+
+    // 2. Avança para revisado
+    await manuscript.updateSceneMetadata('mock-scene-1', 'revised', []);
+    expect(manuscript.items.find((i) => i.id === 'mock-scene-1')?.status).toBe('revised');
+
+    // 3. Avança para final
+    await manuscript.updateSceneMetadata('mock-scene-1', 'final', []);
+    expect(manuscript.items.find((i) => i.id === 'mock-scene-1')?.status).toBe('final');
+
+    // 4. Retorna para draft
+    await manuscript.updateSceneMetadata('mock-scene-1', 'draft', []);
+    expect(manuscript.items.find((i) => i.id === 'mock-scene-1')?.status).toBe('draft');
+  });
+
   it('move nó para a lixeira interna cifrada e restaura com sucesso', async () => {
     const sceneToTrash = await manuscript.createItem('scene', null, 'Cena Temporária');
     expect(manuscript.items.some((i) => i.id === sceneToTrash.id)).toBe(true);

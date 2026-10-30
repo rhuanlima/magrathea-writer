@@ -164,6 +164,14 @@
     if (status === 'final') return t('manuscript.status.final');
     return status || '';
   }
+
+  function cycleStatus(e: MouseEvent, item: ManifestItem) {
+    e.stopPropagation();
+    const current = item.status || 'draft';
+    const nextStatus =
+      current === 'draft' ? 'revised' : current === 'revised' ? 'final' : 'draft';
+    void manuscript.updateSceneMetadata(item.id, nextStatus, item.tags);
+  }
 </script>
 
 {#snippet renderNode(node: TreeNode, depth: number)}
@@ -222,11 +230,18 @@
         </span>
       {/if}
 
-      {#if item.kind === 'scene'}
-        <span
-          class="status-dot status-{item.status || 'draft'}"
-          title="{getStatusLabel(item.status || 'draft')}"
-        ></span>
+      {#if item.kind === 'scene' || item.kind === 'chapter'}
+        <button
+          type="button"
+          class="status-dot-btn"
+          onclick={(e) => cycleStatus(e, item)}
+          title="{getStatusLabel(item.status || 'draft')} (clique para alternar)"
+          aria-label="{getStatusLabel(item.status || 'draft')}"
+        >
+          <span
+            class="status-dot status-{item.status || 'draft'}"
+          ></span>
+        </button>
       {/if}
     </div>
 
@@ -710,6 +725,24 @@
     color: var(--color-ink-charcoal);
     outline: none;
     width: 90%;
+  }
+
+  .status-dot-btn {
+    background: transparent;
+    border: none;
+    padding: 3px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 50%;
+    margin-left: 2px;
+    line-height: 0;
+    transition: transform 0.15s ease;
+  }
+
+  .status-dot-btn:hover {
+    transform: scale(1.3);
   }
 
   .status-dot {
