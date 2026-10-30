@@ -83,7 +83,15 @@
       }
     }
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && selectedImage) {
+      selectedImage = null;
+    }
+  }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 <div
   class="gallery-container"
