@@ -4,7 +4,6 @@
   import { EditorState, Compartment, Transaction, type Extension } from '@codemirror/state';
   import { lineNumbers } from '@codemirror/view';
   import { markdown } from '@codemirror/lang-markdown';
-  import { t } from '../i18n';
   import { vault } from '../vault/vault.svelte';
   import { manuscript } from '../vault/manuscript.svelte';
   import { AutosaveManager, type AutosaveStatus } from './autosave';
@@ -13,18 +12,12 @@
   import { wikilinkAutocompleteExtension } from './wikilink-autocomplete';
   import { wikilinkHoverExtension } from './wikilink-hover';
   import { externalLinksPlugin } from './external-links';
-  import { focusModeExtension } from './focus-mode';
+  import { focusModeExtension, setFocusMode } from './focus-mode';
   import { editorViewState } from './editor-view-state.svelte';
-  import { searchStore } from '../search/search.svelte';
-  import { commandPaletteStore } from '../commands/palette.svelte';
-  import { timelineStore } from '../timeline/timeline.svelte';
-  import { graphStore } from '../graph/graph.svelte';
-  import { compilerStore } from '../compiler/compiler.svelte';
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
   import { typewriterAudio } from './typewriter-audio';
-  import { preferences } from '../preferences/preferences.svelte';
   import { focusPreferences } from '../preferences/focus-preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
   import FloatingHud from './FloatingHud.svelte';
@@ -82,24 +75,7 @@
   let bodyOnly = $derived(splitFrontmatter(currentDoc).body);
   let wordsCount = $derived(countWords(bodyOnly));
   let charsCount = $derived(countChars(bodyOnly));
-  let isExportMenuOpen = $state(false);
-  let isLiteraryMenuOpen = $state(false);
-
-  function insertLiteraryText(snippet: string, cursorOffset = 0) {
-    if (!view) return;
-    const { from, to } = view.state.selection.main;
-    view.dispatch({
-      changes: { from, to, insert: snippet },
-      selection: { anchor: from + snippet.length + cursorOffset },
-    });
-    view.focus();
-    isLiteraryMenuOpen = false;
-  }
-
-  async function handleExportDirect(format: 'docx' | 'epub' | 'pdf' | 'obsidian' | 'txt') {
-    isExportMenuOpen = false;
-    await compilerStore.quickExportDirect(format);
-  }
+  let statsModalTab = $state<'style' | 'productivity'>('style');
 
   onMount(() => {
     if (!editorElement) {
@@ -311,6 +287,15 @@
     }
   });
 
+  // Sincroniza o Modo Foco com a extensão do CodeMirror
+  $effect(() => {
+    if (view) {
+      view.dispatch({
+        effects: setFocusMode.of(editorViewState.isFocusMode),
+      });
+    }
+  });
+
   // Reage à mudança de cena ativa selecionada na barra lateral
   $effect(() => {
     const activeId = manuscript.activeSceneId;
@@ -388,362 +373,76 @@
   <FloatingHud sceneWordsCount={wordsCount} />
 
   <footer class="editor-footer">
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <div
-      class="stats clickable-stats"
-      role="button"
-      tabindex="0"
-      onclick={() => (isStyleModalOpen = true)}
-      title="Clique para ver Análise Estilométrica (Advérbios, Verbos de Diálogo, Ritmo)"
+    <!-- Canto Esquerdo: Estatísticas em fonte menor como link para o modal unificado -->
+    <button
+      type="button"
+      class="stats-link"
+      onclick={() => {
+        statsModalTab = 'style';
+        isStyleModalOpen = true;
+      }}
+      title="Clique para ver Estatísticas Estilométricas & Produtividade"
     >
-      <span>{t('editor.wordsCount', { count: wordsCount })}</span>
+      <span>{wordsCount} {wordsCount === 1 ? 'palavra' : 'palavras'}</span>
       <span class="dot">·</span>
-      <span>{t('editor.charactersCount', { count: charsCount })}</span>
+      <span>{charsCount} {charsCount === 1 ? 'caractere' : 'caracteres'}</span>
+    </button>
+
+    <!-- Centro: Link / Ação do Modo Foco -->
+    <div class="footer-center">
+      {#if editorViewState.isFocusMode}
+        <button
+          type="button"
+          class="focus-pill-btn active"
+          onclick={() => editorViewState.toggleFocus(view)}
+          title="Sair do Modo Foco (Esc)"
+        >
+          ✕ Sair do Modo Foco (Esc)
+        </button>
+      {:else}
+        <button
+          type="button"
+          class="focus-pill-btn"
+          onclick={() => editorViewState.toggleFocus(view)}
+          title="Ativar Modo Foco (Cmd+Alt+F)"
+        >
+          ✨ Modo Foco
+        </button>
+      {/if}
     </div>
 
-    <div class="quick-status-actions" role="toolbar" aria-label="Ações Rápidas">
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => commandPaletteStore.toggle()}
-        title="Paleta de Comandos & Quick Open (Cmd+K)"
-      >
-        ⚡
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => searchStore.openModal()}
-        title="Busca Global no Projeto (Cmd+Shift+F)"
-      >
-        🔍
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => timelineStore.openModal()}
-        title="Linha do Tempo Literária (Cmd+Shift+T)"
-      >
-        ⏳
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => graphStore.openModal()}
-        title="Grafo Narrativo & Canvas (Cmd+Shift+G)"
-      >
-        🕸️
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => editorViewState.openProductivityDashboard()}
-        title="Metas de Escrita & Ritmo (Cmd+Shift+P)"
-      >
-        📊
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        class:active={isStyleModalOpen}
-        onclick={() => (isStyleModalOpen = true)}
-        title="Estilometria & Análise da Prosa (Advérbios, Verbos, Ritmo)"
-      >
-        <span class="btn-icon">🔬</span>
-        <span class="btn-tag">Estilo</span>
-      </button>
-
-      <!-- Menu Popover de Pontuação Literária (Ajuste 5) -->
-      <div class="export-popover-wrapper">
-        <button
-          type="button"
-          class="quick-action-btn"
-          class:active={isLiteraryMenuOpen}
-          onclick={() => (isLiteraryMenuOpen = !isLiteraryMenuOpen)}
-          title="Pontuação Literária (—, «», …, ***)"
-        >
-          <span class="btn-icon">✍️</span>
-          <span class="btn-tag">Pontuação</span>
-        </button>
-
-        {#if isLiteraryMenuOpen}
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="export-backdrop" onclick={() => (isLiteraryMenuOpen = false)}></div>
-
-          <div class="export-dropdown-popover" role="menu">
-            <div class="export-dropdown-title">Pontuação Literária</div>
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => insertLiteraryText('— ')}
-            >
-              <span class="export-item-icon">—</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Travessão Literário</span>
-                <span class="export-item-ext">— diálogo</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => insertLiteraryText('«»', -1)}
-            >
-              <span class="export-item-icon">« »</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Aspas Angulares</span>
-                <span class="export-item-ext">«pensamento»</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => insertLiteraryText('“”', -1)}
-            >
-              <span class="export-item-icon">“ ”</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Aspas Tipográficas</span>
-                <span class="export-item-ext">“citação”</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => insertLiteraryText('…')}
-            >
-              <span class="export-item-icon">…</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Reticências Reais</span>
-                <span class="export-item-ext">pausa…</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => insertLiteraryText('\n\n* * *\n\n')}
-            >
-              <span class="export-item-icon">⁂</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Quebra de Cena</span>
-                <span class="export-item-ext">* * *</span>
-              </div>
-            </button>
-          </div>
-        {/if}
-      </div>
-
-      <div class="export-popover-wrapper">
-        <button
-          type="button"
-          class="quick-action-btn"
-          class:active={isExportMenuOpen}
-          onclick={() => (isExportMenuOpen = !isExportMenuOpen)}
-          title="Exportar Manuscrito (Word, EPUB, PDF...)"
-        >
-          <span class="btn-icon">📖</span>
-          <span class="btn-tag">Exportar</span>
-        </button>
-
-        {#if isExportMenuOpen}
-          <!-- Backdrop invisível para fechar ao clicar fora -->
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="export-backdrop" onclick={() => (isExportMenuOpen = false)}></div>
-
-          <div class="export-dropdown-popover" role="menu">
-            <div class="export-dropdown-title">Exportação Editorial</div>
-
-            <button
-              type="button"
-              class="export-dropdown-item primary-highlight"
-              onclick={() => {
-                isExportMenuOpen = false;
-                void compilerStore.openExportWithOptions();
-              }}
-            >
-              <span class="export-item-icon">⚙️</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Opções de Exportação...</span>
-                <span class="export-item-ext">Tudo vs Final • Incluir Fichas</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => {
-                isExportMenuOpen = false;
-                void compilerStore.openMatterTab();
-              }}
-            >
-              <span class="export-item-icon">✍️</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Partes do Livro...</span>
-                <span class="export-item-ext">Referências, Agradecimentos, Epígrafe</span>
-              </div>
-            </button>
-
-            <div class="export-dropdown-divider"></div>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => handleExportDirect('docx')}
-            >
-              <span class="export-item-icon">📄</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Microsoft Word</span>
-                <span class="export-item-ext">.docx</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => handleExportDirect('epub')}
-            >
-              <span class="export-item-icon">📱</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Livro Digital</span>
-                <span class="export-item-ext">.epub</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => handleExportDirect('pdf')}
-            >
-              <span class="export-item-icon">📕</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Livro em PDF</span>
-                <span class="export-item-ext">.pdf</span>
-              </div>
-            </button>
-
-            <div class="export-dropdown-divider"></div>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => handleExportDirect('obsidian')}
-            >
-              <span class="export-item-icon">💎</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Cofre Obsidian</span>
-                <span class="export-item-ext">.md</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              class="export-dropdown-item"
-              onclick={() => handleExportDirect('txt')}
-            >
-              <span class="export-item-icon">📝</span>
-              <div class="export-item-info">
-                <span class="export-item-name">Texto Puro + Dossiê</span>
-                <span class="export-item-ext">.txt</span>
-              </div>
-            </button>
-          </div>
+    <!-- Canto Direito: Status 'salvando' > 'salvo', cadeado de trancar e botão sanduíche do Inspector -->
+    <div class="footer-right">
+      <div class="save-status-text" title="Status de gravação cifrada no cofre">
+        {#if autosaveStatus === 'saving'}
+          <span class="save-dot saving">●</span>
+          <span>Salvando...</span>
+        {:else}
+          <span class="save-dot saved">✓</span>
+          <span>Salvo</span>
         {/if}
       </div>
 
       <button
         type="button"
-        class="quick-action-btn"
-        class:active={editorPreferences.typewriterSound}
-        onclick={() => {
-          editorPreferences.toggleTypewriterSound();
-          if (editorPreferences.typewriterSound) {
-            typewriterAudio.playKeyClick(editorPreferences.typewriterVolume);
-          }
-        }}
-        title="Som Mecânico de Máquina de Escrever (Typewriter)"
-      >
-        <span class="btn-icon">⌨️</span>
-        <span class="btn-tag">{editorPreferences.typewriterSound ? 'Sons ON' : 'Sons'}</span>
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        class:active={vault.isInspectorOpen}
-        onclick={() => vault.toggleInspector()}
-        title="Inspetor de Fichas e Personagens (Cmd+I)"
-      >
-        <span class="btn-icon">ℹ️</span>
-        <span class="btn-tag">Inspetor</span>
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => preferences.open('editor')}
-        title="Preferências do Sistema & Editor (Cmd+,)"
-      >
-        <span class="btn-icon">⚙️</span>
-        <span class="btn-tag">Preferências</span>
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn"
-        onclick={() => theme.toggleTheme()}
-        title="Alternar Tema Claro / Escuro"
-      >
-        <span class="btn-icon">
-          {#if theme.mode === 'light'}
-            ☀️
-          {:else if theme.mode === 'dark'}
-            🌙
-          {:else}
-            💻
-          {/if}
-        </span>
-        <span class="btn-tag">Tema</span>
-      </button>
-
-      <button
-        type="button"
-        class="quick-action-btn lock-btn"
+        class="icon-action-btn lock-action"
         onclick={() => vault.lockVault()}
         title="Trancar Mundo (Cmd+L)"
+        aria-label="Trancar Mundo"
       >
-        <span class="btn-icon">🔒</span>
-        <span class="btn-tag">Trancar</span>
+        🔒
       </button>
-    </div>
 
-    <div
-      class="save-status"
-      class:saving={autosaveStatus === 'saving'}
-      class:error={autosaveStatus === 'error'}
-      title="Status de salvamento automático cifrado no cofre"
-    >
-      {#if autosaveStatus === 'saving'}
-        <span class="status-indicator saving">●</span>
-        <span>{t('editor.saving')}</span>
-      {:else if autosaveStatus === 'unsaved'}
-        <span class="status-indicator unsaved">○</span>
-        <span>{t('editor.unsavedChanges')}</span>
-      {:else if autosaveStatus === 'saved'}
-        <span class="status-indicator saved">✓</span>
-        <span>{t('editor.saved')}</span>
-      {:else if autosaveStatus === 'error'}
-        <span class="status-indicator error">⚠️</span>
-        <span>{vault.errorMessage || 'Erro ao salvar'}</span>
-      {/if}
+      <button
+        type="button"
+        class="icon-action-btn inspector-toggle"
+        class:active={vault.isInspectorOpen}
+        onclick={() => vault.toggleInspector()}
+        title="Alternar Inspetor Lateral (Cmd+I)"
+        aria-label="Alternar Inspetor Lateral"
+      >
+        ☰
+      </button>
     </div>
   </footer>
 
@@ -751,6 +450,7 @@
     isOpen={isStyleModalOpen}
     text={currentDoc}
     sceneTitle={manuscript.activeScene?.title}
+    initialTab={statsModalTab}
     onClose={() => (isStyleModalOpen = false)}
   />
 </div>
@@ -796,7 +496,7 @@
   }
 
   .editor-footer {
-    height: 28px;
+    height: 30px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -806,205 +506,120 @@
     font-family: var(--font-ui);
     font-size: 11px;
     color: var(--color-ink-muted);
-  }
-
-  .stats {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .clickable-stats {
-    cursor: pointer;
-    border-radius: 4px;
-    padding: 2px 6px;
-    transition: background 0.15s ease, color 0.15s ease;
     user-select: none;
+    z-index: 10;
   }
 
-  .clickable-stats:hover {
-    background: rgba(0, 0, 0, 0.05);
-    color: var(--color-olive, #5E6F45);
-  }
-
-  :global(.dark) .clickable-stats:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #A3BD84;
-  }
-
-  .quick-status-actions {
+  .stats-link {
     display: flex;
     align-items: center;
-    gap: 4px;
-  }
-
-  .quick-action-btn {
+    gap: 5px;
     background: transparent;
-    border: 1px solid transparent;
-    border-radius: 4px;
-    padding: 2px 7px;
-    font-size: 11px;
-    cursor: pointer;
-    color: var(--color-ink-muted);
-    transition: all 0.15s ease;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    line-height: 1;
-    user-select: none;
-    font-family: var(--font-ui);
-  }
-
-  .quick-action-btn:hover {
-    background-color: var(--color-paper-border);
-    border-color: var(--color-paper-border);
-    color: var(--color-ink-primary);
-  }
-
-  .btn-icon {
-    font-size: 11px;
-    line-height: 1;
-  }
-
-  .btn-tag {
-    font-size: 10.5px;
-    font-weight: 500;
-  }
-
-  .quick-action-btn.active {
-    background-color: var(--color-paper-border);
-    color: var(--color-terracotta);
-    font-weight: 600;
-  }
-
-  .quick-action-btn.lock-btn:hover {
-    color: #e11d48;
-  }
-
-  .export-popover-wrapper {
-    position: relative;
-    display: inline-flex;
-  }
-
-  .export-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 99;
-    cursor: default;
-  }
-
-  .export-dropdown-popover {
-    position: absolute;
-    bottom: calc(100% + 8px);
-    right: 0;
-    z-index: 100;
-    min-width: 220px;
-    background-color: var(--color-paper-elevated, #ffffff);
-    border: 1px solid var(--color-paper-border);
-    border-radius: var(--rounded-lg, 8px);
-    box-shadow: 0 10px 25px -4px rgba(0, 0, 0, 0.12), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    padding: 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .export-dropdown-title {
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-ink-faded);
-    padding: 4px 8px;
-    margin-bottom: 2px;
-  }
-
-  .export-dropdown-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 6px 8px;
     border: none;
-    background: transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    text-align: left;
+    padding: 3px 6px;
+    border-radius: var(--rounded-sm, 4px);
     font-family: var(--font-ui);
-    color: var(--color-ink-charcoal);
-    transition: background-color 0.12s ease;
-  }
-
-  .export-dropdown-item:hover {
-    background-color: var(--color-paper-hover);
-  }
-
-  .export-dropdown-item.primary-highlight {
-    background-color: rgba(217, 119, 6, 0.08);
-  }
-
-  .export-dropdown-item.primary-highlight:hover {
-    background-color: rgba(217, 119, 6, 0.16);
-  }
-
-  .export-item-icon {
-    font-size: 14px;
-    line-height: 1;
-  }
-
-  .export-item-info {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    flex: 1;
-  }
-
-  .export-item-name {
-    font-size: 12px;
-    font-weight: 500;
-  }
-
-  .export-item-ext {
-    font-size: 10px;
-    font-family: var(--font-mono);
+    font-size: 11px;
     color: var(--color-ink-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
 
-  .export-dropdown-divider {
-    height: 1px;
-    background-color: var(--color-paper-border);
-    margin: 4px 0;
+  .stats-link:hover {
+    background-color: var(--color-paper-hover);
+    color: var(--color-olive);
   }
 
   .dot {
     opacity: 0.5;
   }
 
-  .save-status {
+  .footer-center {
     display: flex;
     align-items: center;
-    justify-content: flex-end;
-    gap: 6px;
-    min-width: 110px;
-    white-space: nowrap;
-    user-select: none;
-    flex-shrink: 0;
+    justify-content: center;
   }
 
-  .save-status.saving {
+  .focus-pill-btn {
+    border: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-base);
+    color: var(--color-ink-muted);
+    border-radius: 9999px;
+    padding: 2px 10px;
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .focus-pill-btn:hover {
+    border-color: var(--color-olive);
+    color: var(--color-ink-charcoal);
+    background-color: var(--color-paper-hover);
+  }
+
+  .focus-pill-btn.active {
+    background-color: var(--color-paper-hover);
     color: var(--color-olive);
+    border-color: var(--color-olive);
+    font-weight: 600;
   }
 
-  .save-status.error {
-    color: var(--color-error);
+  .footer-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
-  .status-indicator {
-    font-size: 10px;
+  .save-status-text {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: var(--color-ink-faded);
   }
 
-  .status-indicator.saving {
+  .save-dot {
+    font-size: 8px;
+    line-height: 1;
+  }
+
+  .save-dot.saving {
+    color: var(--color-olive);
     animation: pulse 1s infinite alternate;
+  }
+
+  .save-dot.saved {
+    color: var(--color-olive);
+    font-size: 11px;
+  }
+
+  .icon-action-btn {
+    background: transparent;
+    border: none;
+    font-size: 13px;
+    cursor: pointer;
+    padding: 3px 5px;
+    border-radius: 4px;
+    color: var(--color-ink-muted);
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .icon-action-btn:hover {
+    background-color: var(--color-paper-hover);
+    color: var(--color-ink-charcoal);
+  }
+
+  .icon-action-btn.inspector-toggle.active {
+    color: var(--color-olive);
   }
 
   @keyframes pulse {

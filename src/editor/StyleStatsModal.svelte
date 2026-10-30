@@ -1,25 +1,34 @@
 <script lang="ts">
   /**
-   * Modal de Análise Estilométrica e Estatísticas de Escrita.
+   * Modal de Análise Estilométrica e Estatísticas de Escrita com guias integradas (M2-04 & M3-04).
    *
-   * Apresenta ao autor métricas avançadas sobre sua prosa:
-   * - Densidade e repetições de advérbios (especialmente em '-mente')
-   * - Verbos de diálogo e fórmulas de elocução (disse, perguntou, respondeu)
-   * - Verbos mais frequentes na narrativa
-   * - Riqueza vocabular (TTR) e ritmo de frases (curtas/médias/longas)
-   * - Proporção de diálogos vs texto narrativo
+   * Apresenta ao autor:
+   * - Guia 1: Análise Estilométrica & Prosa (advérbios, verbos, ritmo, riqueza vocabular)
+   * - Guia 2: Dashboard de Produtividade & Metas Literárias (metas, ritmo diário, histórico)
    */
 
   import { analyzeProseStyle, type ProseStyleAnalysis } from './text-analysis';
+  import { editorViewState } from './editor-view-state.svelte';
+  import ProductivityDashboardContent from '../productivity/ProductivityDashboardContent.svelte';
 
   interface Props {
     isOpen: boolean;
     text: string;
     sceneTitle?: string;
+    initialTab?: 'style' | 'productivity';
     onClose: () => void;
   }
 
-  let { isOpen = false, text = '', sceneTitle = '', onClose }: Props = $props();
+  let { isOpen = false, text = '', sceneTitle = '', initialTab = 'style', onClose }: Props = $props();
+
+  let activeTab = $state<'style' | 'productivity'>('style');
+
+  $effect(() => {
+    if (isOpen) {
+      activeTab = initialTab;
+      void editorViewState.refreshProductivity();
+    }
+  });
 
   let analysis: ProseStyleAnalysis = $derived(analyzeProseStyle(text));
 
@@ -45,19 +54,42 @@
     >
       <header class="modal-header">
         <div class="title-group">
-          <span class="header-icon">🔬</span>
+          <span class="header-icon">{activeTab === 'style' ? '🔬' : '📊'}</span>
           <div>
-            <h2>Estatísticas Estilométricas & Prosa</h2>
+            <h2>{activeTab === 'style' ? 'Estatísticas Estilométricas & Prosa' : 'Produtividade & Metas Literárias'}</h2>
             <p class="subtitle">
-              {sceneTitle ? `Análise da cena: ${sceneTitle}` : 'Diagnóstico estilístico em tempo real'}
+              {activeTab === 'style'
+                ? (sceneTitle ? `Análise da cena: ${sceneTitle}` : 'Diagnóstico estilístico em tempo real')
+                : 'Acompanhamento de ritmo de escrita, metas e projeção'}
             </p>
           </div>
         </div>
         <button type="button" class="close-btn" onclick={onClose} title="Fechar (Esc)">✕</button>
       </header>
 
+      <nav class="modal-tabs" aria-label="Guias de Estatísticas">
+        <button
+          type="button"
+          class="tab-btn"
+          class:active={activeTab === 'style'}
+          onclick={() => (activeTab = 'style')}
+        >
+          <span>🔬 Estilometria & Prosa</span>
+        </button>
+        <button
+          type="button"
+          class="tab-btn"
+          class:active={activeTab === 'productivity'}
+          onclick={() => (activeTab = 'productivity')}
+        >
+          <span>📊 Produtividade & Metas</span>
+        </button>
+      </nav>
+
       <div class="modal-body">
-        {#if analysis.totalWords === 0}
+        {#if activeTab === 'productivity'}
+          <ProductivityDashboardContent />
+        {:else if analysis.totalWords === 0}
           <div class="empty-state">
             <span class="empty-icon">✍️</span>
             <h3>Nenhum texto para analisar ainda</h3>
@@ -287,6 +319,49 @@
 
   :global(.dark) .modal-header {
     border-bottom-color: #383C32;
+  }
+
+  .modal-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-lg);
+    background-color: var(--color-paper-surface, #F8F9FA);
+    border-bottom: 1px solid var(--color-paper-border, #E5E7EB);
+  }
+
+  :global(.dark) .modal-tabs {
+    background-color: #23261F;
+    border-bottom-color: #383C32;
+  }
+
+  .tab-btn {
+    border: none;
+    background: transparent;
+    padding: var(--space-xs) var(--space-md);
+    font-family: var(--font-ui);
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--color-ink-muted, #64748B);
+    border-radius: var(--rounded-md, 6px);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .tab-btn:hover {
+    color: var(--color-ink-charcoal, #111827);
+    background-color: var(--color-paper-hover, rgba(0, 0, 0, 0.04));
+  }
+
+  .tab-btn.active {
+    color: var(--color-olive, #5E6F45);
+    background-color: var(--color-paper-base, #FFFFFF);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  :global(.dark) .tab-btn.active {
+    background-color: #2B2F27;
+    color: #A3BD84;
   }
 
   .title-group {

@@ -68,6 +68,12 @@ describe('M3 — Foco Dinâmico, Zen Mode, HUD e Metas Literárias', () => {
       editorViewState.toggleFocus();
       expect(editorViewState.isFocusMode).toBe(false);
       expect(localStorage.getItem('magrathea-focus-mode')).toBe('false');
+
+      // Teste do exitFocus
+      editorViewState.isFocusMode = true;
+      editorViewState.exitFocus();
+      expect(editorViewState.isFocusMode).toBe(false);
+      expect(localStorage.getItem('magrathea-focus-mode')).toBe('false');
     });
 
     it('deve atenuar linhas inativas no editor quando o modo foco está habilitado', () => {

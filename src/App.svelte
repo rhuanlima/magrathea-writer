@@ -41,6 +41,7 @@
 
   let isCreateModalOpen = $state(false);
   let isOpenVaultModalOpen = $state(false);
+  let isViewMenuOpen = $state(false);
   let prefilledVaultPath = $state<string | undefined>(undefined);
   let currentContent = $state(
     `# ${t('editor.defaultTitle')}\n\n${t('editor.welcomeMessage')}`
@@ -208,8 +209,19 @@
   }
 
   function handleGlobalKeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape' && editorViewState.isZenMode) {
-      editorViewState.exitZen();
+    if (e.key === 'Escape') {
+      if (editorViewState.isFocusMode) {
+        editorViewState.exitFocus();
+      } else if (editorViewState.isZenMode) {
+        editorViewState.exitZen();
+      }
+    }
+    // Cmd/Ctrl + L: Abrir busca global rapidamente
+    if ((e.metaKey || e.ctrlKey) && (e.key === 'l' || e.key === 'L') && !e.altKey && !e.shiftKey) {
+      e.preventDefault();
+      if (vault.isOpen && !vault.isLocked) {
+        searchStore.openModal();
+      }
     }
     if ((e.metaKey || e.ctrlKey) && (e.key === 'o' || e.key === 'O')) {
       e.preventDefault();
@@ -252,7 +264,7 @@
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
-<main class="app-shell" class:zen-active={editorViewState.isZenMode}>
+<main class="app-shell" class:zen-active={editorViewState.isZenMode} class:focus-mode-active={editorViewState.isFocusMode}>
   {#if editorViewState.isZenMode}
     <div class="zen-exit-zone" role="region" aria-label={t('editor.exitZen')}>
       <button
@@ -288,7 +300,162 @@
     </div>
 
     <div class="header-actions">
-      {#if !vault.isOpen}
+      {#if vault.isOpen}
+        <!-- Menu Ver (Item 11) -->
+        <div class="view-menu-wrapper">
+          <button
+            type="button"
+            class="header-menu-btn"
+            class:active={isViewMenuOpen}
+            onclick={() => (isViewMenuOpen = !isViewMenuOpen)}
+            title="Visualizações e Ferramentas Literárias"
+          >
+            <span>Ver</span>
+            <span class="menu-caret">▾</span>
+          </button>
+
+          {#if isViewMenuOpen}
+            <!-- svelte-ignore a11y_click_events_have_key_events -->
+            <!-- svelte-ignore a11y_no_static_element_interactions -->
+            <div class="menu-backdrop" onclick={() => (isViewMenuOpen = false)}></div>
+
+            <div class="header-dropdown-menu" role="menu">
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  editorViewState.toggleFocus();
+                }}
+              >
+                <span class="item-icon">✨</span>
+                <span class="item-text">Modo Foco</span>
+                <span class="item-shortcut">⌥⌘F</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  void timelineStore.openModal();
+                }}
+              >
+                <span class="item-icon">⏳</span>
+                <span class="item-text">Linha do Tempo</span>
+                <span class="item-shortcut">⇧⌘T</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  graphStore.openModal();
+                }}
+              >
+                <span class="item-icon">🕸️</span>
+                <span class="item-text">Grafo Narrativo</span>
+                <span class="item-shortcut">⇧⌘G</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  graphStore.openModal();
+                }}
+              >
+                <span class="item-icon">🗺️</span>
+                <span class="item-text">Canvas & Post-its</span>
+              </button>
+
+              <div class="dropdown-divider"></div>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  editorViewState.openProductivityDashboard();
+                }}
+              >
+                <span class="item-icon">📊</span>
+                <span class="item-text">Metas & Produtividade</span>
+                <span class="item-shortcut">⇧⌘M</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  manuscript.toggleSidebar();
+                }}
+              >
+                <span class="item-icon">☰</span>
+                <span class="item-text">Alternar Barra Lateral</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  vault.toggleInspector();
+                }}
+              >
+                <span class="item-icon">📑</span>
+                <span class="item-text">Alternar Painel Inspetor</span>
+                <span class="item-shortcut">⌘I</span>
+              </button>
+            </div>
+          {/if}
+        </div>
+
+        <button
+          type="button"
+          class="action-button icon-only"
+          onclick={() => searchStore.openModal()}
+          title="Busca Global no Projeto (Cmd+L / Cmd+Shift+F)"
+        >
+          🔍
+        </button>
+
+        <button
+          type="button"
+          class="action-button icon-only"
+          onclick={() => theme.toggleTheme()}
+          title={t('theme.toggle')}
+        >
+          {#if theme.mode === 'light'}
+            ☀️
+          {:else if theme.mode === 'dark'}
+            🌙
+          {:else}
+            💻
+          {/if}
+        </button>
+
+        <button
+          type="button"
+          class="action-button icon-only"
+          onclick={() => preferences.open()}
+          title="Preferências do Cofre & Editor (Cmd+,)"
+        >
+          ⚙️
+        </button>
+
+        <button
+          type="button"
+          class="action-button icon-only"
+          onclick={() => onboardingStore.open()}
+          title="Guia do Autor (Sobre)"
+        >
+          🎓
+        </button>
+      {:else}
         <button
           type="button"
           class="action-button primary-action"
@@ -503,6 +670,36 @@
     display: none !important;
   }
 
+  /* Modo Foco Limpo (Item 8) */
+  .app-shell.focus-mode-active {
+    background-color: var(--color-focus-bg) !important;
+  }
+
+  .app-shell.focus-mode-active .app-header,
+  .app-shell.focus-mode-active :global(.sidebar-container),
+  .app-shell.focus-mode-active :global(.inspector-panel),
+  .app-shell.focus-mode-active :global(.scene-header),
+  .app-shell.focus-mode-active :global(.floating-hud) {
+    display: none !important;
+  }
+
+  .app-shell.focus-mode-active :global(.editor-workspace) {
+    background-color: var(--color-focus-bg) !important;
+  }
+
+  .app-shell.focus-mode-active :global(.editor-container) {
+    background-color: var(--color-focus-bg) !important;
+  }
+
+  .app-shell.focus-mode-active :global(.cm-editor) {
+    background-color: transparent !important;
+  }
+
+  .app-shell.focus-mode-active :global(.editor-footer) {
+    background-color: var(--color-focus-footer-bg) !important;
+    border-top: 1px solid var(--color-focus-footer-border) !important;
+  }
+
   .app-header {
     height: 48px;
     display: flex;
@@ -609,6 +806,118 @@
   .action-button.primary-action:hover {
     background-color: var(--color-olive-hover);
     border-color: var(--color-olive-hover);
+  }
+
+  .action-button.icon-only {
+    padding: 5px 8px;
+    font-size: 13px;
+    min-width: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .view-menu-wrapper {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .header-menu-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: var(--rounded-md, 6px);
+    border: 1px solid var(--color-paper-border);
+    background: var(--color-paper-base);
+    color: var(--color-ink-charcoal);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+  }
+
+  .header-menu-btn:hover,
+  .header-menu-btn.active {
+    background-color: var(--color-paper-hover);
+    border-color: var(--color-olive);
+    color: var(--color-olive);
+  }
+
+  .menu-caret {
+    font-size: 10px;
+    opacity: 0.7;
+  }
+
+  .menu-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    cursor: default;
+  }
+
+  .header-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 100;
+    min-width: 220px;
+    background-color: var(--color-paper-elevated, #ffffff);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-lg, 8px);
+    box-shadow: var(--shadow-modal, 0 10px 25px -4px rgba(0, 0, 0, 0.15));
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: none;
+    background: transparent;
+    border-radius: var(--rounded-md, 6px);
+    cursor: pointer;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    color: var(--color-ink-charcoal);
+    text-align: left;
+    transition: background-color var(--transition-fast);
+  }
+
+  .dropdown-item:hover {
+    background-color: var(--color-paper-hover);
+  }
+
+  .dropdown-item .item-icon {
+    font-size: 14px;
+    line-height: 1;
+    width: 18px;
+    text-align: center;
+  }
+
+  .dropdown-item .item-text {
+    flex: 1;
+  }
+
+  .dropdown-item .item-shortcut {
+    font-size: 10px;
+    font-family: var(--font-mono, monospace);
+    color: var(--color-ink-muted);
+    background-color: var(--color-paper-border);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+
+  .dropdown-divider {
+    height: 1px;
+    background-color: var(--color-paper-border);
+    margin: 4px 0;
   }
 
   .action-button:focus-visible {
