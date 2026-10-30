@@ -6,6 +6,7 @@
   import { onMount } from 'svelte';
   import { graphStore } from './graph.svelte';
   import type { GraphNode } from '../tauri/bridge';
+  import { mergeSimNodes, type SimNode } from './graph-layout';
 
   interface Props {
     onSelectNode?: (node: GraphNode) => void;
@@ -15,18 +16,13 @@
 
   let canvasEl = $state<HTMLCanvasElement | null>(null);
 
-  // Nós com posições na simulação física 2D
-  interface SimNode extends GraphNode {
-    x: number;
-    y: number;
-    vx: number;
-    vy: number;
-    radius: number;
-  }
-
-  let simNodes = $state<SimNode[]>([]);
-  let hoveredNodeId = $state<string | null>(null);
-  let draggedNode = $state<SimNode | null>(null);
+  // Simulation state is intentionally NOT reactive: the physics loop mutates every node on
+  // every animation frame and the canvas is redrawn by requestAnimationFrame. Making it
+  // `$state` made the sync effect below depend on (and write) its own data, which ended in
+  // an update loop that killed the effect, so filters stopped applying until a remount.
+  let simNodes: SimNode[] = [];
+  let hoveredNodeId: string | null = null;
+  let draggedNode: SimNode | null = null;
 
   // Câmera do grafo
   let cameraX = $state(0);
@@ -50,43 +46,13 @@
     return KIND_COLORS[kind.toLowerCase()] || '#5E6F45';
   }
 
-  // Inicializa posições iniciais dos nós
+  // Re-syncs the simulation whenever the visible set changes (filters, search, orphans).
+  // It only depends on `filteredNodes`; everything else is read untracked.
   $effect(() => {
     const rawNodes = graphStore.filteredNodes;
-    if (rawNodes.length === 0) {
-      simNodes = [];
-      return;
-    }
-
-    const existingMap = new Map(simNodes.map((n) => [n.id, n]));
     const width = canvasEl?.width || 800;
     const height = canvasEl?.height || 600;
-
-    simNodes = rawNodes.map((rn, idx) => {
-      const existing = existingMap.get(rn.id);
-      if (existing) {
-        return {
-          ...rn,
-          x: existing.x,
-          y: existing.y,
-          vx: existing.vx,
-          vy: existing.vy,
-          radius: 8 + Math.min(rn.connections_count * 2, 16),
-        };
-      }
-
-      // Distribuição circular inicial
-      const angle = (idx / rawNodes.length) * 2 * Math.PI;
-      const radiusDist = 120 + Math.random() * 150;
-      return {
-        ...rn,
-        x: width / 2 + Math.cos(angle) * radiusDist,
-        y: height / 2 + Math.sin(angle) * radiusDist,
-        vx: 0,
-        vy: 0,
-        radius: 8 + Math.min(rn.connections_count * 2, 16),
-      };
-    });
+    simNodes = mergeSimNodes(rawNodes, simNodes, width, height);
   });
 
   // Loop da simulação física e renderização no Canvas
