@@ -451,6 +451,13 @@ export interface TranslationSchema {
     deleteNode: string;
     viewDetails: string;
     selectEntityPlaceholder: string;
+    addImage: string;
+    removeImage: string;
+    connectCard: string;
+    connectingInstruction: string;
+    cancelConnection: string;
+    deleteEdge: string;
+    edgeLabelPrompt: string;
   };
   commands: {
     title: string;

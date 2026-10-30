@@ -1,6 +1,7 @@
 <script lang="ts">
   /**
    * Componente de Quadro Infinito (Infinite Canvas) baseado no JSON Canvas 1.0 (PRD E10 / M8-03).
+   * Suporta post-its com texto e imagens, cartões de entidades vinculados ao manuscrito e conexões direcionadas.
    */
 
   import { onMount } from 'svelte';
@@ -16,6 +17,9 @@
   let { onSelectEntity }: Props = $props();
 
   let containerEl = $state<HTMLDivElement | null>(null);
+  let imageInputEl = $state<HTMLInputElement | null>(null);
+  let pendingImageNodeId = $state<string | null>(null);
+
   let isPanning = $state(false);
   let panStartX = 0;
   let panStartY = 0;
@@ -37,12 +41,26 @@
     void canvasStore.init();
   });
 
+  function handleWindowKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape' && connectingFromId) {
+      connectingFromId = null;
+      e.stopPropagation();
+    }
+  }
+
   function handleContainerMouseDown(e: MouseEvent) {
-    if (e.target === containerEl || (e.target as HTMLElement).classList.contains('canvas-infinite-plane')) {
+    if (
+      e.target === containerEl ||
+      (e.target as HTMLElement).classList.contains('canvas-infinite-plane')
+    ) {
+      if (connectingFromId) {
+        connectingFromId = null;
+      }
       isPanning = true;
       panStartX = e.clientX - canvasStore.panX;
       panStartY = e.clientY - canvasStore.panY;
       canvasStore.selectedNodeId = null;
+      canvasStore.selectedEdgeId = null;
     }
   }
 
@@ -65,7 +83,10 @@
   }
 
   function handleDoubleClick(e: MouseEvent) {
-    if (e.target === containerEl || (e.target as HTMLElement).classList.contains('canvas-infinite-plane')) {
+    if (
+      e.target === containerEl ||
+      (e.target as HTMLElement).classList.contains('canvas-infinite-plane')
+    ) {
       const rect = containerEl?.getBoundingClientRect();
       if (!rect) return;
       const clickX = (e.clientX - rect.left - canvasStore.panX) / canvasStore.zoom;
@@ -77,6 +98,16 @@
   // Drag de nó individual
   let draggingNodeId: string | null = null;
   let dragOffset = { x: 0, y: 0 };
+
+  function handleCardClick(e: MouseEvent, node: CanvasNode) {
+    if (connectingFromId) {
+      e.stopPropagation();
+      if (connectingFromId !== node.id) {
+        canvasStore.connectNodes(connectingFromId, node.id);
+      }
+      connectingFromId = null;
+    }
+  }
 
   function startDragNode(e: MouseEvent, node: CanvasNode) {
     e.stopPropagation();
@@ -90,6 +121,7 @@
 
     draggingNodeId = node.id;
     canvasStore.selectedNodeId = node.id;
+    canvasStore.selectedEdgeId = null;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     dragOffset = {
       x: e.clientX - rect.left,
@@ -101,7 +133,11 @@
         const cRect = containerEl.getBoundingClientRect();
         const curX = (ev.clientX - cRect.left - canvasStore.panX) / canvasStore.zoom;
         const curY = (ev.clientY - cRect.top - canvasStore.panY) / canvasStore.zoom;
-        canvasStore.updateNodePosition(draggingNodeId, curX - dragOffset.x / canvasStore.zoom, curY - dragOffset.y / canvasStore.zoom);
+        canvasStore.updateNodePosition(
+          draggingNodeId,
+          curX - dragOffset.x / canvasStore.zoom,
+          curY - dragOffset.y / canvasStore.zoom
+        );
       }
     };
 
@@ -116,7 +152,7 @@
     window.addEventListener('mouseup', onUp);
   }
 
-  function handleInsertEntity(item: typeof manuscript.items[0]) {
+  function handleInsertEntity(item: (typeof manuscript.items)[0]) {
     canvasStore.addEntityNode(
       item.id,
       item.title,
@@ -128,23 +164,166 @@
     showAddEntityPicker = false;
   }
 
-  // Calcula linha SVG entre nós
+  // --- Upload e Manipulação de Imagens nos Post-its ---
+  function promptImageUpload(nodeId: string) {
+    pendingImageNodeId = nodeId;
+    if (imageInputEl) {
+      imageInputEl.value = '';
+      imageInputEl.click();
+    }
+  }
+
+  function handleImageFileSelected(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (file && pendingImageNodeId) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        if (dataUrl && pendingImageNodeId) {
+          canvasStore.updateNodeImage(pendingImageNodeId, dataUrl);
+          pendingImageNodeId = null;
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleCardPaste(e: ClipboardEvent, nodeId: string) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const dataUrl = ev.target?.result as string;
+            if (dataUrl) {
+              canvasStore.updateNodeImage(nodeId, dataUrl);
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+        break;
+      }
+    }
+  }
+
+  function handleCardDrop(e: DragEvent, nodeId: string) {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer?.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const dataUrl = ev.target?.result as string;
+        if (dataUrl) {
+          canvasStore.updateNodeImage(nodeId, dataUrl);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  function handleOpenEntityInEditor(node: CanvasNode) {
+    if (node.file) {
+      manuscript.selectScene(node.file);
+    }
+  }
+
+  // --- Cálculo Matemático de Interseção de Bordas para Arestas SVG ---
+  function getNodeBorderIntersection(source: CanvasNode, target: CanvasNode) {
+    const scx = source.x + source.width / 2;
+    const scy = source.y + source.height / 2;
+    const tcx = target.x + target.width / 2;
+    const tcy = target.y + target.height / 2;
+
+    const dx = tcx - scx;
+    const dy = tcy - scy;
+
+    if (Math.abs(dx) < 0.001 && Math.abs(dy) < 0.001) {
+      return { x: scx, y: scy };
+    }
+
+    // Compara inclinação do vetor com a diagonal do retângulo
+    if (Math.abs(dx) * (source.height / 2) > Math.abs(dy) * (source.width / 2)) {
+      // Cruza borda vertical esquerda ou direita
+      if (dx > 0) {
+        return {
+          x: source.x + source.width,
+          y: scy + (dy / dx) * (source.width / 2),
+        };
+      } else {
+        return {
+          x: source.x,
+          y: scy - (dy / dx) * (source.width / 2),
+        };
+      }
+    } else {
+      // Cruza borda horizontal superior ou inferior
+      if (dy > 0) {
+        return {
+          x: scx + (dx / dy) * (source.height / 2),
+          y: source.y + source.height,
+        };
+      } else {
+        return {
+          x: scx - (dx / dy) * (source.height / 2),
+          y: source.y,
+        };
+      }
+    }
+  }
+
   function getEdgeCoords(edge: CanvasEdge) {
     if (!canvasStore.currentCanvas) return null;
     const from = canvasStore.currentCanvas.nodes.find((n) => n.id === edge.fromNode);
     const to = canvasStore.currentCanvas.nodes.find((n) => n.id === edge.toNode);
     if (!from || !to) return null;
 
-    const x1 = from.x + from.width / 2;
-    const y1 = from.y + from.height / 2;
-    const x2 = to.x + to.width / 2;
-    const y2 = to.y + to.height / 2;
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
+    const p1 = getNodeBorderIntersection(from, to);
+    const p2 = getNodeBorderIntersection(to, from);
 
-    return { x1, y1, x2, y2, midX, midY };
+    // Recuo sutil na chegada para o marcador de ponta de seta tocar a borda perfeitamente
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy);
+    let endX = p2.x;
+    let endY = p2.y;
+    if (len > 12) {
+      const ux = dx / len;
+      const uy = dy / len;
+      endX = p2.x - ux * 4;
+      endY = p2.y - uy * 4;
+    }
+
+    const midX = (p1.x + p2.x) / 2;
+    const midY = (p1.y + p2.y) / 2;
+
+    return { x1: p1.x, y1: p1.y, x2: endX, y2: endY, midX, midY };
+  }
+
+  function promptEditEdgeLabel(edge: CanvasEdge) {
+    const current = edge.label || '';
+    const newLabel = window.prompt(t('canvas.edgeLabelPrompt'), current);
+    if (newLabel !== null) {
+      canvasStore.updateEdgeLabel(edge.id, newLabel);
+    }
   }
 </script>
+
+<svelte:window onkeydown={handleWindowKeyDown} />
+
+<!-- Input oculto para upload de imagens nos post-its -->
+<input
+  type="file"
+  accept="image/*"
+  class="sr-only"
+  bind:this={imageInputEl}
+  onchange={handleImageFileSelected}
+/>
 
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <div
@@ -224,11 +403,19 @@
     <div class="entity-picker-dropdown">
       <div class="picker-header">
         <span class="picker-title">{t('canvas.selectEntityPlaceholder')}</span>
-        <button type="button" class="btn-close-picker" onclick={() => (showAddEntityPicker = false)}>✕</button>
+        <button
+          type="button"
+          class="btn-close-picker"
+          onclick={() => (showAddEntityPicker = false)}>✕</button
+        >
       </div>
       <div class="picker-list">
         {#each manuscript.items as it}
-          <button type="button" class="picker-item" onclick={() => handleInsertEntity(it)}>
+          <button
+            type="button"
+            class="picker-item"
+            onclick={() => handleInsertEntity(it)}
+          >
             <span class="item-kind-badge">{it.kind}</span>
             <span class="item-title">{it.title}</span>
           </button>
@@ -240,8 +427,14 @@
   <!-- Mensagem de Conexão Ativa -->
   {#if connectingFromId}
     <div class="connecting-banner">
-      <span>🔗 Clique no cartão de destino para criar a conexão direcionada...</span>
-      <button type="button" class="btn-cancel-conn" onclick={() => (connectingFromId = null)}>Cancelar</button>
+      <span>🔗 {t('canvas.connectingInstruction')}</span>
+      <button
+        type="button"
+        class="btn-cancel-conn"
+        onclick={() => (connectingFromId = null)}
+      >
+        {t('canvas.cancelConnection')} (Esc)
+      </button>
     </div>
   {/if}
 
@@ -250,49 +443,114 @@
     class="canvas-infinite-plane"
     style="transform: translate({canvasStore.panX}px, {canvasStore.panY}px) scale({canvasStore.zoom});"
   >
-    <!-- Camada SVG de Arestas e Setas -->
+    <!-- Camada SVG de Arestas e Setas (com overflow visible e coordenadas relativas ao plano) -->
     <svg class="canvas-svg-layer" aria-hidden="true">
       <defs>
         <marker
-          id="arrow-end"
+          id="canvas-arrow-end"
           viewBox="0 0 10 10"
-          refX="10"
+          refX="9"
           refY="5"
-          markerWidth="6"
-          markerHeight="6"
+          markerWidth="7"
+          markerHeight="7"
           orient="auto-start-reverse"
         >
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="#849864" />
+          <path d="M 0 1 L 9 5 L 0 9 z" fill="#5E6F45" />
+        </marker>
+        <marker
+          id="canvas-arrow-selected"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="7"
+          markerHeight="7"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 1 L 9 5 L 0 9 z" fill="#B91C1C" />
         </marker>
       </defs>
 
       {#if canvasStore.currentCanvas}
-        {#each canvasStore.currentCanvas.edges as edge}
+        {#each canvasStore.currentCanvas.edges as edge (edge.id)}
           {@const coords = getEdgeCoords(edge)}
           {#if coords}
-            <g class="canvas-edge-group">
+            <g
+              class="canvas-edge-group"
+              class:selected={canvasStore.selectedEdgeId === edge.id}
+            >
+              <!-- Linha de toque invisível para facilitar seleção -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
               <line
                 x1={coords.x1}
                 y1={coords.y1}
                 x2={coords.x2}
                 y2={coords.y2}
-                stroke="#849864"
-                stroke-width="2"
-                marker-end="url(#arrow-end)"
+                stroke="transparent"
+                stroke-width="16"
+                class="edge-hitbox"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  canvasStore.selectedEdgeId = edge.id;
+                }}
               />
-              {#if edge.label}
-                <text
-                  x={coords.midX}
-                  y={coords.midY - 8}
-                  fill="#5E6F45"
-                  font-size="11"
-                  font-weight="600"
-                  text-anchor="middle"
-                  class="edge-label"
+
+              <!-- Linha visível conectando os cartões -->
+              <line
+                x1={coords.x1}
+                y1={coords.y1}
+                x2={coords.x2}
+                y2={coords.y2}
+                stroke={canvasStore.selectedEdgeId === edge.id ? '#B91C1C' : '#5E6F45'}
+                stroke-width={canvasStore.selectedEdgeId === edge.id ? '3' : '2'}
+                stroke-linecap="round"
+                stroke-dasharray={edge.fromEnd === 'dashed' ? '5,5' : 'none'}
+                marker-end={canvasStore.selectedEdgeId === edge.id
+                  ? 'url(#canvas-arrow-selected)'
+                  : 'url(#canvas-arrow-end)'}
+                class="edge-line"
+              />
+
+              <!-- Badge central com rótulo e botão de exclusão da conexão -->
+              <foreignObject
+                x={coords.midX - 70}
+                y={coords.midY - 14}
+                width="140"
+                height="28"
+                class="edge-foreign-obj"
+              >
+                <div
+                  class="edge-badge"
+                  class:selected={canvasStore.selectedEdgeId === edge.id}
                 >
-                  {edge.label}
-                </text>
-              {/if}
+                  <button
+                    type="button"
+                    class="edge-label-btn"
+                    title="Clique duas vezes para renomear"
+                    ondblclick={(e) => {
+                      e.stopPropagation();
+                      promptEditEdgeLabel(edge);
+                    }}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      canvasStore.selectedEdgeId = edge.id;
+                    }}
+                  >
+                    {edge.label || '🔗'}
+                  </button>
+                  <button
+                    type="button"
+                    class="edge-delete-btn"
+                    title={t('canvas.deleteEdge')}
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      canvasStore.deleteEdge(edge.id);
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </foreignObject>
             </g>
           {/if}
         {/each}
@@ -303,36 +561,60 @@
     {#if canvasStore.currentCanvas}
       {#each canvasStore.currentCanvas.nodes as node (node.id)}
         {#if node.type === 'text'}
-          <!-- Cartão Post-it Livre -->
+          <!-- Cartão Post-it Livre com Suporte a Imagens -->
           <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div
             class="canvas-card postit-card"
             class:selected={canvasStore.selectedNodeId === node.id}
+            class:connecting-source={connectingFromId === node.id}
+            class:connect-target={connectingFromId && connectingFromId !== node.id}
             style="
               left: {node.x}px;
               top: {node.y}px;
               width: {node.width}px;
-              height: {node.height}px;
+              min-height: {node.height}px;
               background-color: {POSTIT_COLORS[node.color || '1'] || '#FEF9C3'};
             "
             onmousedown={(e) => startDragNode(e, node)}
+            onclick={(e) => handleCardClick(e, node)}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={(e) => handleCardDrop(e, node.id)}
             role="article"
           >
+            <!-- Barra Superior do Post-it -->
             <div class="card-top-bar">
-              <span class="card-drag-handle">⠿</span>
+              <span class="card-drag-handle" title="Arraste para reposicionar">⠿</span>
               <div class="card-controls">
                 <button
                   type="button"
                   class="card-action-btn"
-                  onclick={() => (connectingFromId = node.id)}
-                  title="Conectar a outro nó"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    promptImageUpload(node.id);
+                  }}
+                  title={t('canvas.addImage')}
+                >
+                  🖼️
+                </button>
+                <button
+                  type="button"
+                  class="card-action-btn"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    connectingFromId = node.id;
+                  }}
+                  title={t('canvas.connectCard')}
                 >
                   🔗
                 </button>
                 <button
                   type="button"
                   class="card-action-btn"
-                  onclick={() => canvasStore.deleteNode(node.id)}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    canvasStore.deleteNode(node.id);
+                  }}
                   title={t('canvas.deleteNode')}
                 >
                   ✕
@@ -340,19 +622,46 @@
               </div>
             </div>
 
+            <!-- Imagem do Post-it (se houver) -->
+            {#if node.image_url}
+              <div class="postit-image-container">
+                <img
+                  src={node.image_url}
+                  alt="Imagem da anotação"
+                  class="postit-image"
+                />
+                <button
+                  type="button"
+                  class="btn-remove-postit-image"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    canvasStore.updateNodeImage(node.id, null);
+                  }}
+                  title={t('canvas.removeImage')}
+                >
+                  ✕
+                </button>
+              </div>
+            {/if}
+
+            <!-- Área de Texto do Post-it -->
             <textarea
               class="postit-textarea"
               bind:value={node.text}
               oninput={() => canvasStore.saveNow()}
-              placeholder="Digite aqui sua ideia..."
+              onpaste={(e) => handleCardPaste(e, node.id)}
+              placeholder="Digite sua ideia ou cole/solte uma imagem..."
             ></textarea>
           </div>
         {:else if node.type === 'file'}
-          <!-- Cartão de Entidade do Mundo / Cena -->
+          <!-- Cartão de Entidade do Mundo / Cena Interligado -->
           <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
           <div
             class="canvas-card entity-card"
             class:selected={canvasStore.selectedNodeId === node.id}
+            class:connecting-source={connectingFromId === node.id}
+            class:connect-target={connectingFromId && connectingFromId !== node.id}
             style="
               left: {node.x}px;
               top: {node.y}px;
@@ -360,6 +669,11 @@
               height: {node.height}px;
             "
             onmousedown={(e) => startDragNode(e, node)}
+            onclick={(e) => handleCardClick(e, node)}
+            ondblclick={(e) => {
+              e.stopPropagation();
+              handleOpenEntityInEditor(node);
+            }}
             role="article"
           >
             <div class="card-top-bar">
@@ -370,15 +684,21 @@
                 <button
                   type="button"
                   class="card-action-btn"
-                  onclick={() => (connectingFromId = node.id)}
-                  title="Conectar a outro nó"
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    connectingFromId = node.id;
+                  }}
+                  title={t('canvas.connectCard')}
                 >
                   🔗
                 </button>
                 <button
                   type="button"
                   class="card-action-btn"
-                  onclick={() => canvasStore.deleteNode(node.id)}
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    canvasStore.deleteNode(node.id);
+                  }}
                   title={t('canvas.deleteNode')}
                 >
                   ✕
@@ -393,13 +713,30 @@
               {/if}
             </div>
 
-            <button
-              type="button"
-              class="btn-inspect-entity"
-              onclick={() => onSelectEntity?.(node)}
-            >
-              📄 {t('canvas.viewDetails')}
-            </button>
+            <div class="entity-card-actions">
+              <button
+                type="button"
+                class="btn-card-action primary"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  handleOpenEntityInEditor(node);
+                }}
+                title="Abrir no editor"
+              >
+                📖 {t('graph.openInEditor')}
+              </button>
+              <button
+                type="button"
+                class="btn-card-action"
+                onclick={(e) => {
+                  e.stopPropagation();
+                  onSelectEntity?.(node);
+                }}
+                title="Inspecionar detalhes"
+              >
+                📄 {t('canvas.viewDetails')}
+              </button>
+            </div>
           </div>
         {/if}
       {/each}
@@ -428,7 +765,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(8px);
     padding: 6px 10px;
     border-radius: 8px;
@@ -488,17 +825,35 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    animation: fadeInSlide 0.2s ease-out;
+  }
+
+  @keyframes fadeInSlide {
+    from {
+      opacity: 0;
+      transform: translate(-50%, -8px);
+    }
+    to {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
   }
 
   .btn-cancel-conn {
-    background: rgba(0, 0, 0, 0.2);
+    background: rgba(0, 0, 0, 0.25);
     border: none;
     color: #FFFFFF;
-    padding: 2px 8px;
-    border-radius: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 11px;
+    font-weight: 600;
+    transition: background-color 0.15s ease;
+  }
+
+  .btn-cancel-conn:hover {
+    background: rgba(0, 0, 0, 0.4);
   }
 
   .entity-picker-dropdown {
@@ -575,29 +930,118 @@
     pointer-events: all;
   }
 
+  /* Camada SVG: perfeitamente alinhada com as coordenadas do plano infinito */
   .canvas-svg-layer {
     position: absolute;
-    top: -5000px;
-    left: -5000px;
-    width: 10000px;
-    height: 10000px;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
     pointer-events: none;
+  }
+
+  .canvas-edge-group {
+    pointer-events: stroke;
+  }
+
+  .edge-hitbox {
+    cursor: pointer;
+  }
+
+  .edge-line {
+    transition: stroke 0.15s ease, stroke-width 0.15s ease;
+  }
+
+  .canvas-edge-group:hover .edge-line {
+    stroke: #3F4D2E;
+    stroke-width: 3;
+  }
+
+  .edge-foreign-obj {
+    pointer-events: none;
+  }
+
+  .edge-badge {
+    pointer-events: all;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    background-color: var(--color-paper-elevated, #FFFFFF);
+    border: 1px solid var(--color-olive, #5E6F45);
+    border-radius: 9999px;
+    padding: 2px 6px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--color-olive, #5E6F45);
+    max-width: 130px;
+    margin: 0 auto;
+  }
+
+  .edge-badge.selected {
+    border-color: #B91C1C;
+    color: #B91C1C;
+    box-shadow: 0 0 0 1px #B91C1C;
+  }
+
+  .edge-label-btn {
+    background: none;
+    border: none;
+    font-size: 10px;
+    font-weight: 600;
+    color: inherit;
+    cursor: pointer;
+    padding: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
+  }
+
+  .edge-delete-btn {
+    background: none;
+    border: none;
+    font-size: 9px;
+    color: var(--color-ink-muted, #726E65);
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 2px;
+  }
+
+  .edge-delete-btn:hover {
+    color: #B91C1C;
+    background-color: rgba(185, 28, 28, 0.1);
   }
 
   .canvas-card {
     position: absolute;
     border-radius: 8px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(0, 0, 0, 0.14);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
     display: flex;
     flex-direction: column;
     overflow: hidden;
     cursor: move;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
   }
 
   .canvas-card.selected {
     border-color: var(--color-olive, #5E6F45);
-    box-shadow: 0 0 0 2px var(--color-olive, #5E6F45), 0 8px 18px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 0 0 2px var(--color-olive, #5E6F45), 0 8px 18px rgba(0, 0, 0, 0.14);
+  }
+
+  .canvas-card.connecting-source {
+    border-color: var(--color-olive, #5E6F45);
+    box-shadow: 0 0 0 3px var(--color-olive, #5E6F45), 0 0 16px rgba(94, 111, 69, 0.35);
+  }
+
+  .canvas-card.connect-target {
+    cursor: crosshair;
+    border-color: var(--color-olive, #5E6F45);
+    border-style: dashed;
+    box-shadow: 0 0 0 2px rgba(94, 111, 69, 0.5);
   }
 
   .card-top-bar {
@@ -605,12 +1049,13 @@
     align-items: center;
     justify-content: space-between;
     padding: 4px 8px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   }
 
   .card-drag-handle {
     font-size: 12px;
-    opacity: 0.4;
+    opacity: 0.5;
+    cursor: grab;
   }
 
   .card-controls {
@@ -627,14 +1072,55 @@
     cursor: pointer;
     padding: 2px 4px;
     border-radius: 4px;
+    transition: background-color 0.12s ease;
   }
 
   .card-action-btn:hover {
     background-color: rgba(0, 0, 0, 0.08);
   }
 
+  /* Post-it com suporte a imagem */
+  .postit-image-container {
+    position: relative;
+    width: 100%;
+    max-height: 140px;
+    overflow: hidden;
+    background-color: rgba(0, 0, 0, 0.04);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .postit-image {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .btn-remove-postit-image {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+  }
+
+  .btn-remove-postit-image:hover {
+    background-color: rgba(185, 28, 28, 0.9);
+  }
+
   .postit-textarea {
     flex: 1;
+    min-height: 80px;
     border: none;
     background: transparent;
     padding: 8px;
@@ -686,20 +1172,43 @@
     overflow: hidden;
   }
 
-  .btn-inspect-entity {
-    width: 100%;
-    border: none;
+  .entity-card-actions {
+    display: flex;
     border-top: 1px solid var(--color-paper-border, #E5E0D8);
     background-color: var(--color-paper-surface, #F8F4EC);
-    color: var(--color-olive, #5E6F45);
+  }
+
+  .btn-card-action {
+    flex: 1;
+    border: none;
+    background: transparent;
+    color: var(--color-ink-charcoal, #1E231D);
     font-size: 11px;
     font-weight: 600;
     padding: 6px;
     cursor: pointer;
     text-align: center;
+    transition: background-color 0.12s ease;
   }
 
-  .btn-inspect-entity:hover {
+  .btn-card-action:hover {
     background-color: var(--color-paper-hover, #F4EFE6);
+  }
+
+  .btn-card-action.primary {
+    color: var(--color-olive, #5E6F45);
+    border-right: 1px solid var(--color-paper-border, #E5E0D8);
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 </style>

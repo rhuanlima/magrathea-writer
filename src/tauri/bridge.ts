@@ -456,6 +456,7 @@ export interface CanvasNode {
   label?: string | null;
   entity_kind?: string | null;
   entity_summary?: string | null;
+  image_url?: string | null;
 }
 
 export interface CanvasEdge {

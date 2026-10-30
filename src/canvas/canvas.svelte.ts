@@ -127,6 +127,18 @@ class CanvasStore {
     }
   }
 
+  updateNodeImage(nodeId: string, imageUrl: string | null) {
+    if (!this.currentCanvas) return;
+    const node = this.currentCanvas.nodes.find((n) => n.id === nodeId);
+    if (node) {
+      node.image_url = imageUrl;
+      if (imageUrl && node.height < 240) {
+        node.height = 240;
+      }
+      void this.saveNow();
+    }
+  }
+
   deleteNode(nodeId: string) {
     if (!this.currentCanvas) return;
     this.currentCanvas.nodes = this.currentCanvas.nodes.filter(
@@ -172,6 +184,15 @@ class CanvasStore {
       this.selectedEdgeId = null;
     }
     void this.saveNow();
+  }
+
+  updateEdgeLabel(edgeId: string, label?: string) {
+    if (!this.currentCanvas) return;
+    const edge = this.currentCanvas.edges.find((e) => e.id === edgeId);
+    if (edge) {
+      edge.label = label?.trim() || undefined;
+      void this.saveNow();
+    }
   }
 
   resetView() {
