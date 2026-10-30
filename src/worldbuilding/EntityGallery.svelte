@@ -14,6 +14,13 @@
   let uploadError = $state<string | null>(null);
   let selectedImage = $state<EntityImageData | null>(null);
 
+  $effect(() => {
+    if (entityId) {
+      selectedImage = null;
+      uploadError = null;
+    }
+  });
+
   async function handleFileSelected(e: Event) {
     const input = e.target as HTMLInputElement;
     if (!input.files || input.files.length === 0) return;
