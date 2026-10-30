@@ -85,6 +85,23 @@ class EditorViewState {
   }
 
   /**
+   * Sai imediatamente do Modo Foco.
+   */
+  exitFocus(view?: EditorView | null): void {
+    if (this.isFocusMode) {
+      this.isFocusMode = false;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('magrathea-focus-mode', 'false');
+      }
+      if (view) {
+        view.dispatch({
+          effects: setFocusMode.of(false),
+        });
+      }
+    }
+  }
+
+  /**
    * Aplica o estado inicial de foco dinâmico no EditorView na montagem.
    */
   applyInitialFocus(view: EditorView): void {

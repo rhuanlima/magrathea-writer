@@ -19,6 +19,9 @@
   --color-bronze-deep: #8C733E;
   --color-chip-bg: #F1F5F9;
   --color-error: #BA1A1A;
+  --color-focus-bg: #FFFFFF;
+  --color-focus-footer-bg: rgba(255, 255, 255, 0.95);
+  --color-focus-footer-border: #E5E7EB;
 
   /* Typography Families */
   --font-literary: 'EB Garamond', Georgia, serif;
@@ -108,6 +111,9 @@
     --color-bronze-text: #D4B97F;
     --color-chip-bg: #33301F;
     --color-error: #FFB4AB;
+    --color-focus-bg: #000000;
+    --color-focus-footer-bg: rgba(0, 0, 0, 0.95);
+    --color-focus-footer-border: #23261F;
   }
 }
 
@@ -129,6 +135,9 @@
   --color-bronze-text: #D4B97F;
   --color-chip-bg: #33301F;
   --color-error: #FFB4AB;
+  --color-focus-bg: #000000;
+  --color-focus-footer-bg: rgba(0, 0, 0, 0.95);
+  --color-focus-footer-border: #23261F;
 }
 
 /* Explicit Light Theme override (Pure White Zen) */
@@ -150,4 +159,7 @@
   --color-bronze-deep: #8C733E;
   --color-chip-bg: #F1F5F9;
   --color-error: #BA1A1A;
+  --color-focus-bg: #FFFFFF;
+  --color-focus-footer-bg: rgba(255, 255, 255, 0.95);
+  --color-focus-footer-border: #E5E7EB;
 }
