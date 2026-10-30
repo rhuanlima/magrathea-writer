@@ -8,6 +8,20 @@
 
   let scene = $derived(manuscript.activeScene);
 
+  $effect(() => {
+    if (scene?.id) {
+      isEditingTitle = false;
+      newTagInput = '';
+    }
+  });
+
+  function getStatusLabel(status: string | null): string {
+    if (status === 'draft') return t('manuscript.status.draft');
+    if (status === 'revised') return t('manuscript.status.revised');
+    if (status === 'final') return t('manuscript.status.final');
+    return status || t('manuscript.status.draft');
+  }
+
   function handleStatusChange(e: Event) {
     const target = e.target as HTMLSelectElement;
     if (scene) {
@@ -112,29 +126,39 @@
       <span class="kind-role">{getItemRoleDescription(scene.kind)}</span>
     </div>
     <div class="title-row">
-      {#if isEditingTitle}
-        <input
-          type="text"
-          class="title-input"
-          bind:value={titleInput}
-          onblur={saveTitleEdit}
-          onkeydown={handleTitleKeyDown}
-        />
-      {:else}
-        <button
-          type="button"
-          class="scene-title-btn"
-          onclick={startTitleEdit}
-          title={t('manuscript.rename')}
-        >
-          <h2 class="scene-title">
-            {scene.title}
-          </h2>
-        </button>
-      {/if}
+      <div class="title-wrapper">
+        <span
+          class="status-dot status-{scene.status || 'draft'}"
+          title="Status: {getStatusLabel(scene.status || 'draft')}"
+        ></span>
+        {#if isEditingTitle}
+          <input
+            type="text"
+            class="title-input"
+            bind:value={titleInput}
+            onblur={saveTitleEdit}
+            onkeydown={handleTitleKeyDown}
+          />
+        {:else}
+          <button
+            type="button"
+            class="scene-title-btn"
+            onclick={startTitleEdit}
+            title={t('manuscript.rename')}
+          >
+            <h2 class="scene-title">
+              {scene.title}
+            </h2>
+          </button>
+        {/if}
+      </div>
 
       <div class="metadata-controls">
-        <label class="status-selector">
+        <label class="status-selector" title="Status literário do manuscrito">
+          <span
+            class="status-dot-mini status-{scene.status || 'draft'}"
+            title={getStatusLabel(scene.status || 'draft')}
+          ></span>
           <select value={scene.status || 'draft'} onchange={handleStatusChange}>
             <option value="draft">{t('manuscript.status.draft')}</option>
             <option value="revised">{t('manuscript.status.revised')}</option>
@@ -215,6 +239,62 @@
     align-items: center;
     justify-content: space-between;
     gap: var(--space-md);
+  }
+
+  .title-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .status-dot-mini {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: inline-block;
+  }
+
+  .status-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background-color: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--radius-sm);
+    padding: 0 8px;
+  }
+
+  .status-selector select {
+    border: none;
+    background: transparent;
+    padding: 4px 4px 4px 0;
+  }
+
+  .status-draft {
+    background-color: #d97706; /* Âmbar */
+    box-shadow: 0 0 6px rgba(217, 119, 6, 0.45);
+  }
+
+  .status-revised {
+    background-color: #2563eb; /* Azul */
+    box-shadow: 0 0 6px rgba(37, 99, 235, 0.45);
+  }
+
+  .status-final {
+    background-color: #16a34a; /* Verde */
+    box-shadow: 0 0 6px rgba(22, 163, 74, 0.45);
   }
 
   .scene-title-btn {

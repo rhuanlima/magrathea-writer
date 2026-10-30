@@ -222,10 +222,10 @@
         </span>
       {/if}
 
-      {#if item.kind === 'scene' && item.status}
+      {#if item.kind === 'scene'}
         <span
-          class="status-dot status-{item.status}"
-          title={getStatusLabel(item.status)}
+          class="status-dot status-{item.status || 'draft'}"
+          title="{getStatusLabel(item.status || 'draft')}"
         ></span>
       {/if}
     </div>
@@ -713,22 +713,26 @@
   }
 
   .status-dot {
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     flex-shrink: 0;
+    transition: background-color 0.2s ease, transform 0.2s ease;
   }
 
   .status-draft {
     background-color: #d97706; /* Âmbar */
+    box-shadow: 0 0 4px rgba(217, 119, 6, 0.4);
   }
 
   .status-revised {
     background-color: #2563eb; /* Azul */
+    box-shadow: 0 0 4px rgba(37, 99, 235, 0.4);
   }
 
   .status-final {
     background-color: #16a34a; /* Verde */
+    box-shadow: 0 0 4px rgba(22, 163, 74, 0.4);
   }
 
   .node-actions {

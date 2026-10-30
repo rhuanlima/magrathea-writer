@@ -49,7 +49,7 @@ describe('AutosaveManager (Escrita Atômica Cifrada com Debounce)', () => {
     await vi.advanceTimersByTimeAsync(500);
 
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith('Texto 3 final');
+    expect(onSave).toHaveBeenCalledWith('Texto 3 final', undefined);
     expect(manager.getStatus()).toBe('saved');
 
     manager.dispose();
@@ -67,8 +67,23 @@ describe('AutosaveManager (Escrita Atômica Cifrada com Debounce)', () => {
 
     await manager.flush();
     expect(onSave).toHaveBeenCalledTimes(1);
-    expect(onSave).toHaveBeenCalledWith('Conteúdo imediato');
+    expect(onSave).toHaveBeenCalledWith('Conteúdo imediato', undefined);
     expect(manager.getStatus()).toBe('saved');
+
+    manager.dispose();
+  });
+
+  it('preserva o targetId correto ao salvar e ao dar flush entre entidades', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const manager = new AutosaveManager({
+      delayMs: 2000,
+      onSave,
+    });
+
+    manager.notifyChange('Dossiê do Personagem A', 'character-123');
+    await manager.flush();
+
+    expect(onSave).toHaveBeenCalledWith('Dossiê do Personagem A', 'character-123');
 
     manager.dispose();
   });

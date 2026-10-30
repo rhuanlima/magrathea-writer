@@ -61,7 +61,23 @@
     });
   }
   let autosaveManager: AutosaveManager | null = null;
-  let lastLoadedSceneId = $state<string | null>(null);
+  let currentEditingSceneId: string | null = null;
+  let loadSequence = 0;
+  let editorResizeObserver: ResizeObserver | null = null;
+
+  function recenterTypewriter() {
+    if (view && editorPreferences.typewriterScrolling) {
+      view.dispatch({
+        effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }),
+      });
+    }
+  }
+
+  function handleWindowResize() {
+    if (editorPreferences.typewriterScrolling) {
+      requestAnimationFrame(recenterTypewriter);
+    }
+  }
 
   let bodyOnly = $derived(splitFrontmatter(currentDoc).body);
   let wordsCount = $derived(countWords(bodyOnly));
@@ -90,16 +106,17 @@
       return;
     }
     currentDoc = initialContent;
+    currentEditingSceneId = manuscript.activeSceneId;
 
     autosaveManager = new AutosaveManager({
       delayMs: 800,
-      onSave: async (content) => {
+      onSave: async (content, targetId) => {
         if (vault.isOpen && !vault.isLocked) {
-          const targetSceneId = manuscript.activeSceneId || 'default_scene';
-          await vault.saveScene(targetSceneId, content);
+          const effectiveId = targetId || currentEditingSceneId || manuscript.activeSceneId || 'default_scene';
+          await vault.saveScene(effectiveId, content);
           await vault.loadVaultIndex();
-          if (manuscript.activeSceneId) {
-            await vault.loadBacklinks(manuscript.activeSceneId);
+          if (effectiveId) {
+            await vault.loadBacklinks(effectiveId);
           }
         }
       },
@@ -140,7 +157,7 @@
         if (onChange) {
           onChange(text);
         }
-        autosaveManager?.notifyChange(text);
+        autosaveManager?.notifyChange(text, currentEditingSceneId || undefined);
 
         const newWords = countWords(splitFrontmatter(text).body);
         const wordsDelta = newWords - prevWords;
@@ -238,6 +255,15 @@
       parent: editorElement,
     });
     editorViewState.applyInitialFocus(view);
+
+    if (editorElement && typeof ResizeObserver !== 'undefined') {
+      editorResizeObserver = new ResizeObserver(() => {
+        if (editorPreferences.typewriterScrolling) {
+          requestAnimationFrame(recenterTypewriter);
+        }
+      });
+      editorResizeObserver.observe(editorElement);
+    }
   });
 
   // Reconfigura instantaneamente o tema e o syntax highlighting do editor ao alternar claro/escuro
@@ -278,19 +304,34 @@
     }
   }
 
+  // Recentraliza o typewriter scrolling sempre que o usuário ativar a preferência
+  $effect(() => {
+    if (editorPreferences.typewriterScrolling && view) {
+      requestAnimationFrame(recenterTypewriter);
+    }
+  });
+
   // Reage à mudança de cena ativa selecionada na barra lateral
   $effect(() => {
     const activeId = manuscript.activeSceneId;
-    if (activeId && activeId !== lastLoadedSceneId && view) {
-      lastLoadedSceneId = activeId;
+    if (activeId && activeId !== currentEditingSceneId && view) {
+      const mySeq = ++loadSequence;
+
       void (async () => {
+        // Se houver edições não salvas no documento anterior, força o salvamento com o ID dele
         if (autosaveManager) {
           await autosaveManager.flush();
         }
+        if (mySeq !== loadSequence) return;
+
         try {
           const scene = manuscript.items.find((i) => i.id === activeId);
           const blobId = scene?.blob_id || activeId;
           const content = await vault.loadScene(blobId);
+
+          if (mySeq !== loadSequence) return;
+
+          currentEditingSceneId = activeId;
           currentDoc = content;
           if (view) {
             view.dispatch({
@@ -300,6 +341,9 @@
                 insert: content,
               },
             });
+            if (editorPreferences.typewriterScrolling) {
+              requestAnimationFrame(recenterTypewriter);
+            }
           }
         } catch (err) {
           console.error('Falha ao carregar conteúdo da cena:', err);
@@ -309,6 +353,10 @@
   });
 
   onDestroy(() => {
+    if (editorResizeObserver) {
+      editorResizeObserver.disconnect();
+      editorResizeObserver = null;
+    }
     if (autosaveManager) {
       void autosaveManager.flush();
       autosaveManager.dispose();
@@ -322,7 +370,7 @@
   });
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onresize={handleWindowResize} />
 
 <div class="editor-wrapper">
   {#if manuscript.activeScene}

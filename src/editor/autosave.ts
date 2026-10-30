@@ -11,19 +11,20 @@ export type AutosaveStatus = 'saved' | 'unsaved' | 'saving' | 'error';
 export interface AutosaveOptions {
   /** Atraso de debounce em milissegundos antes de salvar (padrão: 800ms). */
   delayMs?: number;
-  /** Função assíncrona de salvamento atômico cifrado. */
-  onSave: (content: string) => Promise<void>;
+  /** Função assíncrona de salvamento atômico cifrado vinculada ao ID do item. */
+  onSave: (content: string, targetId?: string) => Promise<void>;
   /** Callback para notificação de transição de estado. */
   onStatusChange?: (status: AutosaveStatus) => void;
 }
 
 export class AutosaveManager {
   private delayMs: number;
-  private onSave: (content: string) => Promise<void>;
+  private onSave: (content: string, targetId?: string) => Promise<void>;
   private onStatusChange?: (status: AutosaveStatus) => void;
 
   private timerId: ReturnType<typeof setTimeout> | null = null;
   private pendingContent: string | null = null;
+  private pendingTargetId: string | null = null;
   private currentStatus: AutosaveStatus = 'saved';
   private isDisposed = false;
 
@@ -43,10 +44,13 @@ export class AutosaveManager {
   /**
    * Notifica que o documento foi modificado pelo autor.
    */
-  notifyChange(content: string): void {
+  notifyChange(content: string, targetId?: string): void {
     if (this.isDisposed) return;
 
     this.pendingContent = content;
+    if (targetId !== undefined) {
+      this.pendingTargetId = targetId;
+    }
     this.setStatus('unsaved');
 
     if (this.timerId !== null) {
@@ -74,11 +78,13 @@ export class AutosaveManager {
     }
 
     const contentToSave = this.pendingContent;
+    const targetIdToSave = this.pendingTargetId ?? undefined;
     this.pendingContent = null;
+    this.pendingTargetId = null;
     this.setStatus('saving');
 
     try {
-      await this.onSave(contentToSave);
+      await this.onSave(contentToSave, targetIdToSave);
       // Se não houver novas alterações pendentes geradas durante a gravação
       if (this.pendingContent === null) {
         this.setStatus('saved');
