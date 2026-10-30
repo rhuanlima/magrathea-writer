@@ -788,11 +788,15 @@ pub fn rename_manuscript_item_internal(
 #[tauri::command]
 pub fn update_scene_metadata(
     state: tauri::State<'_, AppState>,
-    item_id: String,
+    item_id: Option<String>,
+    scene_id: Option<String>,
     status: Option<String>,
-    tags: Vec<String>,
+    tags: Option<Vec<String>>,
 ) -> Result<(), String> {
-    update_scene_metadata_internal(&state, &item_id, status, tags)
+    let id = item_id
+        .or(scene_id)
+        .ok_or_else(|| "ID do item ou cena não informado.".to_string())?;
+    update_scene_metadata_internal(&state, &id, status, tags.unwrap_or_default())
 }
 
 /// Lógica interna para atualização de metadados da cena.

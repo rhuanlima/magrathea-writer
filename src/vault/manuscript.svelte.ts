@@ -140,14 +140,33 @@ class ManuscriptStore {
     status?: string | null,
     tags?: string[]
   ): Promise<void> {
+    const item = this.items.find((it) => it.id === sceneId);
+    const prevStatus = item?.status;
+    const prevTags = item ? [...item.tags] : undefined;
+
+    // Atualização otimista imediata na reatividade Svelte 5
+    if (item) {
+      if (status !== undefined) {
+        item.status = status;
+      }
+      if (tags !== undefined) {
+        item.tags = tags;
+      }
+    }
+
     try {
       await safeInvoke('update_scene_metadata', {
+        item_id: sceneId,
         scene_id: sceneId,
         status: status ?? null,
         tags: tags ?? [],
       });
       await this.refreshTree();
     } catch (err) {
+      if (item) {
+        item.status = prevStatus ?? null;
+        if (prevTags) item.tags = prevTags;
+      }
       this.errorMessage = String(err);
       throw err;
     }

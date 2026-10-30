@@ -93,7 +93,8 @@ export interface RenameItemPayload {
 }
 
 export interface UpdateSceneMetadataPayload {
-  scene_id: string;
+  item_id?: string;
+  scene_id?: string;
   status?: string | null;
   tags?: string[];
 }
@@ -779,7 +780,8 @@ export async function safeInvoke<T>(
     }
     if (cmd === 'update_scene_metadata') {
       const payload = args as unknown as UpdateSceneMetadataPayload;
-      const item = mockItems.find(i => i.id === payload.scene_id);
+      const targetId = payload.item_id || payload.scene_id;
+      const item = mockItems.find(i => i.id === targetId);
       if (item) {
         if (payload.status !== undefined) {
           item.status = payload.status;
