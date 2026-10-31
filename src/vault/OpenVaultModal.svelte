@@ -27,6 +27,8 @@
   let localError = $state<string | null>(null);
   let recentList = $state<RecentVault[]>([]);
   let showPassword = $state(false);
+  let isTargetPasswordless = $state(false);
+  let isCheckingPasswordless = $state(false);
 
   $effect(() => {
     if (isOpen) {
@@ -39,6 +41,28 @@
       localError = null;
       passphrase = '';
       recoveryKey = '';
+    }
+  });
+
+  $effect(() => {
+    const trimmed = targetPath.trim();
+    if (trimmed) {
+      isCheckingPasswordless = true;
+      safeInvoke<boolean>('is_vault_passwordless', {
+        vault_path: trimmed,
+      })
+        .then((pwless) => {
+          isTargetPasswordless = !!pwless;
+        })
+        .catch(() => {
+          isTargetPasswordless = false;
+        })
+        .finally(() => {
+          isCheckingPasswordless = false;
+        });
+    } else {
+      isTargetPasswordless = false;
+      isCheckingPasswordless = false;
     }
   });
 
@@ -93,6 +117,13 @@
         }
         await vault.openWithRecoveryKey(recoveryKey.trim(), trimmedPath);
       } else {
+        if (isTargetPasswordless) {
+          await vault.openWithPassphrase('', trimmedPath);
+          onSuccess?.();
+          onClose();
+          return;
+        }
+
         if (!passphrase) {
           const isPasswordless = await safeInvoke<boolean>('is_vault_passwordless', {
             vault_path: trimmedPath,
@@ -238,7 +269,15 @@
         {/if}
 
         <!-- Autenticação (Senha ou Chave) -->
-        {#if !useRecovery}
+        {#if isTargetPasswordless}
+          <div class="passwordless-banner" role="status">
+            <span class="passwordless-icon">🔓</span>
+            <div class="passwordless-info">
+              <strong>Mundo Livre (Sem Senha)</strong>
+              <span>Este mundo foi criado sem proteção por senha. Clique abaixo para abri-lo diretamente.</span>
+            </div>
+          </div>
+        {:else if !useRecovery}
           <div class="form-group">
             <div class="label-row">
               <label for="open-passphrase" class="form-label">
@@ -284,32 +323,40 @@
           <button
             type="submit"
             class="btn-primary"
-            disabled={vault.isUnlocking}
+            disabled={vault.isUnlocking || isCheckingPasswordless}
           >
-            {vault.isUnlocking ? 'Desbloqueando...' : t('vault.open.unlockButton')}
+            {vault.isUnlocking
+              ? 'Desbloqueando...'
+              : isTargetPasswordless
+                ? '🔓 Entrar no Mundo (Sem Senha)'
+                : t('vault.open.unlockButton')}
           </button>
 
-          <button
-            type="button"
-            class="btn-text"
-            onclick={toggleMode}
-          >
-            {useRecovery
-              ? t('vault.open.usePassphrase')
-              : t('vault.open.useRecoveryKey')}
-          </button>
+          {#if !isTargetPasswordless}
+            <button
+              type="button"
+              class="btn-text"
+              onclick={toggleMode}
+            >
+              {useRecovery
+                ? t('vault.open.usePassphrase')
+                : t('vault.open.useRecoveryKey')}
+            </button>
+          {/if}
         </div>
 
-        <div class="keyring-action-row">
-          <button
-            type="button"
-            class="btn-keyring"
-            onclick={handleOpenWithKeyring}
-            disabled={vault.isUnlocking}
-          >
-            🔑 {t('vault.open.keyringButton')}
-          </button>
-        </div>
+        {#if !isTargetPasswordless}
+          <div class="keyring-action-row">
+            <button
+              type="button"
+              class="btn-keyring"
+              onclick={handleOpenWithKeyring}
+              disabled={vault.isUnlocking}
+            >
+              🔑 {t('vault.open.keyringButton')}
+            </button>
+          </div>
+        {/if}
       </form>
     </div>
   </div>
@@ -499,6 +546,36 @@
     background-color: var(--color-paper-surface, #F8F4EC);
     padding: 8px 10px;
     border-radius: var(--radius-sm, 4px);
+  }
+
+  .passwordless-banner {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--color-paper-surface, #F8F4EC);
+    border: 1px solid var(--color-olive, #5E6F45);
+    border-radius: var(--rounded-default, 4px);
+    padding: 12px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+  }
+
+  .passwordless-icon {
+    font-size: 24px;
+    line-height: 1;
+  }
+
+  .passwordless-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 12px;
+    color: var(--color-ink-charcoal, #1E231D);
+  }
+
+  .passwordless-info strong {
+    font-size: 13px;
+    color: var(--color-olive, #5E6F45);
   }
 
   .recents-label {

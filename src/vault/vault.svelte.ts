@@ -22,6 +22,7 @@ class VaultStore {
   projectTitle = $state<string | null>(null);
   vaultPath = $state<string | null>(null);
   recoveryKeyToken = $state<string | null>(null);
+  isPasswordless = $state(false);
   isCreating = $state(false);
   isUnlocking = $state(false);
   isSaving = $state(false);
@@ -66,6 +67,7 @@ class VaultStore {
       this.vaultId = status.vault_id;
       this.projectTitle = status.project_title;
       this.vaultPath = status.vault_path;
+      this.isPasswordless = status.is_passwordless ?? false;
 
       if (this.isOpen && !this.isLocked) {
         await this.checkKeyringStatus();
@@ -101,6 +103,7 @@ class VaultStore {
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
       this.recoveryKeyToken = response.recovery_key_token;
+      this.isPasswordless = passphrase.trim().length === 0;
 
       if (response.vault_path) {
         addRecentVault({ path: response.vault_path, title: response.project_title || '' });
@@ -138,6 +141,7 @@ class VaultStore {
       this.vaultId = response.vault_id;
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
+      this.isPasswordless = response.is_passwordless ?? false;
 
       if (response.is_open && !response.is_locked && response.vault_path) {
         addRecentVault({ path: response.vault_path, title: response.project_title || '' });
@@ -175,6 +179,7 @@ class VaultStore {
       this.vaultId = response.vault_id;
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
+      this.isPasswordless = response.is_passwordless ?? false;
 
       if (response.is_open && !response.is_locked && response.vault_path) {
         addRecentVault({ path: response.vault_path, title: response.project_title || '' });
@@ -338,6 +343,7 @@ class VaultStore {
       this.vaultId = response.vault_id;
       this.projectTitle = response.project_title;
       this.vaultPath = response.vault_path;
+      this.isPasswordless = response.is_passwordless ?? false;
       this.hasKeyringEnabled = true;
 
       if (response.is_open && !response.is_locked && response.vault_path) {
@@ -506,6 +512,7 @@ class VaultStore {
       this.projectTitle = null;
       this.vaultPath = null;
       this.recoveryKeyToken = null;
+      this.isPasswordless = false;
       this.errorMessage = null;
       this.indexOverview = null;
       this.activeBacklinks = [];

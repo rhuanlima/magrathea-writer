@@ -12,6 +12,11 @@
     localError = null;
 
     try {
+      if (vault.isPasswordless) {
+        await vault.openWithPassphrase('');
+        return;
+      }
+
       if (useRecovery) {
         if (!recoveryKey.trim()) {
           localError = t('vault.unlock.invalidRecoveryKeyError');
@@ -76,89 +81,105 @@
       </div>
     {/if}
 
-    {#if vault.hasKeyringEnabled}
-      <button
-        type="button"
-        class="keyring-unlock-button"
-        onclick={handleUnlockWithKeyring}
-        disabled={vault.isUnlocking}
-      >
-        🔑 {vault.isUnlocking ? t('vault.unlock.unlockingWithKeyring') : t('vault.unlock.unlockWithKeyringButton')}
-      </button>
-
-      <div class="or-separator">
-        <span class="or-text">ou</span>
+    {#if vault.isPasswordless}
+      <div class="passwordless-lock-box">
+        <p class="passwordless-desc">
+          Este mundo foi criado no modo livre (sem senha de proteção).
+        </p>
+        <button
+          type="button"
+          class="submit-button"
+          onclick={() => vault.openWithPassphrase('')}
+          disabled={vault.isUnlocking}
+        >
+          {vault.isUnlocking ? t('vault.unlock.unlocking') : '🔓 Entrar no Mundo (Sem Senha)'}
+        </button>
       </div>
-    {/if}
+    {:else}
+      {#if vault.hasKeyringEnabled}
+        <button
+          type="button"
+          class="keyring-unlock-button"
+          onclick={handleUnlockWithKeyring}
+          disabled={vault.isUnlocking}
+        >
+          🔑 {vault.isUnlocking ? t('vault.unlock.unlockingWithKeyring') : t('vault.unlock.unlockWithKeyringButton')}
+        </button>
 
-    <form class="lock-form" onsubmit={handleUnlock}>
-      {#if !useRecovery}
-        <div class="field-group">
-          <label for="lock-passphrase" class="field-label">
-            {t('vault.unlock.passphraseLabel')}
-          </label>
-          <input
-            id="lock-passphrase"
-            type="password"
-            class="input-field"
-            placeholder={t('vault.unlock.passphrasePlaceholder')}
-            bind:value={passphrase}
-            disabled={vault.isUnlocking}
-            required
-            autocomplete="current-password"
-          />
-        </div>
-      {:else}
-        <div class="field-group">
-          <label for="lock-recovery-key" class="field-label">
-            {t('vault.unlock.recoveryKeyLabel')}
-          </label>
-          <textarea
-            id="lock-recovery-key"
-            class="input-field mono"
-            rows="3"
-            placeholder={t('vault.unlock.recoveryKeyPlaceholder')}
-            bind:value={recoveryKey}
-            disabled={vault.isUnlocking}
-            required
-          ></textarea>
+        <div class="or-separator">
+          <span class="or-text">ou</span>
         </div>
       {/if}
 
-      <div class="form-actions">
+      <form class="lock-form" onsubmit={handleUnlock}>
+        {#if !useRecovery}
+          <div class="field-group">
+            <label for="lock-passphrase" class="field-label">
+              {t('vault.unlock.passphraseLabel')}
+            </label>
+            <input
+              id="lock-passphrase"
+              type="password"
+              class="input-field"
+              placeholder={t('vault.unlock.passphrasePlaceholder')}
+              bind:value={passphrase}
+              disabled={vault.isUnlocking}
+              required
+              autocomplete="current-password"
+            />
+          </div>
+        {:else}
+          <div class="field-group">
+            <label for="lock-recovery-key" class="field-label">
+              {t('vault.unlock.recoveryKeyLabel')}
+            </label>
+            <textarea
+              id="lock-recovery-key"
+              class="input-field mono"
+              rows="3"
+              placeholder={t('vault.unlock.recoveryKeyPlaceholder')}
+              bind:value={recoveryKey}
+              disabled={vault.isUnlocking}
+              required
+            ></textarea>
+          </div>
+        {/if}
+
+        <div class="form-actions">
+          <button
+            type="submit"
+            class="submit-button"
+            disabled={vault.isUnlocking}
+          >
+            {vault.isUnlocking
+              ? t('vault.unlock.unlocking')
+              : t('vault.unlock.unlockButton')}
+          </button>
+        </div>
+      </form>
+
+      <div class="alt-options">
         <button
-          type="submit"
-          class="submit-button"
+          type="button"
+          class="text-link"
+          onclick={toggleMode}
           disabled={vault.isUnlocking}
         >
-          {vault.isUnlocking
-            ? t('vault.unlock.unlocking')
-            : t('vault.unlock.unlockButton')}
+          {useRecovery
+            ? `← ${t('vault.unlock.usePassphrase')}`
+            : t('vault.unlock.useRecoveryKey')}
+        </button>
+
+        <button
+          type="button"
+          class="text-link secondary"
+          onclick={handleCloseVault}
+          disabled={vault.isUnlocking}
+        >
+          {t('vault.unlock.closeVaultButton')}
         </button>
       </div>
-    </form>
-
-    <div class="alt-options">
-      <button
-        type="button"
-        class="text-link"
-        onclick={toggleMode}
-        disabled={vault.isUnlocking}
-      >
-        {useRecovery
-          ? `← ${t('vault.unlock.usePassphrase')}`
-          : t('vault.unlock.useRecoveryKey')}
-      </button>
-
-      <button
-        type="button"
-        class="text-link secondary"
-        onclick={handleCloseVault}
-        disabled={vault.isUnlocking}
-      >
-        {t('vault.unlock.closeVaultButton')}
-      </button>
-    </div>
+    {/if}
 
     <div class="lock-footer">
       <small>{t('vault.unlock.autoLockNotice')}</small>
@@ -365,6 +386,21 @@
   .submit-button:disabled {
     opacity: 0.6;
     cursor: not-allowed;
+  }
+
+  .passwordless-lock-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    width: 100%;
+    margin-top: var(--space-md);
+  }
+
+  .passwordless-desc {
+    font-size: 13px;
+    color: var(--color-ink-muted);
+    text-align: center;
+    line-height: 1.5;
   }
 
   .alt-options {
