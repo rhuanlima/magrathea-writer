@@ -51,6 +51,7 @@ export interface VaultStatusResponse {
   vault_id: string | null;
   project_title: string | null;
   vault_path: string | null;
+  is_passwordless?: boolean;
 }
 
 export type ManifestItemKind =
@@ -694,7 +695,8 @@ export async function safeInvoke<T>(
     }
     if (cmd === 'is_vault_passwordless') {
       const payload = args as unknown as { vault_path?: string };
-      return (payload?.vault_path?.includes('passwordless') || false) as T;
+      const pathLower = (payload?.vault_path || '').toLowerCase();
+      return (pathLower.includes('passwordless') || pathLower.includes('sem_senha') || pathLower.includes('sem senha')) as T;
     }
     if (cmd === 'open_vault_with_passphrase') {
       const payload = args as unknown as OpenVaultPayload;

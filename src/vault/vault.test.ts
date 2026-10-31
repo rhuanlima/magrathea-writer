@@ -130,4 +130,25 @@ describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
       'Cofre não está aberto ou está bloqueado.'
     );
   });
+
+  it('cria cofre sem senha (modo livre) e marca isPasswordless como true', async () => {
+    const response = await vault.createVault(
+      '/home/author/Documents',
+      'Mundo Livre',
+      ''
+    );
+
+    expect(response.vault_id).toBeDefined();
+    expect(vault.isOpen).toBe(true);
+    expect(vault.isLocked).toBe(false);
+    expect(vault.isPasswordless).toBe(true);
+  });
+
+  it('abre cofre sem senha com frase-senha vazia com sucesso', async () => {
+    const status = await vault.openWithPassphrase('', '/home/author/Documents/Sem_senha.magrathea');
+    expect(status.is_open).toBe(true);
+    expect(status.is_locked).toBe(false);
+    expect(vault.isOpen).toBe(true);
+    expect(vault.isLocked).toBe(false);
+  });
 });

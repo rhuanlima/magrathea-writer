@@ -41,6 +41,9 @@ pub struct VaultStatusResponse {
     pub project_title: Option<String>,
     /// Caminho do cofre no disco, se houver.
     pub vault_path: Option<String>,
+    /// Indica se o cofre foi criado no modo livre (sem senha de acesso).
+    #[serde(default)]
+    pub is_passwordless: bool,
 }
 
 /// Retorna mensagem inicial de boas-vindas para verificação da ponte IPC.
@@ -148,6 +151,40 @@ pub fn get_vault_status(state: tauri::State<'_, AppState>) -> Result<VaultStatus
     get_vault_status_internal(&state)
 }
 
+/// Normaliza o caminho do cofre removendo barras finais e localizando o diretório real do cofre.
+pub fn normalize_vault_path(raw_path: &Path) -> PathBuf {
+    let path_str = raw_path.to_string_lossy();
+    let trimmed = path_str.trim_end_matches(['/', '\\']);
+    let cleaned = PathBuf::from(trimmed);
+
+    // 1. Se cleaned/header existe, este é o diretório raiz do cofre
+    if cleaned.join("header").exists() {
+        return cleaned;
+    }
+
+    // 2. Se cleaned/.magrathea/header existe
+    if cleaned.join(".magrathea").join("header").exists() {
+        return cleaned.join(".magrathea");
+    }
+
+    // 3. Se cleaned com extensão .magrathea existe
+    let with_ext = cleaned.with_extension("magrathea");
+    if with_ext.join("header").exists() {
+        return with_ext;
+    }
+
+    cleaned
+}
+
+/// Verifica se um determinado cofre foi criado no modo livre (sem senha).
+pub fn is_path_passwordless(vault_path: &Path) -> bool {
+    let normalized = normalize_vault_path(vault_path);
+    normalized.join("passwordless").exists()
+        || normalized.join(".magrathea").join("passwordless").exists()
+        || vault_path.join("passwordless").exists()
+        || vault_path.join(".magrathea").join("passwordless").exists()
+}
+
 /// Lógica interna para obter o status atual do cofre em memória.
 pub fn get_vault_status_internal(state: &AppState) -> Result<VaultStatusResponse, String> {
     let guard = state
@@ -156,22 +193,32 @@ pub fn get_vault_status_internal(state: &AppState) -> Result<VaultStatusResponse
         .map_err(|_| "Falha ao obter lock do estado do cofre.".to_string())?;
 
     match &*guard {
-        Some(vault) => Ok(VaultStatusResponse {
-            is_open: true,
-            is_locked: vault.is_locked(),
-            vault_id: Some(vault.header().vault_id.clone()),
-            project_title: vault.manifest().ok().map(|m| m.project_title.clone()),
-            vault_path: Some(vault.root_path().display().to_string()),
-        }),
+        Some(vault) => {
+            let is_pwless = is_path_passwordless(vault.root_path());
+            Ok(VaultStatusResponse {
+                is_open: true,
+                is_locked: vault.is_locked(),
+                vault_id: Some(vault.header().vault_id.clone()),
+                project_title: vault.manifest().ok().map(|m| m.project_title.clone()),
+                vault_path: Some(vault.root_path().display().to_string()),
+                is_passwordless: is_pwless,
+            })
+        }
         None => {
             let last_path = state.last_vault_path.lock().ok().and_then(|p| p.clone());
             let last_title = state.last_project_title.lock().ok().and_then(|t| t.clone());
+            let is_pwless = last_path
+                .as_ref()
+                .map(|p| is_path_passwordless(Path::new(p)))
+                .unwrap_or(false);
+
             Ok(VaultStatusResponse {
                 is_open: false,
                 is_locked: true,
                 vault_id: None,
                 project_title: last_title,
                 vault_path: last_path,
+                is_passwordless: is_pwless,
             })
         }
     }
@@ -232,12 +279,7 @@ pub fn open_vault_with_passphrase(
 #[tauri::command]
 pub fn is_vault_passwordless(vault_path: String) -> Result<bool, String> {
     let raw_path = PathBuf::from(vault_path.trim());
-    let path = if raw_path.extension().is_some_and(|ext| ext == "magrathea") {
-        raw_path
-    } else {
-        raw_path.join(".magrathea")
-    };
-    Ok(path.join("passwordless").exists())
+    Ok(is_path_passwordless(&raw_path))
 }
 
 /// Lógica interna para abertura de cofre com frase-senha.
@@ -247,17 +289,13 @@ pub fn open_vault_with_passphrase_internal(
     passphrase: &str,
 ) -> Result<VaultStatusResponse, String> {
     let raw_path = PathBuf::from(vault_path.trim());
-    let path = if raw_path.extension().is_some_and(|ext| ext == "magrathea") {
-        raw_path
-    } else {
-        raw_path.join(".magrathea")
-    };
+    let path = normalize_vault_path(&raw_path);
     if !path.exists() {
         return Err("O caminho especificado para o cofre não foi encontrado.".to_string());
     }
 
-    let is_passwordless = path.join("passwordless").exists();
-    let effective_passphrase = if passphrase.trim().is_empty() && is_passwordless {
+    let is_passwordless = is_path_passwordless(&path);
+    let effective_passphrase = if is_passwordless {
         PASSWORDLESS_MARKER
     } else {
         passphrase
@@ -298,6 +336,7 @@ pub fn open_vault_with_passphrase_internal(
         vault_id: Some(vault_id),
         project_title: Some(project_title),
         vault_path: Some(canonical_path),
+        is_passwordless,
     })
 }
 
@@ -317,7 +356,8 @@ pub fn open_vault_with_recovery_key_internal(
     vault_path: &str,
     recovery_key: &str,
 ) -> Result<VaultStatusResponse, String> {
-    let path = PathBuf::from(vault_path.trim());
+    let raw_path = PathBuf::from(vault_path.trim());
+    let path = normalize_vault_path(&raw_path);
     if !path.exists() {
         return Err("O caminho especificado para o cofre não foi encontrado.".to_string());
     }
@@ -328,6 +368,7 @@ pub fn open_vault_with_recovery_key_internal(
     let unlocked_vault = VaultStorage::open_with_recovery_key(&path, &key)
         .map_err(|_| "Chave de recuperação incorreta ou cofre corrompido.".to_string())?;
 
+    let is_passwordless = is_path_passwordless(&path);
     let vault_id = unlocked_vault.header().vault_id.clone();
     let project_title = unlocked_vault
         .manifest()
@@ -360,6 +401,7 @@ pub fn open_vault_with_recovery_key_internal(
         vault_id: Some(vault_id),
         project_title: Some(project_title),
         vault_path: Some(canonical_path),
+        is_passwordless,
     })
 }
 
@@ -1387,11 +1429,12 @@ pub fn open_vault_with_keyring_internal(
     vault_path: &str,
 ) -> Result<VaultStatusResponse, String> {
     let raw_path = PathBuf::from(vault_path.trim());
-    if !raw_path.exists() {
+    let path = normalize_vault_path(&raw_path);
+    if !path.exists() {
         return Err(format!("Caminho do cofre não encontrado: {vault_path}"));
     }
 
-    let header_path = raw_path.join("header");
+    let header_path = path.join("header");
     let header_bytes =
         fs::read(&header_path).map_err(|e| format!("Falha ao ler cabeçalho do cofre: {e}"))?;
     let header: crate::vault::VaultHeader =

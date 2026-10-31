@@ -37,7 +37,7 @@
   import { focusPreferences } from './preferences/focus-preferences.svelte';
   import { editorViewState } from './editor/editor-view-state.svelte';
   import { InactivityTracker } from './vault/inactivity';
-  import { listenToEvent } from './tauri/bridge';
+  import { listenToEvent, safeInvoke } from './tauri/bridge';
 
   let isCreateModalOpen = $state(false);
   let isOpenVaultModalOpen = $state(false);
@@ -49,7 +49,20 @@
   let tracker: InactivityTracker | null = null;
   let unlistenMenuEvents: Array<() => void> = [];
 
-  function handleOpenVaultAction(path?: string) {
+  async function handleOpenVaultAction(path?: string) {
+    if (path) {
+      try {
+        const isPwless = await safeInvoke<boolean>('is_vault_passwordless', {
+          vault_path: path,
+        });
+        if (isPwless) {
+          await vault.openWithPassphrase('', path);
+          return;
+        }
+      } catch {
+        // Fallback caso ocorra erro
+      }
+    }
     prefilledVaultPath = path;
     isOpenVaultModalOpen = true;
   }
@@ -150,7 +163,12 @@
     tracker = new InactivityTracker({
       timeoutMs: (initialMins > 0 ? initialMins : 30) * 60 * 1000,
       onTimeout: () => {
-        if (vault.isOpen && !vault.isLocked && focusPreferences.autoLockMinutes > 0) {
+        if (
+          vault.isOpen &&
+          !vault.isLocked &&
+          !vault.isPasswordless &&
+          focusPreferences.autoLockMinutes > 0
+        ) {
           void vault.lockVault();
         }
       },
