@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Magrathea Writer — Sua oficina particular de criação de mundos</title>
-  <meta name="description" content="Ambiente de escrita e segundo cérebro literário local-first, offline e cifrado para autores de ficção e worldbuilders. Sem nuvem, sem assinaturas.">
+  <meta name="description"
+    content="Ambiente de escrita e segundo cérebro literário local-first, offline e cifrado para autores de ficção e worldbuilders. Sem nuvem, sem assinaturas.">
   <link rel="icon" type="image/png" href="assets/app-icon.png">
 
   <!-- Google Fonts: EB Garamond, Plus Jakarta Sans, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..700;1,400..700&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
 
   <style>
     /* DESIGN TOKENS DE ACORDO COM DESIGN.MD (ATELIER SCRIPTORIUM) */
@@ -84,7 +88,10 @@
     }
 
     /* TIPOGRAFIA EDITORIAL */
-    h1, h2, h3, .serif-font {
+    h1,
+    h2,
+    h3,
+    .serif-font {
       font-family: 'EB Garamond', Georgia, serif;
     }
 
@@ -134,7 +141,7 @@
       width: 40px;
       height: 40px;
       border-radius: var(--radius-md);
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
 
     .brand-text h1 {
@@ -413,9 +420,18 @@
       height: 12px;
       border-radius: 50%;
     }
-    .light-red { background: #ff5f56; }
-    .light-yellow { background: #ffbd2e; }
-    .light-green { background: #27c93f; }
+
+    .light-red {
+      background: #ff5f56;
+    }
+
+    .light-yellow {
+      background: #ffbd2e;
+    }
+
+    .light-green {
+      background: #27c93f;
+    }
 
     .window-title-tab {
       font-family: 'JetBrains Mono', monospace;
@@ -499,7 +515,8 @@
       transition: background var(--transition-fast);
     }
 
-    .tree-item:hover, .tree-item.active {
+    .tree-item:hover,
+    .tree-item.active {
       background: var(--paper-hover);
       color: var(--olive);
       font-weight: 600;
@@ -571,25 +588,56 @@
       cursor: pointer;
     }
 
-    .literary-toolbar {
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+
+    .dot-draft {
+      background: #d97706;
+    }
+
+    .dot-revised {
+      background: #2563eb;
+    }
+
+    .dot-final {
+      background: #16a34a;
+    }
+
+    .mockup-status-bar {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: space-between;
       margin-top: auto;
-      padding-top: 18px;
+      padding-top: 14px;
       border-top: 1px solid var(--paper-border);
-      font-size: 0.85rem;
+      font-size: 0.78rem;
+      font-family: 'JetBrains Mono', monospace;
       color: var(--ink-muted);
     }
 
-    .lit-symbol {
+    .mockup-status-bar .status-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-pill {
       background: var(--paper-surface);
       border: 1px solid var(--paper-border);
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: 4px;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--ink-charcoal);
-      cursor: pointer;
+      font-size: 0.75rem;
+    }
+
+    .status-pill.status-saved {
+      color: var(--olive);
+      font-weight: 600;
     }
 
     /* SEÇÃO MANIFESTO */
@@ -730,27 +778,52 @@
     }
 
     .security-banner {
-      background: var(--ink-charcoal);
+      background: #181C16;
       color: #E9E6DA;
+      border: 1px solid #2B3327;
       border-radius: var(--radius-xl);
       padding: 48px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 40px;
       align-items: center;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25);
+    }
+
+    .security-banner-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: #8AA66A;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+      letter-spacing: 0.08em;
+      font-weight: 600;
     }
 
     .security-banner h2 {
-      font-size: 2.4rem;
+      font-size: 2.3rem;
       margin-bottom: 16px;
-      color: #ffffff;
+      color: #FFFFFF;
+      line-height: 1.25;
     }
 
     .security-banner p {
       font-size: 1.05rem;
-      color: #A4A89E;
+      color: #C5C9BE;
       line-height: 1.7;
       margin-bottom: 24px;
+    }
+
+    .security-banner .btn-outline {
+      border-color: #8AA66A;
+      color: #E9E6DA;
+      transition: all var(--transition-fast);
+    }
+
+    .security-banner .btn-outline:hover {
+      background: rgba(138, 166, 106, 0.18);
+      border-color: #A3BD84;
+      color: #FFFFFF;
     }
 
     .cipher-specs {
@@ -765,11 +838,53 @@
       align-items: center;
       gap: 12px;
       font-family: 'JetBrains Mono', monospace;
-      font-size: 0.85rem;
-      background: rgba(255, 255, 255, 0.06);
-      padding: 10px 14px;
+      font-size: 0.88rem;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 12px 16px;
       border-radius: var(--radius-sm);
-      border-left: 3px solid var(--olive);
+      border-left: 3px solid #8AA66A;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      color: #E9E6DA;
+    }
+
+    .cipher-item strong {
+      color: #FFFFFF;
+    }
+
+    [data-theme="dark"] .security-section {
+      background: var(--paper-base);
+      border-color: var(--paper-border);
+    }
+
+    [data-theme="dark"] .security-banner {
+      background: #11140E;
+      color: #E9E6DA;
+      border: 1px solid var(--paper-border);
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+    }
+
+    [data-theme="dark"] .security-banner-tag {
+      color: #A3BD84;
+    }
+
+    [data-theme="dark"] .security-banner h2 {
+      color: #FFFFFF;
+    }
+
+    [data-theme="dark"] .security-banner p {
+      color: #C5C9BE;
+    }
+
+    [data-theme="dark"] .cipher-item {
+      background: rgba(255, 255, 255, 0.04);
+      border-left: 3px solid #8AA66A;
+      color: #E9E6DA;
+    }
+
+    [data-theme="dark"] .cipher-item strong {
+      color: #FFFFFF;
     }
 
     /* SEÇÃO FAQ */
@@ -903,25 +1018,67 @@
 
     /* RESPONSIVIDADE */
     @media (max-width: 992px) {
-      .hero-title { font-size: 2.8rem; }
-      .manifesto-grid { grid-template-columns: 1fr; }
-      .features-cards-grid { grid-template-columns: 1fr; }
-      .security-banner { grid-template-columns: 1fr; }
-      .footer-grid { grid-template-columns: 1fr 1fr; }
-      .nav-links { display: none; }
+      .hero-title {
+        font-size: 2.8rem;
+      }
+
+      .manifesto-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .features-cards-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .security-banner {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+
+      .nav-links {
+        display: none;
+      }
     }
 
     @media (max-width: 768px) {
-      .hero-title { font-size: 2.2rem; }
-      .hero-lead { font-size: 1.2rem; }
-      .footer-grid { grid-template-columns: 1fr; }
-      .footer-bottom { flex-direction: column; gap: 12px; text-align: center; }
-      .mockup-viewport { flex-direction: column; }
-      .mockup-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--paper-border); }
-      .mockup-editor { padding: 24px 20px; }
+      .hero-title {
+        font-size: 2.2rem;
+      }
+
+      .hero-lead {
+        font-size: 1.2rem;
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .footer-bottom {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .mockup-viewport {
+        flex-direction: column;
+      }
+
+      .mockup-sidebar {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid var(--paper-border);
+      }
+
+      .mockup-editor {
+        padding: 24px 20px;
+      }
     }
   </style>
 </head>
+
 <body>
 
   <!-- CABEÇALHO -->
@@ -933,7 +1090,7 @@
           <div class="brand-text">
             <h1>Magrathea Writer</h1>
           </div>
-          <span class="brand-badge">v1.0 AGPLv3</span>
+          <span class="brand-badge">v0.9.5-beta.3 AGPLv3</span>
         </a>
 
         <ul class="nav-links">
@@ -944,10 +1101,12 @@
         </ul>
 
         <div class="nav-actions">
-          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Alternar tema claro/escuro">
+          <button class="theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()"
+            title="Alternar tema claro/escuro">
             🌓
           </button>
-          <a href="https://github.com/rhuanlima/magrathea-writer" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+          <a href="https://github.com/rhuanlima/magrathea-writer" target="_blank" rel="noopener noreferrer"
+            class="btn btn-secondary">
             <span>⭐ GitHub</span>
           </a>
           <a href="#download" class="btn btn-primary">
@@ -963,7 +1122,7 @@
     <section class="hero-section">
       <div class="container">
         <div class="hero-eyebrow">
-          <span>🔒 O Primeiro Atelier Literário Local-First & Cifrado</span>
+          <span>🪐 Feito por quem ama criar universos — para mestres de RPG, worldbuilders e contadores de histórias</span>
         </div>
 
         <h1 class="hero-title">
@@ -971,15 +1130,16 @@
         </h1>
 
         <p class="hero-lead">
-          Um ambiente de escrita livre de distrações e segundo cérebro literário para autores de ficção e worldbuilders. 
-          Manuscritos, fichas de personagens e cronologias protegidos em um <strong>cofre cifrado local</strong> na sua máquina. 
-          Sem nuvem, sem assinaturas e com privacidade absoluta.
+          Um espaço simples, direto e sem distrações para dar vida a campanhas de RPG, romances fantásticos e lore profundo.
+          Sem inteligência artificial querendo reescrever suas ideias, sem nuvem obrigatória, sem assinaturas e com total liberdade.
+          Mantenha seus universos protegidos no seu próprio computador, com opção de <strong>modo livre sem senha</strong> ou <strong>cofre cifrado</strong>.
         </p>
 
         <div class="hero-cta-group" id="download">
           <div class="download-dropdown-wrapper">
-            <button class="btn btn-primary" onclick="toggleDownloadDropdown()" style="font-size: 1.05rem; padding: 14px 28px;">
-              <span>⬇️ Baixar Magrathea Writer v1.0</span>
+            <button class="btn btn-primary" onclick="toggleDownloadDropdown()"
+              style="font-size: 1.05rem; padding: 14px 28px;">
+              <span>⬇️ Baixar Magrathea Writer v0.9.5-beta.3</span>
               <span style="font-size: 0.8rem; margin-left: 4px;">▼</span>
             </button>
             <div class="dropdown-menu" id="downloadDropdown">
@@ -1004,7 +1164,8 @@
             </div>
           </div>
 
-          <a href="https://github.com/rhuanlima/magrathea-writer" target="_blank" rel="noopener noreferrer" class="btn btn-secondary" style="font-size: 1.05rem; padding: 14px 24px;">
+          <a href="https://github.com/rhuanlima/magrathea-writer" target="_blank" rel="noopener noreferrer"
+            class="btn btn-secondary" style="font-size: 1.05rem; padding: 14px 24px;">
             <span>⭐ Ver no GitHub (AGPLv3)</span>
           </a>
         </div>
@@ -1012,23 +1173,23 @@
         <div class="trust-badges">
           <div class="trust-item">
             <span class="icon">🚫</span>
-            <span>Zero Chamadas de Rede em Runtime</span>
+            <span>Zero Nuvem (100% Offline Local-First)</span>
           </div>
           <div class="trust-item">
-            <span class="icon">🔐</span>
-            <span>Cifragem XChaCha20-Poly1305 + Argon2id</span>
+            <span class="icon">🎲</span>
+            <span>Feito para RPG & Worldbuilding</span>
+          </div>
+          <div class="trust-item">
+            <span class="icon">🧠</span>
+            <span>[[Wikilinks]] & Grafo de Lore</span>
           </div>
           <div class="trust-item">
             <span class="icon">🦀</span>
-            <span>Núcleo Nativo Tauri 2 em Rust</span>
+            <span>Motor Nativo Rápido em Rust (Tauri 2)</span>
           </div>
           <div class="trust-item">
-            <span class="icon">⚡</span>
-            <span>Interface Reativa Svelte 5</span>
-          </div>
-          <div class="trust-item">
-            <span class="icon">📦</span>
-            <span>Exportação Livre (Markdown, PDF, EPUB)</span>
+            <span class="icon">🔓</span>
+            <span>Criptografia Opcional ou Modo Livre</span>
           </div>
         </div>
 
@@ -1041,87 +1202,97 @@
               <div class="light light-green"></div>
             </div>
             <div class="window-title-tab">
-              🔒 O Reino de Eldoria.magrathea — [Cofre Desbloqueado]
+              🪐 Campanha_Costa_da_Espada.magrathea — [Mundo Ativo]
             </div>
             <div style="font-size: 0.8rem; color: var(--olive); font-weight: 600;">
-              ● Modo Offline Protegido
+              ● Salvo no Computador
             </div>
           </div>
 
           <!-- Barra de Abas da Demonstração -->
           <div class="tabs-bar">
             <button class="tab-btn active" onclick="switchDemoTab('editor')">
-              <span>✍️ Editor Modo Foco Zen</span>
+              <span>✍️ Editor Modo Foco (Zen)</span>
             </button>
             <button class="tab-btn" onclick="switchDemoTab('tree')">
-              <span>🌳 Árvore do Manuscrito</span>
+              <span>🌳 Árvore de Cenas & Status</span>
             </button>
             <button class="tab-btn" onclick="switchDemoTab('brain')">
-              <span>🧠 Segundo Cérebro & Wikilinks</span>
+              <span>🧠 Segundo Cérebro & [[Wikilinks]]</span>
             </button>
             <button class="tab-btn" onclick="switchDemoTab('world')">
-              <span>📜 Ficha de Worldbuilding</span>
+              <span>🗺️ Ficha de Entidade (Worldbuilding)</span>
             </button>
           </div>
 
           <div class="mockup-viewport" id="mockupViewport">
             <!-- Sidebar da Demonstração -->
             <div class="mockup-sidebar">
-              <div class="sidebar-title">Manuscrito (Parte I)</div>
+              <div class="sidebar-title">Aventuras & Cenas</div>
               <div class="tree-item" onclick="selectScene(1)">
-                <span>📖 Prólogo: As Cinzas de Aethel</span>
+                <span class="status-dot dot-final" title="Cena Final"></span>
+                <span>📖 Prólogo: O Encontro na Taverna</span>
               </div>
               <div class="tree-item active" onclick="selectScene(2)">
-                <span>📜 Cena 1: O Templo da Bruma</span>
+                <span class="status-dot dot-revised" title="Cena Revisada"></span>
+                <span>📜 Cena 1: A Cripta dos Esquecidos</span>
                 <span class="tree-badge">1.420 pal.</span>
               </div>
               <div class="tree-item sub" onclick="selectScene(3)">
-                <span>• O Juramento de Kaelen</span>
+                <span class="status-dot dot-draft" title="Cena em Rascunho"></span>
+                <span>• O Juramento de Sangue</span>
               </div>
               <div class="tree-item" onclick="selectScene(4)">
+                <span class="status-dot dot-draft" title="Cena em Rascunho"></span>
                 <span>📜 Cena 2: Portões de Ferro</span>
               </div>
 
-              <div class="sidebar-title" style="margin-top: 14px;">Segundo Cérebro</div>
+              <div class="sidebar-title" style="margin-top: 14px;">Segundo Cérebro (Worldbuilding)</div>
               <div class="tree-item">
-                <span>👤 Kaelen Vael</span>
-                <span class="tree-badge">Ficha</span>
+                <span>👤 Thorin Marreta-Negra</span>
+                <span class="tree-badge">NPC / Ficha</span>
               </div>
               <div class="tree-item">
-                <span>🏰 Fortaleza de Skarhold</span>
-                <span class="tree-badge">Local</span>
+                <span>🏰 Fortaleza de Pedra-Bruta</span>
+                <span class="tree-badge">Lugar</span>
               </div>
               <div class="tree-item">
-                <span>⚔️ Ordem da Chama Branca</span>
+                <span>🗡️ A Lâmina da Alvorada</span>
+                <span class="tree-badge">Item</span>
+              </div>
+              <div class="tree-item">
+                <span>⚔️ Guilda dos Ladrões de Ebon</span>
                 <span class="tree-badge">Facção</span>
               </div>
             </div>
 
             <!-- Editor de Texto Interativo -->
             <div class="mockup-editor" id="mockupEditorContainer">
-              <h2 class="mockup-editor-title" id="mockupSceneTitle">Cena 1: O Templo da Bruma</h2>
+              <h2 class="mockup-editor-title" id="mockupSceneTitle">Cena 1: A Cripta dos Esquecidos</h2>
 
               <div class="mockup-editor-content" id="mockupEditorBody">
                 <p class="dimmed">
-                  O silêncio do desfiladeiro não era um vazio comum, mas uma presença pesada, como o ar que antecede as tempestades de cinzas no norte de <span class="wikilink-chip" title="Ver ficha da região">[[Terras Devastadas]]</span>.
+                  As tochas crepitavam nas paredes frias de calcário de <span class="wikilink-chip" title="Ver ficha da fortaleza">[[Fortaleza de Pedra-Bruta]]</span>, projetando sombras alongadas sobre o mapa desgastado da Costa da Espada.
                 </p>
                 <p class="active-focus">
-                  — O pacto foi quebrado antes mesmo da primeira neve — murmurou <span class="wikilink-chip" title="Ver ficha de personagem">[[Kaelen Vael]]</span>, passando os dedos calosos pela empunhadura gasta da espada. — E se as pedras do templo guardam memória, hoje elas testemunharão o retorno do fogo antigo.
+                  — O cerco não vai esperar pela alvorada — advertiu <span class="wikilink-chip"
+                    title="Ver ficha do anão">[[Thorin Marreta-Negra]]</span>, cravando a adaga na mesa de carvalho. — Se o dragão acordar antes do solstício, nem mesmo o poder d’<span class="wikilink-chip"
+                    title="Ver ficha do artefato">[[A Lâmina da Alvorada]]</span> salvará a guarnição.
                 </p>
                 <p class="dimmed">
-                  Ao longe, o eco do sino de bronze reverberou por entre os penhascos de granito, lembrando-o de que o tempo dos escribas havia acabado, e a era das cinzas acabara de começar…
+                  O ladino recolheu os dados na palma da mão, encarou o mestre do outro lado da mesa e sorriu: era hora de rolar iniciativa…
                 </p>
               </div>
 
-              <div class="literary-toolbar">
-                <span>Barra Literária Sob Demanda:</span>
-                <span class="lit-symbol" title="Inserir travessão literário">—</span>
-                <span class="lit-symbol" title="Inserir aspas tipográficas">“ ”</span>
-                <span class="lit-symbol" title="Inserir reticências tipográficas">…</span>
-                <span class="lit-symbol" title="Inserir separador de cena">***</span>
-                <span style="margin-left: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem;">
-                  Palavras: 1.420 · Caracteres: 8.940 · Leitura: ~6 min
-                </span>
+              <div class="mockup-status-bar">
+                <div class="status-left">
+                  <span>1.420 palavras · 8.940 caracteres · ~6 min de leitura</span>
+                </div>
+                <div class="status-right">
+                  <span class="status-pill status-saved">● Salvo</span>
+                  <span class="status-pill">🔓 Modo Livre</span>
+                  <span class="status-pill">[ ▤ Inspetor ]</span>
+                </div>
               </div>
             </div>
           </div>
@@ -1137,18 +1308,18 @@
             <img src="assets/manifesto-art.jpg" alt="Atelier Scriptorium Magrathea">
           </div>
           <div class="manifesto-text">
-            <div class="section-eyebrow">O Manifesto da Obra Sagrada</div>
+            <div class="section-eyebrow">O Manifesto do Criador de Mundos</div>
             <h2 class="manifesto-quote">
-              "No Guia do Mochileiro das Galáxias, Magrathea é o planeta que fabrica planetas sob encomenda, com litorais esculpidos à mão."
+              "No Guia do Mochileiro das Galáxias, Magrathea é o planeta lendário que fabrica mundos inteiros sob medida, esculpindo cada fiorde e continente à mão."
             </h2>
             <p>
-              Como autor, você gasta meses e anos arquitetando universos complexos, línguas imaginadas, linhagens de reis e os dilemas íntimos de suas personagens. <strong>Sua obra não é um "ativo de dados" para ser minerado por robôs de inteligência artificial ou bloqueado atrás de assinaturas mensais perpétuas.</strong>
+              Eu não sou um escritor de renome nem um acadêmico literário. Sou, antes de tudo, <strong>um apaixonado inveterado pela criação de mundos</strong>. Daqueles que passam horas a fio desenhando mapas de campanhas de D&D, inventando panteões esquecidos, bolando intrigas de taverna e arquitetando o lore que seus jogadores ou leitores vão desbravar.
             </p>
             <p>
-              A maioria dos editores modernos força seus manuscritos para servidores em nuvem com termos de privacidade permissivos. O <strong>Magrathea Writer</strong> nasceu na direção oposta: uma oficina de marcenaria fina literária, blindada contra a internet.
+              O <strong>Magrathea Writer</strong> nasceu dessa paixão: um espaço focado e acolhedor para construir universos de forma simples, direta e com total liberdade. <strong>Sem inteligência artificial querendo adivinhar o seu texto</strong>, sem nuvem obrigatória, sem assinaturas mensais e sem distrações. Apenas você, suas ideias e o prazer de criar.
             </p>
             <p>
-              O que você escreve é cifrado no instante em que toca o disco. Nem nós, nem o sistema operacional, nem terceiros têm a chave. <strong>O mundo é seu. As palavras são suas.</strong>
+              A segurança e a privacidade local são uma oportunidade e uma melhoria para dar paz de espírito, não o foco exclusivo da ferramenta. Seus mundos pertencem unicamente a você — salvos no seu próprio computador, podendo ser protegidos com criptografia robusta ou abertos no modo livre com um único clique. Como bem ensina o Guia: <strong>Não entre em pânico, pegue sua toalha, role sua iniciativa</strong> e venha esculpir suas próprias galáxias.
             </p>
           </div>
         </div>
@@ -1159,65 +1330,71 @@
     <section class="features-section" id="recursos">
       <div class="container">
         <div class="section-header">
-          <div class="section-eyebrow">Construído com Maestria</div>
-          <h2 class="section-title">As ferramentas de um mestre artesão de mundos</h2>
+          <div class="section-eyebrow">Construído para Criadores</div>
+          <h2 class="section-title">As ferramentas de um arquiteto de mundos</h2>
           <p class="section-desc">
-            Cada detalhe foi desenhado para eliminar a fricção entre a mente do romancista e a página em branco.
+            Cada detalhe foi desenhado para eliminar a fricção entre a imaginação do criador e a página em branco.
           </p>
         </div>
 
         <div class="features-cards-grid">
           <!-- Card 1 -->
           <div class="feature-box">
-            <div class="feature-box-icon">🔒</div>
-            <h3>Cofre Cifrado Zero-Knowledge</h3>
+            <div class="feature-box-icon">🧠</div>
+            <h3>Segundo Cérebro & [[Wikilinks]]</h3>
             <p>
-              Cifragem de envelope com <strong>XChaCha20-Poly1305</strong> e derivação de chave com <strong>Argon2id</strong>. Seus arquivos nunca descansam em texto claro no disco. Detecção criptográfica contra adulteração e corrupção.
+              Conecte entidades com <code>[[wikilinks]]</code> autocompletáveis com resolução resiliente a renomeações.
+              Prévia instantânea ao passar o mouse e mapa bidirecional de backlinks para nunca perder um fio do lore da sua campanha.
             </p>
           </div>
 
           <!-- Card 2 -->
           <div class="feature-box">
             <div class="feature-box-icon">✍️</div>
-            <h3>Editor Foco Dinâmico & Zen</h3>
+            <h3>Editor Foco Dinâmico & Modo Zen</h3>
             <p>
-              Modo Zen imersivo e foco suave parágrafo a parágrafo. Tipografia clássica de alto prestígio (EB Garamond) na largura áurea de 720px para conforto visual durante sessões de 10.000 palavras.
+              Modo Zen imersivo (Cmd+Shift+F) e foco suave parágrafo a parágrafo. Tipografia clássica de alto prestígio (EB Garamond)
+              na largura áurea de 720px para conforto visual durante sessões épicas de escrita.
             </p>
           </div>
 
           <!-- Card 3 -->
           <div class="feature-box">
-            <div class="feature-box-icon">🧠</div>
-            <h3>Segundo Cérebro Literário</h3>
+            <div class="feature-box-icon">🗺️</div>
+            <h3>Canvas Visual & Lousa de Ideias</h3>
             <p>
-              Conecte entidades com <code>[[wikilinks]]</code> autocompletáveis com resolução resiliente a renomeações. Prévia ao passar o mouse (hover preview) e mapa bidirecional de backlinks para nunca perder um fio da trama.
+              Organize espacialmente seu brainstorm. Crie post-its coloridos, anexe imagens locais aos cartões e trace linhas de
+              conexão entre causas, consequências, facções e mistérios do seu universo.
             </p>
           </div>
 
           <!-- Card 4 -->
           <div class="feature-box">
             <div class="feature-box-icon">🌳</div>
-            <h3>Árvore Viva do Manuscrito</h3>
+            <h3>Árvore do Manuscrito & Status</h3>
             <p>
-              Estruture sua obra em Partes, Capítulos e Cenas com drag-and-drop intuitivo. Escreva diretamente em qualquer nível da hierarquia e conte com uma lixeira interna protegida para resgate sem pânico.
+              Estruture sua obra em Partes, Capítulos e Cenas com drag-and-drop intuitivo. Acompanhe o progresso com o sistema visual
+              de bolinhas coloridas (🟡 Rascunho, 🔵 Revisado, 🟢 Final) e lixeira com recuperação segura.
             </p>
           </div>
 
           <!-- Card 5 -->
           <div class="feature-box">
-            <div class="feature-box-icon">⚡</div>
-            <h3>Paleta Global (Cmd+K / Ctrl+K)</h3>
-            <p>
-              Navegação ultra veloz acionada 100% pelo teclado. Localize qualquer cena, ficha de personagem, nota ou comando em milissegundos sem tirar as mãos das teclas de escrita.
-            </p>
-          </div>
-
-          <!-- Card 6 -->
-          <div class="feature-box">
             <div class="feature-box-icon">📤</div>
             <h3>Soberania & Exportação Livre</h3>
             <p>
-              Zero vendor lock-in. Exporte seus mundos para Markdown aberto perfeitamente compatível com Obsidian, ou gere documentos finais elegantes em PDF, Microsoft Word (DOCX) e EPUB.
+              Zero vendor lock-in. Exporte seus mundos para Markdown aberto perfeitamente compatível com Obsidian, ou
+              gere documentos finais elegantes em PDF diagramado, Microsoft Word (DOCX) e EPUB.
+            </p>
+          </div>
+
+          <!-- Card 6: Cofre Cifrado por último -->
+          <div class="feature-box">
+            <div class="feature-box-icon">🔒</div>
+            <h3>Cofre Cifrado & Privacidade Local</h3>
+            <p>
+              Tranquilidade como melhoria. Cifragem de envelope com <strong>XChaCha20-Poly1305</strong> e derivação de chave com
+              <strong>Argon2id</strong> quando desejar proteção máxima, ou use o <strong>modo livre sem senha</strong> para abrir seu mundo com 1 clique.
             </p>
           </div>
         </div>
@@ -1229,14 +1406,15 @@
       <div class="container">
         <div class="security-banner">
           <div>
-            <div style="font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: var(--olive); text-transform: uppercase; margin-bottom: 8px;">
+            <div class="security-banner-tag">
               Arquitetura de Fortaleza
             </div>
-            <h2>Privacidade absoluta por princípio, não por promessa.</h2>
+            <h2>Privacidade local e soberania total no seu computador.</h2>
             <p>
-              Enquanto ferramentas convencionais enviam seus rascunhos para servidores remotos, o Magrathea Writer opera sem nenhuma capacidade de conexão externa em runtime.
+              O Magrathea Writer foi desenhado para operar 100% offline no seu próprio disco, sem conexões de rede em tempo de execução. Seus arquivos pertencem apenas a você, com a liberdade de trancar com criptografia avançada ou usar o modo livre sem senha.
             </p>
-            <a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/SECURITY.md" target="_blank" rel="noopener noreferrer" class="btn btn-outline" style="border-color: #A4A89E; color: #E9E6DA;">
+            <a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/SECURITY.md" target="_blank"
+              rel="noopener noreferrer" class="btn btn-outline">
               <span>Ler Especificação de Segurança (SECURITY.md) →</span>
             </a>
           </div>
@@ -1245,23 +1423,23 @@
             <ul class="cipher-specs">
               <li class="cipher-item">
                 <span>🔐</span>
-                <span><strong>XChaCha20-Poly1305:</strong> Cifragem autenticada AEAD por arquivo</span>
+                <span><strong>XChaCha20-Poly1305:</strong> Cifragem autenticada AEAD de ponta</span>
               </li>
               <li class="cipher-item">
                 <span>🛡️</span>
-                <span><strong>Argon2id:</strong> KDF resistente a ataques de força bruta por GPU</span>
+                <span><strong>Argon2id:</strong> Derivação de chaves resistente a ataques de força bruta</span>
               </li>
               <li class="cipher-item">
-                <span>🔑</span>
-                <span><strong>Envelope Encryption:</strong> Master key em memória zeroizada no bloqueio</span>
+                <span>🔓</span>
+                <span><strong>Modo Livre Opcional:</strong> Crie mundos sem senha e abra com 1 clique</span>
               </li>
               <li class="cipher-item">
                 <span>🚫</span>
-                <span><strong>No-Network Runtime:</strong> Zero telemetria, zero requisições HTTP</span>
+                <span><strong>100% Local-First:</strong> Zero telemetria, zero nuvem, zero rastreadores</span>
               </li>
               <li class="cipher-item">
                 <span>📜</span>
-                <span><strong>Código Auditável:</strong> Licença livre AGPLv3 transparente</span>
+                <span><strong>Código Aberto Auditável:</strong> Licença livre AGPLv3 no GitHub</span>
               </li>
             </ul>
           </div>
@@ -1284,7 +1462,8 @@
               <span class="arrow">▼</span>
             </div>
             <div class="faq-answer">
-              Sim! O projeto é 100% livre e de código aberto sob a licença GNU AGPL v3. Você pode utilizá-lo, inspecionar o código-fonte no GitHub e compilar por conta própria sem qualquer custo ou assinatura.
+              Sim! O projeto é 100% livre e de código aberto sob a licença GNU AGPL v3. Você pode utilizá-lo,
+              inspecionar o código-fonte no GitHub e compilar por conta própria sem qualquer custo ou assinatura.
             </div>
           </div>
 
@@ -1294,7 +1473,9 @@
               <span class="arrow">▼</span>
             </div>
             <div class="faq-answer">
-              Durante a criação do cofre, o Magrathea gera uma Chave de Recuperação de emergência (Recovery Key). Caso você perca a senha, poderá usá-la. Contudo, se perder a senha e a chave de recuperação, o cofre é irrecuperável por princípio matemático de segurança — não existem backdoors nem servidores centrais.
+              Durante a criação do cofre, o Magrathea gera uma Chave de Recuperação de emergência (Recovery Key). Caso
+              você perca a senha, poderá usá-la. Contudo, se perder a senha e a chave de recuperação, o cofre é
+              irrecuperável por princípio matemático de segurança — não existem backdoors nem servidores centrais.
             </div>
           </div>
 
@@ -1304,7 +1485,9 @@
               <span class="arrow">▼</span>
             </div>
             <div class="faq-answer">
-              Sim! Como o cofre é uma pasta única cifrada (com arquivos encriptados), você pode colocá-la em um pendrive seguro, HD externo ou na sua pasta local do Syncthing, Dropbox ou Google Drive. O provedor de nuvem verá apenas blocos criptografados indecifráveis.
+              Sim! Como o cofre é uma pasta única cifrada (com arquivos encriptados), você pode colocá-la em um pendrive
+              seguro, HD externo ou na sua pasta local do Syncthing, Dropbox ou Google Drive. O provedor de nuvem verá
+              apenas blocos criptografados indecifráveis.
             </div>
           </div>
 
@@ -1314,7 +1497,8 @@
               <span class="arrow">▼</span>
             </div>
             <div class="faq-answer">
-              Com certeza! O formato de exportação para Markdown aberto inclui toda a estrutura de pastas e wikilinks compatíveis com o ecossistema Obsidian, além de exportador para DOCX (Word), PDF e EPUB.
+              Com certeza! O formato de exportação para Markdown aberto inclui toda a estrutura de pastas e wikilinks
+              compatíveis com o ecossistema Obsidian, além de exportador para DOCX (Word), PDF e EPUB.
             </div>
           </div>
         </div>
@@ -1328,8 +1512,9 @@
           <div style="font-size: 2rem; margin-bottom: 8px;">☕</div>
           <h2>Apoie o Desenvolvimento Independente</h2>
           <p style="color: var(--ink-muted); margin-top: 8px;">
-            O Magrathea Writer é mantido com dedicação por e para escritores. 
-            Se esta ferramenta traz paz e produtividade para a sua rotina de escrita, considere apoiar o projeto com qualquer valor via Pix:
+            O Magrathea Writer é mantido com dedicação por e para escritores.
+            Se esta ferramenta traz paz e produtividade para a sua rotina de escrita, considere apoiar o projeto com
+            qualquer valor via Pix:
           </p>
           <img src="assets/pix-qrcode.png" alt="QR Code Pix para doação">
           <p class="mono-font" style="font-size: 0.85rem; color: var(--olive); font-weight: 600;">
@@ -1370,25 +1555,32 @@
         <div class="footer-col">
           <h4>Downloads & Código</h4>
           <ul class="footer-links">
-            <li><a href="https://github.com/rhuanlima/magrathea-writer/releases" target="_blank">Releases & Instaladores</a></li>
+            <li><a href="https://github.com/rhuanlima/magrathea-writer/releases" target="_blank">Releases &
+                Instaladores</a></li>
             <li><a href="https://github.com/rhuanlima/magrathea-writer" target="_blank">Repositório no GitHub</a></li>
-            <li><a href="https://github.com/rhuanlima/magrathea-writer/issues" target="_blank">Reportar Problema</a></li>
+            <li><a href="https://github.com/rhuanlima/magrathea-writer/issues" target="_blank">Reportar Problema</a>
+            </li>
           </ul>
         </div>
 
         <div class="footer-col">
           <h4>Legalidade & Licença</h4>
           <ul class="footer-links">
-            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/LICENSE" target="_blank">Licença GNU AGPLv3</a></li>
-            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/SECURITY.md" target="_blank">Política de Segurança</a></li>
-            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/DESIGN.md" target="_blank">Tokens de Design</a></li>
+            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/LICENSE" target="_blank">Licença GNU
+                AGPLv3</a></li>
+            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/SECURITY.md"
+                target="_blank">Política de Segurança</a></li>
+            <li><a href="https://github.com/rhuanlima/magrathea-writer/blob/main/docs/DESIGN.md" target="_blank">Tokens
+                de Design</a></li>
           </ul>
         </div>
       </div>
 
       <div class="footer-bottom">
         <div>
-          © 2026 Magrathea Writer · Distribuído sob a licença <a href="https://github.com/rhuanlima/magrathea-writer/blob/main/LICENSE" target="_blank" style="color: inherit; font-weight: 600;">GNU AGPL v3</a>.
+          © 2026 Magrathea Writer · Distribuído sob a licença <a
+            href="https://github.com/rhuanlima/magrathea-writer/blob/main/LICENSE" target="_blank"
+            style="color: inherit; font-weight: 600;">GNU AGPL v3</a>.
         </div>
         <div>
           Feito com Tauri 2 (Rust) + Svelte 5 para romancistas e contadores de histórias.
@@ -1420,7 +1612,7 @@
     }
 
     // Fechar dropdown ao clicar fora
-    window.addEventListener('click', function(e) {
+    window.addEventListener('click', function (e) {
       if (!e.target.closest('.download-dropdown-wrapper')) {
         const dropdown = document.getElementById('downloadDropdown');
         if (dropdown) dropdown.classList.remove('active');
@@ -1430,76 +1622,77 @@
     // Abas de Demonstração Interativa
     const tabContents = {
       editor: {
-        title: "Cena 1: O Templo da Bruma",
+        title: "Cena 1: A Cripta dos Esquecidos",
         html: `
           <p class="dimmed">
-            O silêncio do desfiladeiro não era um vazio comum, mas uma presença pesada, como o ar que antecede as tempestades de cinzas no norte de <span class="wikilink-chip">[[Terras Devastadas]]</span>.
+            As tochas crepitavam nas paredes frias de calcário de <span class="wikilink-chip">[[Fortaleza de Pedra-Bruta]]</span>, projetando sombras alongadas sobre o mapa desgastado da Costa da Espada.
           </p>
           <p class="active-focus">
-            — O pacto foi quebrado antes mesmo da primeira neve — murmurou <span class="wikilink-chip">[[Kaelen Vael]]</span>, passando os dedos calosos pela empunhadura gasta da espada. — E se as pedras do templo guardam memória, hoje elas testemunharão o retorno do fogo antigo.
+            — O cerco não vai esperar pela alvorada — advertiu <span class="wikilink-chip">[[Thorin Marreta-Negra]]</span>, cravando a adaga na mesa de carvalho. — Se o dragão acordar antes do solstício, nem mesmo o poder d’<span class="wikilink-chip">[[A Lâmina da Alvorada]]</span> salvará a guarnição.
           </p>
           <p class="dimmed">
-            Ao longe, o eco do sino de bronze reverberou por entre os penhascos de granito, lembrando-o de que o tempo dos escribas havia acabado, e a era das cinzas acabara de começar…
+            O ladino recolheu os dados na palma da mão, encarou o mestre do outro lado da mesa e sorriu: era hora de rolar iniciativa…
           </p>
         `
       },
       tree: {
-        title: "Estrutura do Manuscrito & Cenas",
+        title: "Estrutura da Campanha & Marcadores de Status",
         html: `
           <div style="background: var(--paper-surface); padding: 18px; border-radius: 8px; border: 1px solid var(--paper-border); font-family: 'Plus Jakarta Sans', sans-serif;">
-            <h4 style="margin-bottom: 12px; color: var(--olive);">Hierarquia Narrativa em 3 Níveis:</h4>
+            <h4 style="margin-bottom: 12px; color: var(--olive);">Hierarquia Narrativa com Status Coloridos:</h4>
             <div style="font-size: 0.95rem; line-height: 1.8;">
-              <div>📁 <strong>Parte I: O Despertar das Cinzas</strong> (Total: 24.500 palavras)</div>
-              <div style="padding-left: 20px;">📄 <em>Capítulo 1: Sob as Sombras da Vigília</em> [Concluído]</div>
-              <div style="padding-left: 40px;">• Cena 1: O Templo da Bruma (1.420 palavras)</div>
-              <div style="padding-left: 40px;">• Cena 2: Portões de Ferro (2.100 palavras)</div>
-              <div style="padding-left: 20px;">📄 <em>Capítulo 2: O Rastro de Sal</em> [Em revisão]</div>
-              <div style="padding-left: 40px;">• Cena 1: Encontro na Encruzilhada (1.800 palavras)</div>
+              <div>📁 <strong>Ato I: A Sombra da Cripta</strong> (Total: 18.200 palavras)</div>
+              <div style="padding-left: 20px;"><span class="status-dot dot-final"></span> 📄 <em>Capítulo 1: O Encontro na Taverna</em> <strong style="color: #16a34a; font-size: 0.8rem;">[🟢 Final]</strong></div>
+              <div style="padding-left: 40px;">• Cena 1: A Reunião dos Aventureiros (1.420 palavras)</div>
+              <div style="padding-left: 40px;">• Cena 2: O Mapa da Cripta (2.100 palavras)</div>
+              <div style="padding-left: 20px;"><span class="status-dot dot-revised"></span> 📄 <em>Capítulo 2: As Catacumbas</em> <strong style="color: #2563eb; font-size: 0.8rem;">[🔵 Revisado]</strong></div>
+              <div style="padding-left: 40px;">• Cena 1: Emboscada dos Trogloditas (1.800 palavras)</div>
+              <div style="padding-left: 20px;"><span class="status-dot dot-draft"></span> 📄 <em>Capítulo 3: O Guardião de Pedra</em> <strong style="color: #d97706; font-size: 0.8rem;">[🟡 Rascunho]</strong></div>
             </div>
             <div style="margin-top: 16px; font-size: 0.85rem; color: var(--ink-muted);">
-              💡 <em>Reordene cenas arrastando com drag & drop instantâneo sem risco de corrupção.</em>
+              💡 <em>Alterne o status diretamente com 1 clique sobre a bolinha colorida ou pelo painel do manuscrito.</em>
             </div>
           </div>
         `
       },
       brain: {
-        title: "Segundo Cérebro: [[Wikilinks]] & Grafo de Entidades",
+        title: "Segundo Cérebro: [[Wikilinks]] & Grafo de Lore",
         html: `
           <div style="display: flex; flex-direction: column; gap: 16px; font-family: 'Plus Jakarta Sans', sans-serif;">
             <div style="background: var(--paper-surface); padding: 16px; border-radius: 8px; border: 1px solid var(--paper-border);">
               <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                <strong>Resolução de Conexões em Tempo Real:</strong>
+                <strong>Conexões Vivas entre Elementos do Mundo:</strong>
                 <span class="tree-badge">Índice em Memória</span>
               </div>
               <p style="font-size: 0.92rem; color: var(--ink-muted);">
-                Ao digitar <code>[[</code>, o Magrathea Writer busca instantaneamente personagens, magias, armas e locais. Se você renomear <strong>"Kaelen Vael"</strong> para <strong>"Lorde Kaelen"</strong> no futuro, todas as menções em 40 capítulos são refatoradas com prévia e rollback seguros.
+                Ao digitar <code>[[</code> em qualquer cena ou nota, o Magrathea Writer autocompleta instantaneamente NPCs, locais, facções e itens mágicos. Se você renomear <strong>"Thorin Marreta-Negra"</strong> para <strong>"Rei Thorin II"</strong> no futuro, todas as menções em 50 cenas são refatoradas automaticamente com opção de rollback.
               </p>
             </div>
             <div style="background: var(--paper-elevated); border: 1px dashed var(--olive); padding: 14px; border-radius: 8px;">
-              <span style="font-size: 0.8rem; font-weight: 700; color: var(--olive); text-transform: uppercase;">Backlinks Encontrados:</span>
+              <span style="font-size: 0.8rem; font-weight: 700; color: var(--olive); text-transform: uppercase;">Backlinks & Aparições:</span>
               <ul style="margin-top: 8px; font-size: 0.85rem; padding-left: 20px; line-height: 1.6;">
-                <li>Parte I › Capítulo 1 › Cena 1 (Mencionado na linha 14)</li>
-                <li>Parte II › Capítulo 5 › Cena 3 (Mencionado na linha 42)</li>
-                <li>Enciclopédia › Ficha: Linhagem Real de Aethelgard</li>
+                <li>Ato I › Capítulo 1 › Cena 1 (Mencionado na linha 12)</li>
+                <li>Ato I › Capítulo 2 › Cena 3 (Mencionado na linha 45)</li>
+                <li>Ficha de Facção › [[Clã dos Forjadores de Pedra]]</li>
               </ul>
             </div>
           </div>
         `
       },
       world: {
-        title: "Ficha de Worldbuilding: Kaelen Vael",
+        title: "Ficha de Entidade: Thorin Marreta-Negra",
         html: `
           <div style="background: var(--paper-surface); padding: 20px; border-radius: 8px; border: 1px solid var(--paper-border); font-family: 'Plus Jakarta Sans', sans-serif;">
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 14px; font-size: 0.9rem;">
-              <div><strong>Papel Narrativo:</strong> Protagonista / Renegado</div>
-              <div><strong>Facção de Origem:</strong> [[Ordem da Chama Branca]]</div>
-              <div><strong>Motivação Central:</strong> Redimir o juramento quebrado</div>
-              <div><strong>Fraqueza / Falha:</strong> Incapacidade de confiar em aliados</div>
+              <div><strong>Tipo de Entidade:</strong> 👤 Personagem / NPC</div>
+              <div><strong>Facção / Aliança:</strong> [[Clã dos Forjadores de Pedra]]</div>
+              <div><strong>Base de Operações:</strong> [[Fortaleza de Pedra-Bruta]]</div>
+              <div><strong>Item Notável:</strong> [[A Lâmina da Alvorada]]</div>
             </div>
             <hr style="border: none; border-top: 1px solid var(--paper-border); margin: 12px 0;">
             <div style="font-size: 0.9rem; line-height: 1.6;">
-              <strong>Arco Dramático do Personagem:</strong><br>
-              Inicia como um sentinela descrente de qualquer profecia; ao ser forçado a cruzar as [[Terras Devastadas]], redescobre que a lealdade custa mais do que o aço.
+              <strong>Histórico & Notas de Campanha:</strong><br>
+              Veterano do Cerco dos Mil Dias. Conhece o caminho secreto até a cripta profunda e desconfia profundamente de usuários de magia arcana. Jurou defender a relíquia sagrada até a última gota de sangue.
             </div>
           </div>
         `
@@ -1527,4 +1720,5 @@
     }
   </script>
 </body>
+
 </html>
