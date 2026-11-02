@@ -46,6 +46,32 @@
     </div>
 
     <div class="pref-body">
+      <!-- 0. Modo de Edição (Editor Comum Rich Text vs Markdown) -->
+      <div class="pref-row">
+        <div class="pref-label-col">
+          <span class="pref-label">Modo de Escrita</span>
+          <span class="pref-hint">Alterne entre Editor de Texto Comum (Visual) ou Código Markdown</span>
+        </div>
+        <div class="font-choices" role="radiogroup">
+          <button
+            type="button"
+            class="choice-btn"
+            class:active={editorPreferences.editorMode === 'visual'}
+            onclick={() => editorPreferences.setEditorMode('visual')}
+          >
+            📝 Editor Comum
+          </button>
+          <button
+            type="button"
+            class="choice-btn"
+            class:active={editorPreferences.editorMode === 'markdown'}
+            onclick={() => editorPreferences.setEditorMode('markdown')}
+          >
+            ⌨️ Markdown
+          </button>
+        </div>
+      </div>
+
       <!-- 1. Números de Linha -->
       <div class="pref-row">
         <div class="pref-label-col">

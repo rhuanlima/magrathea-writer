@@ -29,7 +29,11 @@
   );
 
   let backlinks = $derived(vault.activeBacklinks);
-  let styleAnalysis = $derived(analyzeProseStyle(currentContent));
+  let styleAnalysis = $derived(
+    vault.isInspectorOpen && vault.activeInspectorTab === 'style'
+      ? analyzeProseStyle(currentContent)
+      : null
+  );
 
   $effect(() => {
     if (activeItem && vault.isInspectorOpen) {
@@ -235,7 +239,7 @@
         <EntityContextPanel {currentContent} />
       {:else if vault.activeInspectorTab === 'graph'}
         <LocalGraphTab centerId={activeItem.id} />
-      {:else if vault.activeInspectorTab === 'style'}
+      {:else if vault.activeInspectorTab === 'style' && styleAnalysis}
         <div class="style-tab-content">
           <div class="style-summary-cards">
             <div class="style-mini-card">

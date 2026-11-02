@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { vault } from './vault.svelte';
+import { manuscript } from './manuscript.svelte';
 import { assessPasswordStrength } from '../crypto/password-strength';
 
 describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
@@ -49,19 +50,32 @@ describe('Vault Creation & Lifecycle Flow (Frontend M1-02)', () => {
     expect(vault.recoveryKeyToken).toBe(response.recovery_key_token);
   });
 
-  it('ao bloquear o cofre, zeroiza e descarta a chave de recuperação', async () => {
+  it('ao bloquear o cofre, executa flush pré-bloqueio e zeroiza a árvore em memória e a chave de recuperação', async () => {
     await vault.createVault(
       '/home/author/Documents',
       'Romance Bloqueio',
       'frase-senha-longa-segura'
     );
+    await manuscript.refreshTree();
+
+    let flushedBeforeLock = false;
+    vault.registerBeforeLock(async () => {
+      flushedBeforeLock = true;
+    });
 
     expect(vault.isOpen).toBe(true);
     expect(vault.recoveryKeyToken).not.toBeNull();
+    expect(manuscript.items.length).toBeGreaterThan(0);
 
     await vault.lockVault();
+    expect(flushedBeforeLock).toBe(true);
     expect(vault.isLocked).toBe(true);
     expect(vault.recoveryKeyToken).toBeNull();
+    expect(manuscript.items).toHaveLength(0);
+    expect(manuscript.trash).toHaveLength(0);
+    expect(manuscript.activeSceneId).toBeNull();
+
+    vault.registerBeforeLock(null);
   });
 
   it('desbloqueia cofre com frase-senha com sucesso', async () => {

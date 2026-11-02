@@ -13,6 +13,15 @@
   import { wikilinkHoverExtension } from './wikilink-hover';
   import { externalLinksPlugin } from './external-links';
   import { focusModeExtension, setFocusMode } from './focus-mode';
+  import {
+    richTextModeExtension,
+    richTextKeymap,
+    setRichTextMode,
+    getActiveFormats,
+    getFrontmatterEndLine,
+    DEFAULT_ACTIVE_FORMATS,
+    type ActiveFormats,
+  } from './rich-text-mode';
   import { editorViewState } from './editor-view-state.svelte';
   import { theme } from '../design';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
@@ -20,6 +29,7 @@
   import { typewriterAudio } from './typewriter-audio';
   import { focusPreferences } from '../preferences/focus-preferences.svelte';
   import SceneHeader from './SceneHeader.svelte';
+  import LiteraryBar from './LiteraryBar.svelte';
   import FloatingHud from './FloatingHud.svelte';
   import StyleStatsModal from './StyleStatsModal.svelte';
 
@@ -35,6 +45,20 @@
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
   let isStyleModalOpen = $state(false);
+  let activeFormats = $state<ActiveFormats>(DEFAULT_ACTIVE_FORMATS);
+
+  function ensureCursorOutsideFrontmatter(targetView: EditorView) {
+    if (editorPreferences.editorMode !== 'visual') return;
+    const fmEnd = getFrontmatterEndLine(targetView.state);
+    if (fmEnd > 0 && fmEnd < targetView.state.doc.lines) {
+      const bodyStartPos = targetView.state.doc.line(fmEnd + 1).from;
+      if (targetView.state.selection.main.head < bodyStartPos) {
+        targetView.dispatch({
+          selection: { anchor: bodyStartPos },
+        });
+      }
+    }
+  }
 
   const lineNumbersCompartment = new Compartment();
 
@@ -57,6 +81,18 @@
   let currentEditingSceneId: string | null = null;
   let loadSequence = 0;
   let editorResizeObserver: ResizeObserver | null = null;
+  let typewriterRafId: number | null = null;
+  let lastSavedWikilinksSig = '';
+
+  /**
+   * Extrai uma assinatura leve dos [[wikilinks]] presentes no texto para evitar
+   * recarregamentos desnecessários do índice global do cofre a cada autosave.
+   */
+  function extractWikilinksSignature(text: string): string {
+    const matches = text.match(/\[\[([^\]|\n]+)(?:\|[^\]\n]+)?\]\]/g);
+    if (!matches || matches.length === 0) return '';
+    return Array.from(new Set(matches)).sort().join('|');
+  }
 
   function recenterTypewriter() {
     if (view && editorPreferences.typewriterScrolling) {
@@ -83,6 +119,7 @@
     }
     currentDoc = initialContent;
     currentEditingSceneId = manuscript.activeSceneId;
+    lastSavedWikilinksSig = extractWikilinksSignature(initialContent);
 
     autosaveManager = new AutosaveManager({
       delayMs: 800,
@@ -90,9 +127,16 @@
         if (vault.isOpen && !vault.isLocked) {
           const effectiveId = targetId || currentEditingSceneId || manuscript.activeSceneId || 'default_scene';
           await vault.saveScene(effectiveId, content);
-          await vault.loadVaultIndex();
-          if (effectiveId) {
-            await vault.loadBacklinks(effectiveId);
+
+          const nextWikilinksSig = extractWikilinksSignature(content);
+          const wikilinksChanged = nextWikilinksSig !== lastSavedWikilinksSig;
+          lastSavedWikilinksSig = nextWikilinksSig;
+
+          if (wikilinksChanged || !vault.indexOverview) {
+            await vault.loadVaultIndex();
+            if (effectiveId && vault.isInspectorOpen) {
+              await vault.loadBacklinks(effectiveId);
+            }
           }
         }
       },
@@ -101,20 +145,31 @@
       },
     });
 
+    vault.registerBeforeLock(async () => {
+      if (autosaveManager) {
+        await autosaveManager.flush();
+      }
+      await editorViewState.flushSessionToVault();
+    });
+
     let prevWords = countWords(splitFrontmatter(initialContent).body);
     let lastCursorLine = -1;
     let isPasting = false;
     let pasteTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const updateListener = EditorView.updateListener.of((update) => {
+      if (update.docChanged || update.selectionSet) {
+        activeFormats = getActiveFormats(update.state);
+      }
+
       if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
-        setTimeout(() => {
-          if (view) {
-            view.dispatch({
-              effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }),
-            });
-          }
-        }, 10);
+        if (typewriterRafId !== null) {
+          cancelAnimationFrame(typewriterRafId);
+        }
+        typewriterRafId = requestAnimationFrame(() => {
+          typewriterRafId = null;
+          recenterTypewriter();
+        });
       }
 
       if (editorPreferences.relativeLineNumbers && update.selectionSet) {
@@ -215,6 +270,8 @@
         lineNumbersCompartment.of(getLineNumbersExtension(editorPreferences.relativeLineNumbers)),
         ...((basicSetup as unknown as Extension[]).slice(1)),
         markdown(),
+        richTextKeymap,
+        richTextModeExtension,
         wikilinkDecoratorPlugin,
         wikilinkAutocompleteExtension,
         wikilinkHoverExtension,
@@ -230,6 +287,11 @@
       state,
       parent: editorElement,
     });
+    view.dispatch({
+      effects: setRichTextMode.of(editorPreferences.editorMode === 'visual'),
+    });
+    ensureCursorOutsideFrontmatter(view);
+    activeFormats = getActiveFormats(view.state);
     editorViewState.applyInitialFocus(view);
 
     if (editorElement && typeof ResizeObserver !== 'undefined') {
@@ -296,6 +358,19 @@
     }
   });
 
+  // Sincroniza o Modo do Editor (Visual Rich Text vs Markdown)
+  $effect(() => {
+    const isVisual = editorPreferences.editorMode === 'visual';
+    if (view) {
+      view.dispatch({
+        effects: setRichTextMode.of(isVisual),
+      });
+      if (isVisual) {
+        ensureCursorOutsideFrontmatter(view);
+      }
+    }
+  });
+
   // Reage à mudança de cena ativa selecionada na barra lateral
   $effect(() => {
     const activeId = manuscript.activeSceneId;
@@ -318,6 +393,7 @@
 
           currentEditingSceneId = activeId;
           currentDoc = content;
+          lastSavedWikilinksSig = extractWikilinksSignature(content);
           if (view) {
             view.dispatch({
               changes: {
@@ -326,6 +402,8 @@
                 insert: content,
               },
             });
+            ensureCursorOutsideFrontmatter(view);
+            activeFormats = getActiveFormats(view.state);
             if (editorPreferences.typewriterScrolling) {
               requestAnimationFrame(recenterTypewriter);
             }
@@ -338,6 +416,11 @@
   });
 
   onDestroy(() => {
+    vault.registerBeforeLock(null);
+    if (typewriterRafId !== null) {
+      cancelAnimationFrame(typewriterRafId);
+      typewriterRafId = null;
+    }
     if (editorResizeObserver) {
       editorResizeObserver.disconnect();
       editorResizeObserver = null;
@@ -360,6 +443,10 @@
 <div class="editor-wrapper">
   {#if manuscript.activeScene}
     <SceneHeader />
+  {/if}
+
+  {#if !editorViewState.isZenMode}
+    <LiteraryBar {view} {activeFormats} />
   {/if}
 
   <div
@@ -388,8 +475,23 @@
       <span>{charsCount} {charsCount === 1 ? 'caractere' : 'caracteres'}</span>
     </button>
 
-    <!-- Centro: Link / Ação do Modo Foco -->
+    <!-- Centro: Alternador de Modo (Editor Comum vs Markdown) e Modo Foco -->
     <div class="footer-center">
+      <button
+        type="button"
+        class="focus-pill-btn"
+        class:active={editorPreferences.editorMode === 'visual'}
+        onclick={() => {
+          editorPreferences.toggleEditorMode();
+          view?.focus();
+        }}
+        title={editorPreferences.editorMode === 'visual'
+          ? 'Modo Editor Comum ativo (clique para ver código Markdown)'
+          : 'Modo Markdown ativo (clique para usar Editor Visual Rich Text)'}
+      >
+        {editorPreferences.editorMode === 'visual' ? '📝 Editor Comum' : '⌨️ Markdown'}
+      </button>
+
       {#if editorViewState.isFocusMode}
         <button
           type="button"
@@ -538,6 +640,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: 6px;
   }
 
   .focus-pill-btn {

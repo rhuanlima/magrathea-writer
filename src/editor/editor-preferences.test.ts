@@ -68,4 +68,13 @@ describe('Editor Preferences Store', () => {
     editorPreferences.toggleRelativeLineNumbers();
     expect(editorPreferences.relativeLineNumbers).toBe(false);
   });
+
+  it('permite alternar entre Modo Editor Comum (visual) e Modo Markdown', () => {
+    editorPreferences.setEditorMode('visual');
+    expect(editorPreferences.editorMode).toBe('visual');
+    editorPreferences.toggleEditorMode();
+    expect(editorPreferences.editorMode).toBe('markdown');
+    editorPreferences.toggleEditorMode();
+    expect(editorPreferences.editorMode).toBe('visual');
+  });
 });
