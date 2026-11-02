@@ -115,4 +115,21 @@ describe('M0-03: Security, CSP & Offline Confinement', () => {
       `Disallowed external URLs found in production bundle: ${JSON.stringify(foundDisallowedUrls, null, 2)}`
     ).toEqual([]);
   });
+
+  it('prohibits {@html} and raw innerHTML assignment in source files (SECURITY.md §2.3)', () => {
+    const srcDir = path.resolve(__dirname);
+    const sourceFiles = getFilesRecursively(srcDir).filter(
+      (file) => /\.(svelte|ts)$/.test(file) && !file.endsWith('.test.ts')
+    );
+
+    const violations: string[] = [];
+    for (const file of sourceFiles) {
+      const content = fs.readFileSync(file, 'utf-8');
+      if (content.includes('{@html') || /\.innerHTML\s*=/.test(content)) {
+        violations.push(path.relative(srcDir, file));
+      }
+    }
+
+    expect(violations).toEqual([]);
+  });
 });

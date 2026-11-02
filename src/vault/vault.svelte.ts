@@ -14,8 +14,10 @@ import {
   type ApplyRenameRefactorResponse,
 } from '../tauri/bridge';
 import { addRecentVault } from './recent-vaults';
+import { manuscript } from './manuscript.svelte';
 
 class VaultStore {
+  private beforeLockHandler: (() => Promise<void>) | null = null;
   isOpen = $state(false);
   isLocked = $state(true);
   vaultId = $state<string | null>(null);
@@ -483,10 +485,25 @@ class VaultStore {
   }
 
   /**
+   * Registra um callback assíncrono para descarregar alterações pendentes (autosave)
+   * imediatamente antes de o cofre ser trancado ou fechado.
+   */
+  registerBeforeLock(handler: (() => Promise<void>) | null) {
+    this.beforeLockHandler = handler;
+  }
+
+  /**
    * Bloqueia o cofre atual em memória.
    */
   async lockVault() {
     try {
+      if (this.isOpen && !this.isLocked && this.beforeLockHandler) {
+        try {
+          await this.beforeLockHandler();
+        } catch {
+          // Prossegue com o bloqueio de segurança mesmo se o flush falhar
+        }
+      }
       await safeInvoke('lock_vault');
       this.isLocked = true;
       this.recoveryKeyToken = null;
@@ -495,6 +512,7 @@ class VaultStore {
       this.isInspectorOpen = false;
       this.isRefactorModalOpen = false;
       this.lastSnapshotId = null;
+      manuscript.clearSession();
     } catch (err) {
       this.errorMessage = String(err);
     }
@@ -505,6 +523,13 @@ class VaultStore {
    */
   async closeVault() {
     try {
+      if (this.isOpen && !this.isLocked && this.beforeLockHandler) {
+        try {
+          await this.beforeLockHandler();
+        } catch {
+          // Prossegue com o fechamento mesmo se o flush falhar
+        }
+      }
       await safeInvoke('close_vault');
       this.isOpen = false;
       this.isLocked = true;
@@ -519,6 +544,7 @@ class VaultStore {
       this.isInspectorOpen = false;
       this.isRefactorModalOpen = false;
       this.lastSnapshotId = null;
+      manuscript.clearSession();
     } catch (err) {
       this.errorMessage = String(err);
     }

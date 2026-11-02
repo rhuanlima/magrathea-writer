@@ -68,7 +68,7 @@
     </div>
 
     <h2 id="lock-title" class="lock-title">
-      {vault.projectTitle || t('vault.unlock.screenTitle')}
+      {t('vault.unlock.screenTitle')}
     </h2>
 
     <p class="lock-subtitle">

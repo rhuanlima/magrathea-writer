@@ -81,6 +81,18 @@
   let currentEditingSceneId: string | null = null;
   let loadSequence = 0;
   let editorResizeObserver: ResizeObserver | null = null;
+  let typewriterRafId: number | null = null;
+  let lastSavedWikilinksSig = '';
+
+  /**
+   * Extrai uma assinatura leve dos [[wikilinks]] presentes no texto para evitar
+   * recarregamentos desnecessários do índice global do cofre a cada autosave.
+   */
+  function extractWikilinksSignature(text: string): string {
+    const matches = text.match(/\[\[([^\]|\n]+)(?:\|[^\]\n]+)?\]\]/g);
+    if (!matches || matches.length === 0) return '';
+    return Array.from(new Set(matches)).sort().join('|');
+  }
 
   function recenterTypewriter() {
     if (view && editorPreferences.typewriterScrolling) {
@@ -107,6 +119,7 @@
     }
     currentDoc = initialContent;
     currentEditingSceneId = manuscript.activeSceneId;
+    lastSavedWikilinksSig = extractWikilinksSignature(initialContent);
 
     autosaveManager = new AutosaveManager({
       delayMs: 800,
@@ -114,15 +127,29 @@
         if (vault.isOpen && !vault.isLocked) {
           const effectiveId = targetId || currentEditingSceneId || manuscript.activeSceneId || 'default_scene';
           await vault.saveScene(effectiveId, content);
-          await vault.loadVaultIndex();
-          if (effectiveId) {
-            await vault.loadBacklinks(effectiveId);
+
+          const nextWikilinksSig = extractWikilinksSignature(content);
+          const wikilinksChanged = nextWikilinksSig !== lastSavedWikilinksSig;
+          lastSavedWikilinksSig = nextWikilinksSig;
+
+          if (wikilinksChanged || !vault.indexOverview) {
+            await vault.loadVaultIndex();
+            if (effectiveId && vault.isInspectorOpen) {
+              await vault.loadBacklinks(effectiveId);
+            }
           }
         }
       },
       onStatusChange: (status) => {
         autosaveStatus = status;
       },
+    });
+
+    vault.registerBeforeLock(async () => {
+      if (autosaveManager) {
+        await autosaveManager.flush();
+      }
+      await editorViewState.flushSessionToVault();
     });
 
     let prevWords = countWords(splitFrontmatter(initialContent).body);
@@ -136,13 +163,13 @@
       }
 
       if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
-        setTimeout(() => {
-          if (view) {
-            view.dispatch({
-              effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }),
-            });
-          }
-        }, 10);
+        if (typewriterRafId !== null) {
+          cancelAnimationFrame(typewriterRafId);
+        }
+        typewriterRafId = requestAnimationFrame(() => {
+          typewriterRafId = null;
+          recenterTypewriter();
+        });
       }
 
       if (editorPreferences.relativeLineNumbers && update.selectionSet) {
@@ -366,6 +393,7 @@
 
           currentEditingSceneId = activeId;
           currentDoc = content;
+          lastSavedWikilinksSig = extractWikilinksSignature(content);
           if (view) {
             view.dispatch({
               changes: {
@@ -388,6 +416,11 @@
   });
 
   onDestroy(() => {
+    vault.registerBeforeLock(null);
+    if (typewriterRafId !== null) {
+      cancelAnimationFrame(typewriterRafId);
+      typewriterRafId = null;
+    }
     if (editorResizeObserver) {
       editorResizeObserver.disconnect();
       editorResizeObserver = null;

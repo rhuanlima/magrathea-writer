@@ -306,6 +306,17 @@ class ManuscriptStore {
   toggleTrash(open?: boolean): void {
     this.isTrashOpen = open !== undefined ? open : !this.isTrashOpen;
   }
+
+  /**
+   * Limpa os itens e títulos da árvore em memória ao bloquear ou fechar o cofre.
+   */
+  clearSession(): void {
+    this.items = [];
+    this.trash = [];
+    this.activeSceneId = null;
+    this.isTrashOpen = false;
+    this.errorMessage = null;
+  }
 }
 
 export const manuscript = new ManuscriptStore();

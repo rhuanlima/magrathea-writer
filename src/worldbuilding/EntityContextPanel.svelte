@@ -22,10 +22,11 @@
     )
   );
 
+  let contentLower = $derived(currentContent.toLowerCase());
+
   let mentionedEntities = $derived(
     allEntities.filter((e) => {
       const titleLower = e.title.toLowerCase();
-      const contentLower = currentContent.toLowerCase();
       return (
         contentLower.includes(`[[${titleLower}`) ||
         contentLower.includes(titleLower)

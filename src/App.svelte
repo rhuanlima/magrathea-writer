@@ -194,6 +194,31 @@
     }
   });
 
+  // Limpa o conteúdo do manuscrito na memória da UI ao trancar e recarrega a árvore ao desbloquear
+  $effect(() => {
+    if (vault.isLocked) {
+      currentContent = '';
+    } else if (vault.isOpen && manuscript.items.length === 0) {
+      void manuscript.refreshTree();
+      void editorViewState.refreshProductivity();
+    }
+  });
+
+  /**
+   * Defesa em profundidade (SECURITY.md §2.1): bloqueia qualquer tentativa de navegação
+   * externa acidental por links <a> na webview.
+   */
+  function handleGlobalClick(e: MouseEvent) {
+    const target = e.target as HTMLElement | null;
+    const anchor = target?.closest?.('a');
+    if (!anchor) return;
+    const href = anchor.getAttribute('href') || '';
+    if (/^(?:https?:|mailto:|tel:|file:)/i.test(href)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  }
+
   onDestroy(() => {
     tracker?.stop();
     for (const unlisten of unlistenMenuEvents) {
@@ -234,11 +259,11 @@
         editorViewState.exitZen();
       }
     }
-    // Cmd/Ctrl + L: Abrir busca global rapidamente
+    // Cmd/Ctrl + L: Trancar Mundo imediatamente (SECURITY.md §3.3)
     if ((e.metaKey || e.ctrlKey) && (e.key === 'l' || e.key === 'L') && !e.altKey && !e.shiftKey) {
       e.preventDefault();
       if (vault.isOpen && !vault.isLocked) {
-        searchStore.openModal();
+        void vault.lockVault();
       }
     }
     if ((e.metaKey || e.ctrlKey) && (e.key === 'o' || e.key === 'O')) {
@@ -280,7 +305,7 @@
   }
 </script>
 
-<svelte:window onkeydown={handleGlobalKeydown} />
+<svelte:window onkeydown={handleGlobalKeydown} onclick={handleGlobalClick} />
 
 <main class="app-shell" class:zen-active={editorViewState.isZenMode} class:focus-mode-active={editorViewState.isFocusMode}>
   {#if editorViewState.isZenMode}
@@ -308,7 +333,7 @@
       </button>
       <img src="/app-icon.png" alt="Magrathea Writer" class="brand-logo-img" />
       <span class="brand-title">{t('app.title')}</span>
-      {#if vault.isOpen && vault.projectTitle}
+      {#if vault.isOpen && !vault.isLocked && vault.projectTitle}
         <span class="vault-pill" title={vault.vaultPath || ''}>
           🌍 {vault.projectTitle}
         </span>
@@ -525,7 +550,7 @@
   </header>
 
   <div class="app-workspace">
-    {#if vault.isOpen}
+    {#if vault.isOpen && !vault.isLocked}
       <Sidebar />
       <section class="editor-workspace">
         <Editor initialContent={currentContent} onChange={handleContentChange} />
@@ -536,7 +561,7 @@
           currentContent = restored;
         }}
       />
-    {:else}
+    {:else if !vault.isOpen}
       <WelcomeScreen
         onOpenVault={handleOpenVaultAction}
         onCreateVault={() => (isCreateModalOpen = true)}
