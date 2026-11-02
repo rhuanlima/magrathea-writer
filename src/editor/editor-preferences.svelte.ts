@@ -11,8 +11,10 @@
 
 export type FontFamilyChoice = 'garamond' | 'sans' | 'mono';
 export type ColumnWidthChoice = 'narrow' | 'medium' | 'wide' | 'full';
+export type EditorModeChoice = 'visual' | 'markdown';
 
 class EditorPreferencesStore {
+  editorMode = $state<EditorModeChoice>('visual');
   showLineNumbers = $state<boolean>(false);
   relativeLineNumbers = $state<boolean>(false);
   fontSize = $state<number>(18);
@@ -34,6 +36,7 @@ class EditorPreferencesStore {
       const raw = localStorage.getItem('magrathea_editor_preferences');
       if (raw) {
         const parsed = JSON.parse(raw);
+        if (['visual', 'markdown'].includes(parsed.editorMode)) this.editorMode = parsed.editorMode;
         if (typeof parsed.showLineNumbers === 'boolean') this.showLineNumbers = parsed.showLineNumbers;
         if (typeof parsed.relativeLineNumbers === 'boolean') this.relativeLineNumbers = parsed.relativeLineNumbers;
         if (typeof parsed.fontSize === 'number') this.fontSize = parsed.fontSize;
@@ -55,6 +58,7 @@ class EditorPreferencesStore {
       localStorage.setItem(
         'magrathea_editor_preferences',
         JSON.stringify({
+          editorMode: this.editorMode,
           showLineNumbers: this.showLineNumbers,
           relativeLineNumbers: this.relativeLineNumbers,
           fontSize: this.fontSize,
@@ -69,6 +73,16 @@ class EditorPreferencesStore {
     } catch {
       // Ignora falhas
     }
+  }
+
+  setEditorMode(mode: EditorModeChoice): void {
+    this.editorMode = mode;
+    this.saveToStorage();
+  }
+
+  toggleEditorMode(): void {
+    this.editorMode = this.editorMode === 'visual' ? 'markdown' : 'visual';
+    this.saveToStorage();
   }
 
   toggleLineNumbers(): void {

@@ -213,6 +213,20 @@ export interface TranslationSchema {
     guillemets: string;
     ellipsis: string;
     sceneBreak: string;
+    modeVisual: string;
+    modeMarkdown: string;
+    modeVisualHint: string;
+    modeMarkdownHint: string;
+    bold: string;
+    italic: string;
+    underline: string;
+    strikethrough: string;
+    heading1: string;
+    heading2: string;
+    heading3: string;
+    bulletList: string;
+    blockquote: string;
+    clearFormatting: string;
   };
   inspector: {
     title: string;
