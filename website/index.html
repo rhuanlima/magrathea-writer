@@ -1154,6 +1154,12 @@
                   <span>Instalador DMG universal offline (v0.9.5-beta.4)</span>
                 </div>
               </a>
+              <button type="button" onclick="copyMacInstallCommand(this)" class="dropdown-item" style="width: 100%; border: none; background: transparent; text-align: left; cursor: pointer; font-family: inherit;">
+                <div>
+                  <strong>⚡ macOS: Instalar Direto via Terminal</strong>
+                  <span id="macCopyLabel">Clique para copiar comando (instala e abre sem bloqueio Gatekeeper)</span>
+                </div>
+              </button>
               <a href="https://github.com/rhuanlima/magrathea-writer/releases/tag/v0.9.5-beta.4" class="dropdown-item" target="_blank">
                 <div>
                   <strong>Windows 10 / 11 (64-bit)</strong>
@@ -1534,6 +1540,19 @@
               (Word), PDF e EPUB.
             </div>
           </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Como instalar no macOS sem aviso do Gatekeeper?</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="faq-answer">
+              Como o Magrathea Writer é um projeto independente e gratuito (sem certificado comercial pago da Apple), o
+              navegador do macOS adiciona uma flag de quarentena ao baixar arquivos <code>.dmg</code>. Para instalar e
+              abrir diretamente sem nenhum bloqueio, basta rodar no Terminal:<br><br>
+              <code>curl -fsSL https://rhuanlima.github.io/magrathea-writer/install.sh | bash</code>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1753,6 +1772,21 @@
     function toggleFaq(btn) {
       const item = btn.parentElement;
       item.classList.toggle('open');
+    }
+
+    // Copiar comando de instalação rápida no macOS
+    function copyMacInstallCommand(btn) {
+      const cmd = 'curl -fsSL https://rhuanlima.github.io/magrathea-writer/install.sh | bash';
+      navigator.clipboard.writeText(cmd).then(() => {
+        const label = document.getElementById('macCopyLabel');
+        if (label) {
+          const prev = label.innerText;
+          label.innerText = '✓ Comando copiado! Cole no Terminal do Mac e aperte Enter.';
+          setTimeout(() => {
+            label.innerText = prev;
+          }, 3500);
+        }
+      });
     }
   </script>
 </body>
