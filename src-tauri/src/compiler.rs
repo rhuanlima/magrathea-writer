@@ -192,11 +192,11 @@ pub fn compile_manuscript_internal(
     // 2. Front Matter: Epígrafe
     if let Some(ref epigraph) = cfg.epigraph {
         if !epigraph.trim().is_empty() {
-            let mut ep_text = epigraph.trim().to_string();
+            let mut ep_text = clean_literary_markdown(epigraph.trim());
             if let Some(ref src) = cfg.epigraph_source {
                 if !src.trim().is_empty() {
                     ep_text.push_str("\n\n— ");
-                    ep_text.push_str(src.trim());
+                    ep_text.push_str(&clean_literary_markdown(src.trim()));
                 }
             }
             sections.push(CompiledSection {
@@ -212,12 +212,13 @@ pub fn compile_manuscript_internal(
     // 3. Front Matter: Dedicatória
     if let Some(ref dedication) = cfg.dedication {
         if !dedication.trim().is_empty() {
+            let cleaned = clean_literary_markdown(dedication.trim());
             sections.push(CompiledSection {
                 id: "dedication".to_string(),
                 title: "Dedicatória".to_string(),
                 kind: "frontmatter".to_string(),
-                content: dedication.trim().to_string(),
-                word_count: dedication.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -225,12 +226,13 @@ pub fn compile_manuscript_internal(
     // 4. Front Matter: Prefácio
     if let Some(ref foreword) = cfg.foreword {
         if !foreword.trim().is_empty() {
+            let cleaned = clean_literary_markdown(foreword.trim());
             sections.push(CompiledSection {
                 id: "foreword".to_string(),
                 title: "Prefácio".to_string(),
                 kind: "frontmatter".to_string(),
-                content: foreword.trim().to_string(),
-                word_count: foreword.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -255,12 +257,13 @@ pub fn compile_manuscript_internal(
     // 6. Back Matter: Posfácio
     if let Some(ref afterword) = cfg.afterword {
         if !afterword.trim().is_empty() {
+            let cleaned = clean_literary_markdown(afterword.trim());
             sections.push(CompiledSection {
                 id: "afterword".to_string(),
                 title: "Posfácio".to_string(),
                 kind: "backmatter".to_string(),
-                content: afterword.trim().to_string(),
-                word_count: afterword.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -268,12 +271,13 @@ pub fn compile_manuscript_internal(
     // 7. Back Matter: Agradecimentos
     if let Some(ref acks) = cfg.acknowledgments {
         if !acks.trim().is_empty() {
+            let cleaned = clean_literary_markdown(acks.trim());
             sections.push(CompiledSection {
                 id: "acknowledgments".to_string(),
                 title: "Agradecimentos".to_string(),
                 kind: "backmatter".to_string(),
-                content: acks.trim().to_string(),
-                word_count: acks.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -281,12 +285,13 @@ pub fn compile_manuscript_internal(
     // 8. Back Matter: Referências
     if let Some(ref refs) = cfg.references {
         if !refs.trim().is_empty() {
+            let cleaned = clean_literary_markdown(refs.trim());
             sections.push(CompiledSection {
                 id: "references".to_string(),
                 title: "Referências e Leituras".to_string(),
                 kind: "backmatter".to_string(),
-                content: refs.trim().to_string(),
-                word_count: refs.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -294,12 +299,13 @@ pub fn compile_manuscript_internal(
     // 9. Back Matter: Sobre o Autor
     if let Some(ref about) = cfg.about_author {
         if !about.trim().is_empty() {
+            let cleaned = clean_literary_markdown(about.trim());
             sections.push(CompiledSection {
                 id: "about_author".to_string(),
                 title: "Sobre o Autor".to_string(),
                 kind: "backmatter".to_string(),
-                content: about.trim().to_string(),
-                word_count: about.split_whitespace().count(),
+                word_count: cleaned.split_whitespace().count(),
+                content: cleaned,
             });
         }
     }
@@ -495,6 +501,534 @@ pub fn clean_literary_markdown(text: &str) -> String {
         }
     }
     result
+}
+
+/// Trecho inline estilizado extraído da compilação de Markdown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct InlineSpan {
+    pub text: String,
+    pub bold: bool,
+    pub italic: bool,
+    pub underline: bool,
+    pub strike: bool,
+}
+
+/// Bloco estrutural extraído da compilação de Markdown.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MarkdownBlock {
+    SceneBreak,
+    Heading { level: u8, spans: Vec<InlineSpan> },
+    Blockquote(Vec<InlineSpan>),
+    BulletList(Vec<Vec<InlineSpan>>),
+    Paragraph(Vec<InlineSpan>),
+}
+
+/// Analisa marcações inline de Markdown (`***`, `**`, `__`, `*`, `_`, `~~`, `<u>...</u>`, `` ` ``, `[texto](url)`)
+/// de forma recursiva, preservando combinações aninhadas.
+pub fn parse_inline_spans(input: &str) -> Vec<InlineSpan> {
+    let mut out = Vec::new();
+    parse_inline_recursive(input, false, false, false, false, &mut out);
+    out
+}
+
+fn push_span(
+    out: &mut Vec<InlineSpan>,
+    text: &str,
+    bold: bool,
+    italic: bool,
+    underline: bool,
+    strike: bool,
+) {
+    if text.is_empty() {
+        return;
+    }
+    if let Some(last) = out.last_mut() {
+        if last.bold == bold
+            && last.italic == italic
+            && last.underline == underline
+            && last.strike == strike
+        {
+            last.text.push_str(text);
+            return;
+        }
+    }
+    out.push(InlineSpan {
+        text: text.to_string(),
+        bold,
+        italic,
+        underline,
+        strike,
+    });
+}
+
+fn parse_inline_recursive(
+    input: &str,
+    bold: bool,
+    italic: bool,
+    underline: bool,
+    strike: bool,
+    out: &mut Vec<InlineSpan>,
+) {
+    let mut i = 0;
+    let mut buf = String::new();
+
+    while i < input.len() {
+        let rest = &input[i..];
+
+        // 1. Negrito + Itálico: ***texto***
+        if let Some(after_open) = rest.strip_prefix("***") {
+            if let Some(close_idx) = after_open.find("***") {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_open[..close_idx],
+                        true,
+                        true,
+                        underline,
+                        strike,
+                        out,
+                    );
+                    i += 3 + close_idx + 3;
+                    continue;
+                }
+            }
+        }
+
+        // 2. Negrito: **texto** ou __texto__
+        if let Some(after_open) = rest.strip_prefix("**") {
+            if let Some(close_idx) = after_open.find("**") {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_open[..close_idx],
+                        true,
+                        italic,
+                        underline,
+                        strike,
+                        out,
+                    );
+                    i += 2 + close_idx + 2;
+                    continue;
+                }
+            }
+        }
+        if let Some(after_open) = rest.strip_prefix("__") {
+            if let Some(close_idx) = after_open.find("__") {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_open[..close_idx],
+                        true,
+                        italic,
+                        underline,
+                        strike,
+                        out,
+                    );
+                    i += 2 + close_idx + 2;
+                    continue;
+                }
+            }
+        }
+
+        // 3. Tachado: ~~texto~~
+        if let Some(after_open) = rest.strip_prefix("~~") {
+            if let Some(close_idx) = after_open.find("~~") {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_open[..close_idx],
+                        bold,
+                        italic,
+                        underline,
+                        true,
+                        out,
+                    );
+                    i += 2 + close_idx + 2;
+                    continue;
+                }
+            }
+        }
+
+        // 4. Sublinhado: <u>texto</u>
+        if rest.starts_with("<u>") || rest.starts_with("<U>") {
+            let after_open = &rest[3..];
+            let close_pos = after_open.find("</u>").or_else(|| after_open.find("</U>"));
+            if let Some(close_idx) = close_pos {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_open[..close_idx],
+                        bold,
+                        italic,
+                        true,
+                        strike,
+                        out,
+                    );
+                    i += 3 + close_idx + 4;
+                    continue;
+                }
+            }
+        }
+
+        // 5. Itálico: *texto* ou _texto_
+        if let Some(after_open) = rest.strip_prefix('*') {
+            if !after_open.starts_with('*') && !after_open.starts_with(' ') {
+                if let Some(close_idx) = after_open.find('*') {
+                    if close_idx > 0 {
+                        push_span(out, &buf, bold, italic, underline, strike);
+                        buf.clear();
+                        parse_inline_recursive(
+                            &after_open[..close_idx],
+                            bold,
+                            true,
+                            underline,
+                            strike,
+                            out,
+                        );
+                        i += 1 + close_idx + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+        if let Some(after_open) = rest.strip_prefix('_') {
+            if !after_open.starts_with('_') && !after_open.starts_with(' ') {
+                if let Some(close_idx) = after_open.find('_') {
+                    if close_idx > 0 {
+                        push_span(out, &buf, bold, italic, underline, strike);
+                        buf.clear();
+                        parse_inline_recursive(
+                            &after_open[..close_idx],
+                            bold,
+                            true,
+                            underline,
+                            strike,
+                            out,
+                        );
+                        i += 1 + close_idx + 1;
+                        continue;
+                    }
+                }
+            }
+        }
+
+        // 6. Código inline: `texto`
+        if let Some(after_open) = rest.strip_prefix('`') {
+            if let Some(close_idx) = after_open.find('`') {
+                if close_idx > 0 {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    push_span(
+                        out,
+                        &after_open[..close_idx],
+                        bold,
+                        italic,
+                        underline,
+                        strike,
+                    );
+                    i += 1 + close_idx + 1;
+                    continue;
+                }
+            }
+        }
+
+        // 7. Link Markdown: [rótulo](url)
+        if let Some(after_bracket) = rest.strip_prefix('[') {
+            if let Some(close_bracket) = after_bracket.find("](") {
+                let after_paren = &after_bracket[close_bracket + 2..];
+                if let Some(close_paren) = after_paren.find(')') {
+                    push_span(out, &buf, bold, italic, underline, strike);
+                    buf.clear();
+                    parse_inline_recursive(
+                        &after_bracket[..close_bracket],
+                        bold,
+                        italic,
+                        underline,
+                        strike,
+                        out,
+                    );
+                    i += 1 + close_bracket + 2 + close_paren + 1;
+                    continue;
+                }
+            }
+        }
+
+        if let Some(ch) = rest.chars().next() {
+            buf.push(ch);
+            i += ch.len_utf8();
+        } else {
+            break;
+        }
+    }
+
+    push_span(out, &buf, bold, italic, underline, strike);
+}
+
+fn spans_to_plain_text(spans: &[InlineSpan]) -> String {
+    let mut s = String::new();
+    for sp in spans {
+        s.push_str(&sp.text);
+    }
+    s
+}
+
+/// Converte um corpo Markdown em blocos estruturados prontos para exportação em DOCX, EPUB, PDF, HTML e TXT.
+pub fn parse_markdown_blocks(content: &str, section_title: Option<&str>) -> Vec<MarkdownBlock> {
+    let mut blocks: Vec<MarkdownBlock> = Vec::new();
+    let mut quote_lines: Vec<String> = Vec::new();
+    let mut list_items: Vec<Vec<InlineSpan>> = Vec::new();
+
+    let flush_quote = |quote_lines: &mut Vec<String>, blocks: &mut Vec<MarkdownBlock>| {
+        if !quote_lines.is_empty() {
+            let joined = quote_lines.join(" ");
+            let spans = parse_inline_spans(joined.trim());
+            if !spans.is_empty() {
+                blocks.push(MarkdownBlock::Blockquote(spans));
+            }
+            quote_lines.clear();
+        }
+    };
+
+    let flush_list = |list_items: &mut Vec<Vec<InlineSpan>>, blocks: &mut Vec<MarkdownBlock>| {
+        if !list_items.is_empty() {
+            blocks.push(MarkdownBlock::BulletList(std::mem::take(list_items)));
+        }
+    };
+
+    for raw_line in content.lines() {
+        let trimmed = raw_line.trim();
+
+        if trimmed.is_empty() {
+            flush_quote(&mut quote_lines, &mut blocks);
+            flush_list(&mut list_items, &mut blocks);
+            continue;
+        }
+
+        // Divisor de cena
+        if trimmed == "* * *"
+            || trimmed == "***"
+            || trimmed == "---"
+            || trimmed == "___"
+            || trimmed == "✦   ✦   ✦"
+        {
+            flush_quote(&mut quote_lines, &mut blocks);
+            flush_list(&mut list_items, &mut blocks);
+            blocks.push(MarkdownBlock::SceneBreak);
+            continue;
+        }
+
+        // Cabeçalhos Markdown (#, ##, ###, ####)
+        let hash_count = trimmed.chars().take_while(|&c| c == '#').count();
+        if (1..=6).contains(&hash_count) && trimmed[hash_count..].starts_with(' ') {
+            flush_quote(&mut quote_lines, &mut blocks);
+            flush_list(&mut list_items, &mut blocks);
+
+            let heading_text = trimmed[hash_count..].trim();
+            let spans = parse_inline_spans(heading_text);
+            let plain = spans_to_plain_text(&spans);
+
+            // Se for o primeiro bloco da seção e repetir exatamente o título da seção, evita duplicação
+            if blocks.is_empty() {
+                if let Some(sec_t) = section_title {
+                    if plain.trim().eq_ignore_ascii_case(sec_t.trim()) {
+                        continue;
+                    }
+                }
+            }
+
+            if !spans.is_empty() {
+                blocks.push(MarkdownBlock::Heading {
+                    level: hash_count as u8,
+                    spans,
+                });
+            }
+            continue;
+        }
+
+        // Citação (> texto)
+        if let Some(after_gt) = trimmed.strip_prefix('>') {
+            flush_list(&mut list_items, &mut blocks);
+            quote_lines.push(after_gt.trim().to_string());
+            continue;
+        }
+
+        // Lista de tópicos (- item ou * item)
+        if let Some(item_text) = trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("* "))
+            .or_else(|| trimmed.strip_prefix("• "))
+        {
+            flush_quote(&mut quote_lines, &mut blocks);
+            let spans = parse_inline_spans(item_text.trim());
+            if !spans.is_empty() {
+                list_items.push(spans);
+            }
+            continue;
+        }
+
+        flush_quote(&mut quote_lines, &mut blocks);
+        flush_list(&mut list_items, &mut blocks);
+        let spans = parse_inline_spans(trimmed);
+        if !spans.is_empty() {
+            blocks.push(MarkdownBlock::Paragraph(spans));
+        }
+    }
+
+    flush_quote(&mut quote_lines, &mut blocks);
+    flush_list(&mut list_items, &mut blocks);
+
+    blocks
+}
+
+fn render_docx_runs(
+    spans: &[InlineSpan],
+    force_bold: bool,
+    force_italic: bool,
+    size_half_pt: Option<&str>,
+) -> String {
+    let mut xml = String::new();
+    for sp in spans {
+        let is_b = force_bold || sp.bold;
+        let is_i = force_italic || sp.italic;
+        let is_u = sp.underline;
+        let is_s = sp.strike;
+
+        xml.push_str("<w:r>");
+        if is_b || is_i || is_u || is_s || size_half_pt.is_some() {
+            xml.push_str("<w:rPr>");
+            if is_b {
+                xml.push_str("<w:b/>");
+            }
+            if is_i {
+                xml.push_str("<w:i/>");
+            }
+            if is_u {
+                xml.push_str(r#"<w:u w:val="single"/>"#);
+            }
+            if is_s {
+                xml.push_str("<w:strike/>");
+            }
+            if let Some(sz) = size_half_pt {
+                xml.push_str(&format!(r#"<w:sz w:val="{sz}"/><w:szCs w:val="{sz}"/>"#));
+            }
+            xml.push_str("</w:rPr>");
+        }
+        xml.push_str(&format!(
+            r#"<w:t xml:space="preserve">{}</w:t></w:r>"#,
+            xml_escape(&sp.text)
+        ));
+    }
+    xml
+}
+
+fn render_spans_to_xhtml(spans: &[InlineSpan]) -> String {
+    let mut out = String::new();
+    for sp in spans {
+        let mut chunk = xml_escape(&sp.text);
+        if sp.strike {
+            chunk = format!("<s>{chunk}</s>");
+        }
+        if sp.underline {
+            chunk = format!("<u>{chunk}</u>");
+        }
+        if sp.italic {
+            chunk = format!("<em>{chunk}</em>");
+        }
+        if sp.bold {
+            chunk = format!("<strong>{chunk}</strong>");
+        }
+        out.push_str(&chunk);
+    }
+    out
+}
+
+fn render_markdown_to_xhtml(
+    content: &str,
+    section_title: Option<&str>,
+    indent_spaces: &str,
+) -> String {
+    let mut out = String::new();
+    for block in parse_markdown_blocks(content, section_title) {
+        match block {
+            MarkdownBlock::SceneBreak => {
+                out.push_str(&format!(
+                    r#"{indent_spaces}<p class="scene-break">* * *</p>{}"#,
+                    "\n"
+                ));
+            }
+            MarkdownBlock::Heading { level, spans } => {
+                let tag = match level {
+                    1 => "h2",
+                    2 => "h3",
+                    _ => "h4",
+                };
+                out.push_str(&format!(
+                    "{indent_spaces}<{tag}>{}</{tag}>\n",
+                    render_spans_to_xhtml(&spans)
+                ));
+            }
+            MarkdownBlock::Blockquote(spans) => {
+                out.push_str(&format!(
+                    "{indent_spaces}<blockquote><p>{}</p></blockquote>\n",
+                    render_spans_to_xhtml(&spans)
+                ));
+            }
+            MarkdownBlock::BulletList(items) => {
+                out.push_str(&format!("{indent_spaces}<ul>\n"));
+                for item in items {
+                    out.push_str(&format!(
+                        "{indent_spaces}  <li>{}</li>\n",
+                        render_spans_to_xhtml(&item)
+                    ));
+                }
+                out.push_str(&format!("{indent_spaces}</ul>\n"));
+            }
+            MarkdownBlock::Paragraph(spans) => {
+                out.push_str(&format!(
+                    "{indent_spaces}<p>{}</p>\n",
+                    render_spans_to_xhtml(&spans)
+                ));
+            }
+        }
+    }
+    out
+}
+
+/// Converte conteúdo Markdown em texto puro limpo (sem delimitadores `**`, `*`, `<u>`, `~~`, `#`).
+pub fn strip_markdown_to_plain_text(content: &str, section_title: Option<&str>) -> String {
+    let mut out = String::new();
+    for block in parse_markdown_blocks(content, section_title) {
+        if !out.is_empty() {
+            out.push_str("\n\n");
+        }
+        match block {
+            MarkdownBlock::SceneBreak => out.push_str("* * *"),
+            MarkdownBlock::Heading { spans, .. } => {
+                out.push_str(&spans_to_plain_text(&spans).to_uppercase());
+            }
+            MarkdownBlock::Blockquote(spans) => {
+                out.push_str("  “");
+                out.push_str(&spans_to_plain_text(&spans));
+                out.push('”');
+            }
+            MarkdownBlock::BulletList(items) => {
+                let lines: Vec<String> = items
+                    .iter()
+                    .map(|it| format!("  • {}", spans_to_plain_text(it)))
+                    .collect();
+                out.push_str(&lines.join("\n"));
+            }
+            MarkdownBlock::Paragraph(spans) => {
+                out.push_str(&spans_to_plain_text(&spans));
+            }
+        }
+    }
+    out
 }
 
 fn compile_tree_item(
@@ -803,18 +1337,42 @@ pub fn export_docx_internal(
             ));
         }
 
-        for para in sec.content.split("\n\n") {
-            let trimmed = para.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if trimmed == "* * *" || trimmed == "---" {
-                doc_xml.push_str(r#"<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/></w:pPr><w:r><w:t>* * *</w:t></w:r></w:p>"#);
-            } else {
-                doc_xml.push_str(&format!(
-                    r#"<w:p><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/><w:ind w:firstLine="480"/></w:pPr><w:r><w:t>{}</w:t></w:r></w:p>"#,
-                    xml_escape(trimmed)
-                ));
+        for block in parse_markdown_blocks(&sec.content, Some(&sec.title)) {
+            match block {
+                MarkdownBlock::SceneBreak => {
+                    doc_xml.push_str(r#"<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:before="240" w:after="240"/></w:pPr><w:r><w:t>* * *</w:t></w:r></w:p>"#);
+                }
+                MarkdownBlock::Heading { level, spans } => {
+                    let sz = match level {
+                        1 => "34",
+                        2 => "30",
+                        _ => "26",
+                    };
+                    doc_xml.push_str(&format!(
+                        r#"<w:p><w:pPr><w:spacing w:before="320" w:after="140"/></w:pPr>{}</w:p>"#,
+                        render_docx_runs(&spans, true, false, Some(sz))
+                    ));
+                }
+                MarkdownBlock::Blockquote(spans) => {
+                    doc_xml.push_str(&format!(
+                        r#"<w:p><w:pPr><w:spacing w:before="140" w:after="140" w:line="340" w:lineRule="auto"/><w:ind w:left="720" w:right="480"/></w:pPr>{}</w:p>"#,
+                        render_docx_runs(&spans, false, true, None)
+                    ));
+                }
+                MarkdownBlock::BulletList(items) => {
+                    for item in items {
+                        doc_xml.push_str(&format!(
+                            r#"<w:p><w:pPr><w:spacing w:after="80" w:line="340" w:lineRule="auto"/><w:ind w:left="720" w:hanging="360"/></w:pPr><w:r><w:t xml:space="preserve">• </w:t></w:r>{}</w:p>"#,
+                            render_docx_runs(&item, false, false, None)
+                        ));
+                    }
+                }
+                MarkdownBlock::Paragraph(spans) => {
+                    doc_xml.push_str(&format!(
+                        r#"<w:p><w:pPr><w:spacing w:after="120" w:line="360" w:lineRule="auto"/><w:ind w:firstLine="480"/></w:pPr>{}</w:p>"#,
+                        render_docx_runs(&spans, false, false, None)
+                    ));
+                }
             }
         }
     }
@@ -931,17 +1489,11 @@ p.scene-break {
             xml_escape(&sec.title)
         );
 
-        for para in sec.content.split("\n\n") {
-            let trimmed = para.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-            if trimmed == "* * *" || trimmed == "---" {
-                xhtml.push_str(r#"  <p class="scene-break">* * *</p>"#);
-            } else {
-                xhtml.push_str(&format!("  <p>{}</p>\n", xml_escape(trimmed)));
-            }
-        }
+        xhtml.push_str(&render_markdown_to_xhtml(
+            &sec.content,
+            Some(&sec.title),
+            "  ",
+        ));
 
         xhtml.push_str("</body>\n</html>");
         zip.write_all(xhtml.as_bytes())
@@ -1044,41 +1596,18 @@ fn pdf_escape_text(text: &str) -> String {
             '(' => out.push_str("\\("),
             ')' => out.push_str("\\)"),
             '\\' => out.push_str("\\\\"),
-            // Caracteres acentuados comuns em PT-BR mapeados para WinAnsi (octal):
-            'á' => out.push_str("\\341"),
-            'à' => out.push_str("\\340"),
-            'â' => out.push_str("\\342"),
-            'ã' => out.push_str("\\343"),
-            'é' => out.push_str("\\351"),
-            'ê' => out.push_str("\\352"),
-            'í' => out.push_str("\\355"),
-            'ó' => out.push_str("\\363"),
-            'ô' => out.push_str("\\364"),
-            'õ' => out.push_str("\\365"),
-            'ú' => out.push_str("\\372"),
-            'ü' => out.push_str("\\374"),
-            'ç' => out.push_str("\\347"),
-            'Á' => out.push_str("\\301"),
-            'À' => out.push_str("\\300"),
-            'Â' => out.push_str("\\302"),
-            'Ã' => out.push_str("\\303"),
-            'É' => out.push_str("\\311"),
-            'Ê' => out.push_str("\\312"),
-            'Í' => out.push_str("\\315"),
-            'Ó' => out.push_str("\\323"),
-            'Ô' => out.push_str("\\324"),
-            'Õ' => out.push_str("\\325"),
-            'Ú' => out.push_str("\\332"),
-            'Ü' => out.push_str("\\334"),
-            'Ç' => out.push_str("\\307"),
             '—' => out.push_str("\\227"),
             '–' => out.push_str("\\226"),
             '“' => out.push_str("\\223"),
             '”' => out.push_str("\\224"),
             '‘' => out.push_str("\\221"),
             '’' => out.push_str("\\222"),
-            '«' => out.push_str("\\253"),
-            '»' => out.push_str("\\273"),
+            '•' => out.push_str("\\225"),
+            '…' => out.push_str("\\205"),
+            '✦' => out.push('*'),
+            c if ('\u{00A0}'..='\u{00FF}').contains(&c) => {
+                out.push_str(&format!("\\{:03o}", c as u32));
+            }
             c if c.is_ascii() && !c.is_control() => out.push(c),
             _ => out.push('?'),
         }
@@ -1086,27 +1615,138 @@ fn pdf_escape_text(text: &str) -> String {
     out
 }
 
-/// Quebra de texto em linhas respeitando limites de palavras para largura do PDF.
-fn wrap_words(text: &str, max_chars: usize) -> Vec<String> {
-    let mut lines = Vec::new();
-    let words = text.split_whitespace();
-    let mut current_line = String::new();
+/// Quebra trechos estilizados (`InlineSpan`) em linhas respeitando `max_chars` e preservando negrito/itálico inline.
+fn wrap_styled_words(spans: &[InlineSpan], max_chars: usize) -> Vec<Vec<InlineSpan>> {
+    // 1. Divide os spans em palavras estilizadas (cada palavra é um Vec<InlineSpan>)
+    let mut words: Vec<Vec<InlineSpan>> = Vec::new();
+    let mut current_word: Vec<InlineSpan> = Vec::new();
 
-    for word in words {
-        if current_line.is_empty() {
-            current_line.push_str(word);
-        } else if current_line.chars().count() + 1 + word.chars().count() <= max_chars {
-            current_line.push(' ');
-            current_line.push_str(word);
-        } else {
-            lines.push(current_line);
-            current_line = word.to_string();
+    for sp in spans {
+        let mut buf = String::new();
+        for ch in sp.text.chars() {
+            if ch.is_whitespace() {
+                if !buf.is_empty() {
+                    push_span(
+                        &mut current_word,
+                        &buf,
+                        sp.bold,
+                        sp.italic,
+                        sp.underline,
+                        sp.strike,
+                    );
+                    buf.clear();
+                }
+                if !current_word.is_empty() {
+                    words.push(std::mem::take(&mut current_word));
+                }
+            } else {
+                buf.push(ch);
+            }
+        }
+        if !buf.is_empty() {
+            push_span(
+                &mut current_word,
+                &buf,
+                sp.bold,
+                sp.italic,
+                sp.underline,
+                sp.strike,
+            );
         }
     }
+    if !current_word.is_empty() {
+        words.push(current_word);
+    }
+
+    // 2. Agrupa as palavras em linhas de até `max_chars`
+    let mut lines: Vec<Vec<InlineSpan>> = Vec::new();
+    let mut current_line: Vec<InlineSpan> = Vec::new();
+    let mut current_len = 0usize;
+
+    for word in words {
+        let word_len: usize = word.iter().map(|s| s.text.chars().count()).sum();
+        if current_line.is_empty() {
+            for sp in word {
+                push_span(
+                    &mut current_line,
+                    &sp.text,
+                    sp.bold,
+                    sp.italic,
+                    sp.underline,
+                    sp.strike,
+                );
+            }
+            current_len = word_len;
+        } else if current_len + 1 + word_len <= max_chars {
+            let (space_b, space_i) = current_line
+                .last()
+                .map(|last| (last.bold, last.italic))
+                .unwrap_or((false, false));
+            push_span(&mut current_line, " ", space_b, space_i, false, false);
+            for sp in word {
+                push_span(
+                    &mut current_line,
+                    &sp.text,
+                    sp.bold,
+                    sp.italic,
+                    sp.underline,
+                    sp.strike,
+                );
+            }
+            current_len += 1 + word_len;
+        } else {
+            lines.push(std::mem::take(&mut current_line));
+            for sp in word {
+                push_span(
+                    &mut current_line,
+                    &sp.text,
+                    sp.bold,
+                    sp.italic,
+                    sp.underline,
+                    sp.strike,
+                );
+            }
+            current_len = word_len;
+        }
+    }
+
     if !current_line.is_empty() {
         lines.push(current_line);
     }
+
     lines
+}
+
+fn render_pdf_line(
+    stream: &mut String,
+    x: f32,
+    y: f32,
+    font_size: f32,
+    line_spans: &[InlineSpan],
+    force_bold: bool,
+    force_italic: bool,
+) {
+    if line_spans.is_empty() {
+        return;
+    }
+    stream.push_str(&format!("BT\n1 0 0 1 {:.1} {:.1} Tm\n", x, y));
+    for sp in line_spans {
+        let is_b = force_bold || sp.bold;
+        let is_i = force_italic || sp.italic;
+        let font_ref = match (is_b, is_i) {
+            (true, true) => "/F4",
+            (true, false) => "/F2",
+            (false, true) => "/F3",
+            (false, false) => "/F1",
+        };
+        stream.push_str(&format!(
+            "{} {:.1} Tf ({}) Tj\n",
+            font_ref,
+            font_size,
+            pdf_escape_text(&sp.text)
+        ));
+    }
+    stream.push_str("ET\n");
 }
 
 /// Gera um documento PDF 1.4 nativo em formato A5 diagramado profissionalmente.
@@ -1122,12 +1762,12 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
     // --- Página 1: Folha de Rosto / Capa ---
     {
         let mut stream = String::new();
-        stream.push_str("BT\n/F2 22 Tf\n28 TL\n");
+        stream.push_str("BT\n");
         let safe_title = pdf_escape_text(title);
         let title_len = title.chars().count();
         let title_x = (210.0 - (title_len as f32 * 5.5)).max(48.0);
         stream.push_str(&format!(
-            "{:.1} 360.0 Td\n({}) Tj\nT*\n",
+            "/F2 22 Tf\n1 0 0 1 {:.1} 360.0 Tm\n({}) Tj\n",
             title_x, safe_title
         ));
 
@@ -1137,7 +1777,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
                 let sub_len = sub.trim().chars().count();
                 let sub_x = (210.0 - (sub_len as f32 * 3.5)).max(48.0);
                 stream.push_str(&format!(
-                    "/F3 12 Tf\n18 TL\n{:.1} 320.0 Td\n({}) Tj\nT*\n",
+                    "/F3 12 Tf\n1 0 0 1 {:.1} 320.0 Tm\n({}) Tj\n",
                     sub_x, safe_sub
                 ));
             }
@@ -1148,7 +1788,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
             let auth_len = author.trim().chars().count();
             let auth_x = (210.0 - (auth_len as f32 * 3.2)).max(48.0);
             stream.push_str(&format!(
-                "/F1 12 Tf\n{:.1} 240.0 Td\n({}) Tj\n",
+                "/F1 12 Tf\n1 0 0 1 {:.1} 240.0 Tm\n({}) Tj\n",
                 auth_x, safe_author
             ));
         }
@@ -1164,7 +1804,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
     let text_indent = if is_poetry { 0.0f32 } else { 16.0f32 };
 
     let mut start_new_page = |stream: &mut String, p_num: &mut usize| {
-        let footer = format!("BT\n/F1 9 Tf\n205.0 36.0 Td\n({}) Tj\nET\n", *p_num);
+        let footer = format!("BT\n/F1 9 Tf\n1 0 0 1 205.0 36.0 Tm\n({}) Tj\nET\n", *p_num);
         stream.push_str(&footer);
         page_streams.push(std::mem::take(stream));
         *p_num += 1;
@@ -1184,18 +1824,17 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
         if sec.id == "dedication" || sec.id == "epigraph" {
             let lines: Vec<&str> = sec.content.lines().collect();
             let mut y = 340.0f32;
-            current_stream.push_str("BT\n/F3 11 Tf\n16 TL\n");
             for l in lines {
                 let trimmed = l.trim();
                 if !trimmed.is_empty() {
-                    let safe = pdf_escape_text(trimmed);
-                    let len = trimmed.chars().count();
+                    let spans = parse_inline_spans(trimmed);
+                    let plain = spans_to_plain_text(&spans);
+                    let len = plain.chars().count();
                     let x = (210.0 - (len as f32 * 3.0)).max(60.0);
-                    current_stream.push_str(&format!("{:.1} {:.1} Td\n({}) Tj\n", x, y, safe));
+                    render_pdf_line(&mut current_stream, x, y, 11.0, &spans, false, true);
                     y -= 16.0;
                 }
             }
-            current_stream.push_str("ET\n");
             cursor_y = start_new_page(&mut current_stream, &mut page_number);
             continue;
         }
@@ -1207,55 +1846,135 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
             let safe_title = pdf_escape_text(sec.title.trim());
             cursor_y -= 24.0;
             current_stream.push_str(&format!(
-                "BT\n/F2 15 Tf\n{:.1} {:.1} Td\n({}) Tj\nET\n",
+                "BT\n/F2 15 Tf\n1 0 0 1 {:.1} {:.1} Tm\n({}) Tj\nET\n",
                 margin_left, cursor_y, safe_title
             ));
             cursor_y -= 18.0;
         }
 
-        for para in sec.content.split("\n\n") {
-            let trimmed = para.trim();
-            if trimmed.is_empty() {
-                continue;
-            }
-
-            if trimmed == "* * *" || trimmed == "---" {
-                if cursor_y < 85.0 {
-                    cursor_y = start_new_page(&mut current_stream, &mut page_number);
+        for block in parse_markdown_blocks(&sec.content, Some(&sec.title)) {
+            match block {
+                MarkdownBlock::SceneBreak => {
+                    if cursor_y < 85.0 {
+                        cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                    }
+                    cursor_y -= 12.0;
+                    current_stream.push_str(&format!(
+                        "BT\n/F1 11 Tf\n1 0 0 1 190.0 {:.1} Tm\n(*  *  *) Tj\nET\n",
+                        cursor_y
+                    ));
+                    cursor_y -= 16.0;
                 }
-                cursor_y -= 12.0;
-                current_stream.push_str(&format!(
-                    "BT\n/F1 11 Tf\n190.0 {:.1} Td\n(*  *  *) Tj\nET\n",
-                    cursor_y
-                ));
-                cursor_y -= 16.0;
-                continue;
-            }
-
-            let lines = wrap_words(trimmed, 62);
-            for (idx, line) in lines.iter().enumerate() {
-                if cursor_y < 65.0 {
-                    cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                MarkdownBlock::Heading { level, spans } => {
+                    if cursor_y < 100.0 {
+                        cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                    }
+                    cursor_y -= 14.0;
+                    let font_size = match level {
+                        1 => 13.5f32,
+                        2 => 12.0f32,
+                        _ => 11.0f32,
+                    };
+                    for line_spans in wrap_styled_words(&spans, 54) {
+                        if cursor_y < 65.0 {
+                            cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                        }
+                        render_pdf_line(
+                            &mut current_stream,
+                            margin_left,
+                            cursor_y,
+                            font_size,
+                            &line_spans,
+                            true,
+                            false,
+                        );
+                        cursor_y -= leading + 2.0;
+                    }
+                    cursor_y -= 4.0;
                 }
-                let line_indent = if idx == 0 { text_indent } else { 0.0f32 };
-                let x = margin_left + line_indent;
-                let safe_line = pdf_escape_text(line);
-                current_stream.push_str(&format!(
-                    "BT\n/F1 10.5 Tf\n{:.1} {:.1} Td\n({}) Tj\nET\n",
-                    x, cursor_y, safe_line
-                ));
-                cursor_y -= leading;
-            }
-            if is_poetry {
-                cursor_y -= 6.0;
-            } else {
-                cursor_y -= 3.0;
+                MarkdownBlock::Blockquote(spans) => {
+                    for line_spans in wrap_styled_words(&spans, 54) {
+                        if cursor_y < 65.0 {
+                            cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                        }
+                        render_pdf_line(
+                            &mut current_stream,
+                            margin_left + 18.0,
+                            cursor_y,
+                            10.5,
+                            &line_spans,
+                            false,
+                            true,
+                        );
+                        cursor_y -= leading;
+                    }
+                    cursor_y -= 4.0;
+                }
+                MarkdownBlock::BulletList(items) => {
+                    for item in items {
+                        let mut bullet_spans = vec![InlineSpan {
+                            text: "• ".to_string(),
+                            bold: false,
+                            italic: false,
+                            underline: false,
+                            strike: false,
+                        }];
+                        bullet_spans.extend(item);
+                        for (idx, line_spans) in
+                            wrap_styled_words(&bullet_spans, 58).iter().enumerate()
+                        {
+                            if cursor_y < 65.0 {
+                                cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                            }
+                            let x = margin_left + if idx == 0 { 12.0 } else { 20.0 };
+                            render_pdf_line(
+                                &mut current_stream,
+                                x,
+                                cursor_y,
+                                10.5,
+                                line_spans,
+                                false,
+                                false,
+                            );
+                            cursor_y -= leading;
+                        }
+                    }
+                    cursor_y -= 3.0;
+                }
+                MarkdownBlock::Paragraph(spans) => {
+                    let lines = wrap_styled_words(&spans, 62);
+                    for (idx, line_spans) in lines.iter().enumerate() {
+                        if cursor_y < 65.0 {
+                            cursor_y = start_new_page(&mut current_stream, &mut page_number);
+                        }
+                        let line_indent = if idx == 0 { text_indent } else { 0.0f32 };
+                        let x = margin_left + line_indent;
+                        render_pdf_line(
+                            &mut current_stream,
+                            x,
+                            cursor_y,
+                            10.5,
+                            line_spans,
+                            false,
+                            false,
+                        );
+                        cursor_y -= leading;
+                    }
+                    if is_poetry {
+                        cursor_y -= 6.0;
+                    } else {
+                        cursor_y -= 3.0;
+                    }
+                }
             }
         }
     }
 
     if !current_stream.trim().is_empty() {
-        let footer = format!("BT\n/F1 9 Tf\n205.0 36.0 Td\n({}) Tj\nET\n", page_number);
+        let footer = format!(
+            "BT\n/F1 9 Tf\n1 0 0 1 205.0 36.0 Tm\n({}) Tj\nET\n",
+            page_number
+        );
         current_stream.push_str(&footer);
         page_streams.push(current_stream);
     }
@@ -1263,7 +1982,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
     // --- Montagem dos Objetos PDF ---
     let page_count = page_streams.len();
     let mut page_obj_ids = Vec::new();
-    let mut current_obj_id = 6usize;
+    let mut current_obj_id = 7usize;
     for _ in 0..page_count {
         page_obj_ids.push(current_obj_id);
         current_obj_id += 2;
@@ -1303,6 +2022,10 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
     offsets.push(pdf.len());
     pdf.extend_from_slice(b"5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Times-Italic /Encoding /WinAnsiEncoding >>\nendobj\n");
 
+    // 6 0 obj: Font F4 (Times-BoldItalic)
+    offsets.push(pdf.len());
+    pdf.extend_from_slice(b"6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Times-BoldItalic /Encoding /WinAnsiEncoding >>\nendobj\n");
+
     // Páginas e Streams de Conteúdo
     for (idx, stream_content) in page_streams.iter().enumerate() {
         let page_id = page_obj_ids[idx];
@@ -1310,7 +2033,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
 
         offsets.push(pdf.len());
         let page_str = format!(
-            "{} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 419.53 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents {} 0 R >>\nendobj\n",
+            "{} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 419.53 595.28] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R /F4 6 0 R >> >> /Contents {} 0 R >>\nendobj\n",
             page_id, content_id
         );
         pdf.extend_from_slice(page_str.as_bytes());
@@ -1328,7 +2051,7 @@ fn generate_direct_pdf(compiled: &CompiledManuscript) -> Result<Vec<u8>, VaultEr
 
     // Tabela XREF
     let xref_offset = pdf.len();
-    let total_objects = 5 + (page_count * 2);
+    let total_objects = 6 + (page_count * 2);
     let mut xref = format!("xref\n0 {}\n0000000000 65535 f \n", total_objects + 1);
     for off in offsets {
         xref.push_str(&format!("{:010} 00000 n \n", off));
@@ -1505,17 +2228,11 @@ pub fn export_pdf_html_internal(
                     xml_escape(&sec.title)
                 ));
             }
-            for para in sec.content.split("\n\n") {
-                let trimmed = para.trim();
-                if trimmed.is_empty() {
-                    continue;
-                }
-                if trimmed == "* * *" || trimmed == "---" {
-                    html.push_str(r#"    <p class="scene-break">* * *</p>"#);
-                } else {
-                    html.push_str(&format!("    <p>{}</p>\n", xml_escape(trimmed)));
-                }
-            }
+            html.push_str(&render_markdown_to_xhtml(
+                &sec.content,
+                Some(&sec.title),
+                "    ",
+            ));
         }
         html.push_str("  </div>\n");
     }
@@ -1543,7 +2260,8 @@ pub fn export_txt_dossier_internal(
 
     let compiled = compile_manuscript_internal(vault, settings)?;
     let main_txt = destination_dir.join("manuscrito_completo.txt");
-    fs::write(&main_txt, &compiled.full_text).map_err(|e| VaultError::Io(e.to_string()))?;
+    let clean_txt = strip_markdown_to_plain_text(&compiled.full_text, None);
+    fs::write(&main_txt, &clean_txt).map_err(|e| VaultError::Io(e.to_string()))?;
 
     // Gera dossiê literário em txt com notas de mundo
     let mut dossier = String::from(
@@ -1557,7 +2275,7 @@ pub fn export_txt_dossier_internal(
         .collect();
 
     for ent in entities {
-        dossier.push_str(&format!("### {} [{}]\n", ent.title, ent.kind));
+        dossier.push_str(&format!("{} [{}]\n", ent.title.to_uppercase(), ent.kind));
         if !ent.tags.is_empty() {
             dossier.push_str(&format!("Tags: {}\n", ent.tags.join(", ")));
         }
@@ -1565,7 +2283,11 @@ pub fn export_txt_dossier_internal(
             if let Ok(raw_bytes) = vault.read_blob(blob_id) {
                 let sheet = String::from_utf8_lossy(&raw_bytes);
                 let (_, body) = split_frontmatter(&sheet);
-                dossier.push_str(body.trim());
+                let cleaned_body = strip_markdown_to_plain_text(
+                    &clean_literary_markdown(body.trim()),
+                    Some(&ent.title),
+                );
+                dossier.push_str(&cleaned_body);
             }
         }
         dossier.push_str("\n\n-----------------------------------------\n\n");
@@ -1639,5 +2361,56 @@ mod tests {
         let custom: CompilerSettings = serde_json::from_str(custom_json).unwrap();
         assert!(custom.only_final_scenes);
         assert!(custom.include_worldbuilding_dossier);
+    }
+
+    #[test]
+    fn test_parse_inline_spans_rich_formatting() {
+        let spans = parse_inline_spans(
+            "Texto **negrito**, *itálico*, ***ambos***, <u>sublinhado</u> e ~~tachado~~.",
+        );
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "negrito" && s.bold && !s.italic));
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "itálico" && s.italic && !s.bold));
+        assert!(spans
+            .iter()
+            .any(|s| s.text == "ambos" && s.bold && s.italic));
+        assert!(spans.iter().any(|s| s.text == "sublinhado" && s.underline));
+        assert!(spans.iter().any(|s| s.text == "tachado" && s.strike));
+        let plain = spans_to_plain_text(&spans);
+        assert_eq!(
+            plain,
+            "Texto negrito, itálico, ambos, sublinhado e tachado."
+        );
+    }
+
+    #[test]
+    fn test_parse_markdown_blocks_and_renderers() {
+        let md = "# Capítulo 1\n\n## Subtítulo\n\nParágrafo com **negrito** e *itálico*.\n— Diálogo na linha seguinte.\n\n> Uma citação marcante.\n\n- Primeiro item\n- Segundo item\n\n* * *\n\nCena final.";
+        let blocks = parse_markdown_blocks(md, Some("Capítulo 1"));
+        // O H1 repetindo o título da seção é omitido para evitar duplicação
+        assert_eq!(blocks.len(), 7);
+        assert!(matches!(blocks[0], MarkdownBlock::Heading { level: 2, .. }));
+        assert!(matches!(blocks[1], MarkdownBlock::Paragraph(_)));
+        assert!(matches!(blocks[2], MarkdownBlock::Paragraph(_)));
+        assert!(matches!(blocks[3], MarkdownBlock::Blockquote(_)));
+        assert!(matches!(blocks[4], MarkdownBlock::BulletList(_)));
+        assert!(matches!(blocks[5], MarkdownBlock::SceneBreak));
+        assert!(matches!(blocks[6], MarkdownBlock::Paragraph(_)));
+
+        let xhtml = render_markdown_to_xhtml(md, Some("Capítulo 1"), "");
+        assert!(xhtml.contains("<h3>Subtítulo</h3>"));
+        assert!(xhtml.contains("<p>Parágrafo com <strong>negrito</strong> e <em>itálico</em>.</p>"));
+        assert!(xhtml.contains("<blockquote><p>Uma citação marcante.</p></blockquote>"));
+        assert!(xhtml.contains("<ul>\n  <li>Primeiro item</li>\n  <li>Segundo item</li>\n</ul>"));
+        assert!(xhtml.contains(r#"<p class="scene-break">* * *</p>"#));
+
+        let plain = strip_markdown_to_plain_text(md, Some("Capítulo 1"));
+        assert!(!plain.contains("**"));
+        assert!(!plain.contains("##"));
+        assert!(plain.contains("SUBTÍTULO"));
+        assert!(plain.contains("Parágrafo com negrito e itálico."));
     }
 }

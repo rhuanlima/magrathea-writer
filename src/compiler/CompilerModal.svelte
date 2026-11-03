@@ -86,10 +86,280 @@
     }
   }
 
+  interface PreviewSpan {
+    text: string;
+    bold: boolean;
+    italic: boolean;
+    underline: boolean;
+    strike: boolean;
+  }
+
+  type PreviewBlock =
+    | { kind: 'scene_break' }
+    | { kind: 'heading'; level: number; spans: PreviewSpan[] }
+    | { kind: 'blockquote'; spans: PreviewSpan[] }
+    | { kind: 'list'; items: PreviewSpan[][] }
+    | { kind: 'paragraph'; spans: PreviewSpan[] };
+
+  function cleanInlineLinks(raw: string): string {
+    return raw
+      .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, '$2')
+      .replace(/\[\[([^\]]+)\]\]/g, '$1')
+      .replace(/\[([^\]]+)\]\((?!https?:\/\/)[^)]+\)/g, '$1')
+      .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, '$1');
+  }
+
+  function parseInlineSpans(
+    input: string,
+    bold = false,
+    italic = false,
+    underline = false,
+    strike = false
+  ): PreviewSpan[] {
+    const cleaned = cleanInlineLinks(input);
+    const out: PreviewSpan[] = [];
+    let i = 0;
+    let buf = '';
+
+    const flush = () => {
+      if (!buf) return;
+      const last = out[out.length - 1];
+      if (
+        last &&
+        last.bold === bold &&
+        last.italic === italic &&
+        last.underline === underline &&
+        last.strike === strike
+      ) {
+        last.text += buf;
+      } else {
+        out.push({ text: buf, bold, italic, underline, strike });
+      }
+      buf = '';
+    };
+
+    while (i < cleaned.length) {
+      const rest = cleaned.slice(i);
+
+      if (rest.startsWith('***')) {
+        const close = rest.indexOf('***', 3);
+        if (close > 3) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(3, close), true, true, underline, strike));
+          i += close + 3;
+          continue;
+        }
+      }
+      if (rest.startsWith('**')) {
+        const close = rest.indexOf('**', 2);
+        if (close > 2) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(2, close), true, italic, underline, strike));
+          i += close + 2;
+          continue;
+        }
+      }
+      if (rest.startsWith('__')) {
+        const close = rest.indexOf('__', 2);
+        if (close > 2) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(2, close), true, italic, underline, strike));
+          i += close + 2;
+          continue;
+        }
+      }
+      if (rest.startsWith('~~')) {
+        const close = rest.indexOf('~~', 2);
+        if (close > 2) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(2, close), bold, italic, underline, true));
+          i += close + 2;
+          continue;
+        }
+      }
+      if (rest.toLowerCase().startsWith('<u>')) {
+        const close = rest.toLowerCase().indexOf('</u>', 3);
+        if (close > 3) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(3, close), bold, italic, true, strike));
+          i += close + 4;
+          continue;
+        }
+      }
+      if (rest.startsWith('*') && !rest.startsWith('**') && !rest.startsWith('* ')) {
+        const close = rest.indexOf('*', 1);
+        if (close > 1) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(1, close), bold, true, underline, strike));
+          i += close + 1;
+          continue;
+        }
+      }
+      if (rest.startsWith('_') && !rest.startsWith('__') && !rest.startsWith('_ ')) {
+        const close = rest.indexOf('_', 1);
+        if (close > 1) {
+          flush();
+          out.push(...parseInlineSpans(rest.slice(1, close), bold, true, underline, strike));
+          i += close + 1;
+          continue;
+        }
+      }
+      if (rest.startsWith('`')) {
+        const close = rest.indexOf('`', 1);
+        if (close > 1) {
+          flush();
+          buf = rest.slice(1, close);
+          flush();
+          i += close + 1;
+          continue;
+        }
+      }
+
+      buf += cleaned[i];
+      i += 1;
+    }
+
+    flush();
+    return out;
+  }
+
+  function parseSectionBlocks(content: string, sectionTitle?: string): PreviewBlock[] {
+    const blocks: PreviewBlock[] = [];
+    let quoteLines: string[] = [];
+    let listItems: PreviewSpan[][] = [];
+
+    const flushQuote = () => {
+      if (quoteLines.length > 0) {
+        const spans = parseInlineSpans(quoteLines.join(' ').trim());
+        if (spans.length > 0) {
+          blocks.push({ kind: 'blockquote', spans });
+        }
+        quoteLines = [];
+      }
+    };
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        blocks.push({ kind: 'list', items: listItems });
+        listItems = [];
+      }
+    };
+
+    for (const rawLine of content.split(/\r?\n/)) {
+      const trimmed = rawLine.trim();
+      if (!trimmed) {
+        flushQuote();
+        flushList();
+        continue;
+      }
+
+      if (
+        trimmed === '* * *' ||
+        trimmed === '***' ||
+        trimmed === '---' ||
+        trimmed === '___' ||
+        trimmed === '✦   ✦   ✦'
+      ) {
+        flushQuote();
+        flushList();
+        blocks.push({ kind: 'scene_break' });
+        continue;
+      }
+
+      const headingMatch = trimmed.match(/^(#{1,6})\s+(.+)$/);
+      if (headingMatch) {
+        flushQuote();
+        flushList();
+        const level = headingMatch[1].length;
+        const spans = parseInlineSpans(headingMatch[2].trim());
+        const plain = spans.map((s) => s.text).join('').trim();
+        if (
+          blocks.length === 0 &&
+          sectionTitle &&
+          plain.toLowerCase() === sectionTitle.trim().toLowerCase()
+        ) {
+          continue;
+        }
+        if (spans.length > 0) {
+          blocks.push({ kind: 'heading', level, spans });
+        }
+        continue;
+      }
+
+      if (trimmed.startsWith('>')) {
+        flushList();
+        quoteLines.push(trimmed.slice(1).trim());
+        continue;
+      }
+
+      const listMatch = trimmed.match(/^(?:[-*•])\s+(.+)$/);
+      if (listMatch) {
+        flushQuote();
+        const spans = parseInlineSpans(listMatch[1].trim());
+        if (spans.length > 0) {
+          listItems.push(spans);
+        }
+        continue;
+      }
+
+      flushQuote();
+      flushList();
+      const spans = parseInlineSpans(trimmed);
+      if (spans.length > 0) {
+        blocks.push({ kind: 'paragraph', spans });
+      }
+    }
+
+    flushQuote();
+    flushList();
+    return blocks;
+  }
+
+  function buildPlainCompiledText(): string {
+    const compiled = compilerStore.compiled;
+    if (!compiled) return '';
+    const lines: string[] = [];
+    const title = compiled.settings.title || 'Manuscrito';
+    lines.push(title.toUpperCase());
+    if (compiled.settings.subtitle?.trim()) {
+      lines.push(compiled.settings.subtitle.trim());
+    }
+    if (compiled.settings.author?.trim()) {
+      lines.push(`Por ${compiled.settings.author.trim()}`);
+    }
+
+    for (const sec of compiled.sections) {
+      lines.push('');
+      if (sec.title.trim()) {
+        lines.push(sec.title.trim().toUpperCase());
+        lines.push('');
+      }
+      const blocks = parseSectionBlocks(sec.content, sec.title);
+      for (const b of blocks) {
+        if (b.kind === 'scene_break') {
+          lines.push('* * *');
+        } else if (b.kind === 'heading') {
+          lines.push(b.spans.map((s) => s.text).join('').toUpperCase());
+        } else if (b.kind === 'blockquote') {
+          lines.push(`“${b.spans.map((s) => s.text).join('')}”`);
+        } else if (b.kind === 'list') {
+          for (const it of b.items) {
+            lines.push(`• ${it.map((s) => s.text).join('')}`);
+          }
+        } else if (b.kind === 'paragraph') {
+          lines.push(b.spans.map((s) => s.text).join(''));
+        }
+        lines.push('');
+      }
+    }
+    return lines.join('\n').trim();
+  }
+
   async function copyPreviewToClipboard() {
-    if (!compilerStore.compiled?.full_text) return;
+    if (!compilerStore.compiled) return;
     try {
-      await navigator.clipboard.writeText(compilerStore.compiled.full_text);
+      const plain = buildPlainCompiledText() || compilerStore.compiled.full_text;
+      await navigator.clipboard.writeText(plain);
       copiedFeedback = true;
       setTimeout(() => {
         copiedFeedback = false;
@@ -267,8 +537,91 @@
         </div>
 
         {#if compilerStore.compiled}
+          {#snippet renderSpans(spans: PreviewSpan[])}
+            {#each spans as sp}
+              {#if sp.bold && sp.italic && sp.underline && sp.strike}
+                <strong><em><u><s>{sp.text}</s></u></em></strong>
+              {:else if sp.bold && sp.italic && sp.underline}
+                <strong><em><u>{sp.text}</u></em></strong>
+              {:else if sp.bold && sp.italic && sp.strike}
+                <strong><em><s>{sp.text}</s></em></strong>
+              {:else if sp.bold && sp.underline && sp.strike}
+                <strong><u><s>{sp.text}</s></u></strong>
+              {:else if sp.italic && sp.underline && sp.strike}
+                <em><u><s>{sp.text}</s></u></em>
+              {:else if sp.bold && sp.italic}
+                <strong><em>{sp.text}</em></strong>
+              {:else if sp.bold && sp.underline}
+                <strong><u>{sp.text}</u></strong>
+              {:else if sp.bold && sp.strike}
+                <strong><s>{sp.text}</s></strong>
+              {:else if sp.italic && sp.underline}
+                <em><u>{sp.text}</u></em>
+              {:else if sp.italic && sp.strike}
+                <em><s>{sp.text}</s></em>
+              {:else if sp.underline && sp.strike}
+                <u><s>{sp.text}</s></u>
+              {:else if sp.bold}
+                <strong>{sp.text}</strong>
+              {:else if sp.italic}
+                <em>{sp.text}</em>
+              {:else if sp.underline}
+                <u>{sp.text}</u>
+              {:else if sp.strike}
+                <s>{sp.text}</s>
+              {:else}
+                {sp.text}
+              {/if}
+            {/each}
+          {/snippet}
+
           <div class="preview-book-sheet">
-            {compilerStore.compiled.full_text}
+            <div class="preview-title-page">
+              <h1 class="preview-book-title">
+                {compilerStore.compiled.settings.title || 'Manuscrito'}
+              </h1>
+              {#if compilerStore.compiled.settings.subtitle?.trim()}
+                <p class="preview-book-subtitle">
+                  {compilerStore.compiled.settings.subtitle.trim()}
+                </p>
+              {/if}
+              {#if compilerStore.compiled.settings.author?.trim()}
+                <p class="preview-book-author">
+                  Por {compilerStore.compiled.settings.author.trim()}
+                </p>
+              {/if}
+            </div>
+
+            {#each compilerStore.compiled.sections as sec (sec.id)}
+              <section class="preview-section">
+                {#if sec.title.trim()}
+                  <h2 class="preview-section-title">{sec.title}</h2>
+                {/if}
+                {#each parseSectionBlocks(sec.content, sec.title) as block}
+                  {#if block.kind === 'scene_break'}
+                    <p class="preview-scene-break">* * *</p>
+                  {:else if block.kind === 'heading'}
+                    <h3 class="preview-heading">
+                      {@render renderSpans(block.spans)}
+                    </h3>
+                  {:else if block.kind === 'blockquote'}
+                    <blockquote class="preview-blockquote">
+                      {@render renderSpans(block.spans)}
+                    </blockquote>
+                  {:else if block.kind === 'list'}
+                    <ul class="preview-list">
+                      {#each block.items as item}
+                        <li>{@render renderSpans(item)}</li>
+                      {/each}
+                    </ul>
+                  {:else if block.kind === 'paragraph'}
+                    <p class="preview-paragraph">
+                      {@render renderSpans(block.spans)}
+                    </p>
+                  {/if}
+                {/each}
+              </section>
+            {/each}
           </div>
         {:else if compilerStore.isCompiling}
           <div class="loading-state">
@@ -1191,11 +1544,10 @@
     background: var(--color-paper-base, #FFFFFF);
     border: 1px solid var(--color-paper-border, #E5E0D8);
     border-radius: 8px;
-    padding: 24px;
+    padding: 32px 40px;
     font-family: var(--font-literary, Georgia, serif);
-    font-size: 0.95rem;
-    line-height: 1.7;
-    white-space: pre-wrap;
+    font-size: 1rem;
+    line-height: 1.75;
     max-height: 60vh;
     overflow-y: auto;
   }
@@ -1203,6 +1555,88 @@
   :global(.dark) .preview-book-sheet {
     background: #1B1D19;
     border-color: #383C32;
+  }
+
+  .preview-title-page {
+    text-align: center;
+    padding: 20px 0 28px;
+    border-bottom: 1px solid var(--color-paper-border, #E5E0D8);
+    margin-bottom: 24px;
+  }
+
+  :global(.dark) .preview-title-page {
+    border-color: #383C32;
+  }
+
+  .preview-book-title {
+    margin: 0;
+    font-size: 1.65rem;
+    font-weight: 700;
+  }
+
+  .preview-book-subtitle {
+    margin: 6px 0 0;
+    font-size: 1.05rem;
+    font-style: italic;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .preview-book-author {
+    margin: 12px 0 0;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .preview-section {
+    padding: 18px 0;
+    border-bottom: 1px dashed var(--color-paper-border, #E5E0D8);
+  }
+
+  .preview-section:last-child {
+    border-bottom: none;
+  }
+
+  :global(.dark) .preview-section {
+    border-color: #383C32;
+  }
+
+  .preview-section-title {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin: 8px 0 18px;
+  }
+
+  .preview-heading {
+    font-size: 1.12rem;
+    font-weight: 700;
+    margin: 16px 0 8px;
+  }
+
+  .preview-paragraph {
+    margin: 0 0 0.65em;
+    text-indent: 1.5em;
+    text-align: justify;
+  }
+
+  .preview-blockquote {
+    margin: 12px 24px;
+    padding-left: 14px;
+    border-left: 3px solid var(--color-olive, #5E6F45);
+    font-style: italic;
+    color: var(--color-ink-muted, #6B7280);
+  }
+
+  .preview-list {
+    margin: 8px 0 12px 24px;
+    padding-left: 16px;
+  }
+
+  .preview-scene-break {
+    text-align: center;
+    margin: 18px 0;
+    letter-spacing: 0.25em;
+    color: var(--color-ink-muted, #6B7280);
   }
 
   /* Design */
