@@ -1,6 +1,9 @@
 <script lang="ts">
   import { t } from '../i18n';
   import { editorPreferences } from './editor-preferences.svelte';
+  import { manuscript } from '../vault/manuscript.svelte';
+  import { worldbuilding } from '../worldbuilding/worldbuilding.svelte';
+  import { getEntityKindLabel } from './wikilink-autocomplete';
   import {
     toggleBold,
     toggleItalic,
@@ -21,6 +24,40 @@
   }
 
   let { view, activeFormats = DEFAULT_ACTIVE_FORMATS }: Props = $props();
+
+  let isRefMenuOpen = $state(false);
+  let refSearch = $state('');
+
+  let referencableItems = $derived.by(() => {
+    const q = refSearch.trim().toLowerCase();
+    return manuscript.items
+      .filter((it) => it.kind !== 'part' && it.id !== manuscript.activeSceneId)
+      .filter((it) => !q || it.title.toLowerCase().includes(q) || it.tags.some((tag) => tag.toLowerCase().includes(q)))
+      .sort((a, b) => {
+        const score = (k: string) => (k === 'character' ? 0 : ['location', 'item', 'faction', 'lore', 'entity'].includes(k) ? 1 : 2);
+        return score(a.kind) - score(b.kind) || a.title.localeCompare(b.title);
+      });
+  });
+
+  function insertEntityReference(targetTitle: string) {
+    if (!view) return;
+    const { state, dispatch } = view;
+    const { from, to } = state.selection.main;
+    const selectedText = state.sliceDoc(from, to).trim();
+
+    const snippet =
+      selectedText && selectedText.toLowerCase() !== targetTitle.toLowerCase()
+        ? `[[${targetTitle}|${selectedText}]]`
+        : `[[${targetTitle}]]`;
+
+    dispatch({
+      changes: { from, to, insert: snippet },
+      selection: { anchor: from + snippet.length },
+    });
+    isRefMenuOpen = false;
+    refSearch = '';
+    view.focus();
+  }
 
   /**
    * Insere ou envolve o texto selecionado com os caracteres literários tipográficos.
@@ -241,6 +278,90 @@
       >
         ***
       </button>
+      <div class="divider"></div>
+
+      <!-- Botão e Popover de Referência Rápida [[Personagem / Entidade]] -->
+      <div class="ref-dropdown-container">
+        <button
+          type="button"
+          class="lit-btn ref-trigger-btn"
+          class:active={isRefMenuOpen}
+          onclick={() => {
+            isRefMenuOpen = !isRefMenuOpen;
+            if (!isRefMenuOpen) refSearch = '';
+          }}
+          title="Referenciar Personagem, Local, Item ou Cena ([[...]])"
+        >
+          🔗 [[Referenciar]]
+        </button>
+
+        {#if isRefMenuOpen}
+          <div class="ref-popover" role="dialog" aria-label="Referenciar Entidade">
+            <div class="ref-popover-header">
+              <input
+                type="text"
+                class="ref-search-input"
+                placeholder="Buscar personagem, local, item..."
+                bind:value={refSearch}
+                onkeydown={(e) => {
+                  if (e.key === 'Escape') {
+                    isRefMenuOpen = false;
+                    view?.focus();
+                  } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (referencableItems.length > 0) {
+                      insertEntityReference(referencableItems[0].title);
+                    } else if (refSearch.trim()) {
+                      insertEntityReference(refSearch.trim());
+                    }
+                  }
+                }}
+              />
+            </div>
+
+            <div class="ref-list">
+              {#if referencableItems.length > 0}
+                {#each referencableItems as item (item.id)}
+                  <button
+                    type="button"
+                    class="ref-option"
+                    onclick={() => insertEntityReference(item.title)}
+                  >
+                    <span class="ref-option-title">{item.title}</span>
+                    <span class="ref-option-badge">{getEntityKindLabel(item.kind)}</span>
+                  </button>
+                {/each}
+              {:else if refSearch.trim()}
+                <button
+                  type="button"
+                  class="ref-option"
+                  onclick={() => insertEntityReference(refSearch.trim())}
+                >
+                  <span class="ref-option-title">Inserir <strong>[[{refSearch.trim()}]]</strong></span>
+                  <span class="ref-option-badge">✨ Novo link</span>
+                </button>
+              {:else}
+                <div class="ref-empty">
+                  Nenhum personagem ou local cadastrado ainda.
+                </div>
+              {/if}
+            </div>
+
+            <div class="ref-popover-footer">
+              <button
+                type="button"
+                class="ref-create-btn"
+                onclick={() => {
+                  isRefMenuOpen = false;
+                  worldbuilding.openCreateModal();
+                }}
+              >
+                + Criar Personagem / Entidade
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
     </div>
   </div>
 </div>
@@ -403,5 +524,132 @@
     height: 16px;
     background-color: var(--color-paper-border);
     margin: 0 2px;
+  }
+
+  .ref-dropdown-container {
+    position: relative;
+    display: inline-flex;
+  }
+
+  .ref-trigger-btn {
+    font-family: var(--font-ui);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 0 8px;
+    color: var(--color-bronze, #8C733E);
+  }
+
+  .ref-popover {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 280px;
+    background-color: var(--color-paper-elevated, #FFFFFF);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-md, 8px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .ref-popover-header {
+    padding: 8px;
+    border-bottom: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-surface);
+  }
+
+  .ref-search-input {
+    width: 100%;
+    padding: 5px 8px;
+    font-family: var(--font-ui);
+    font-size: 12px;
+    border: 1px solid var(--color-paper-border);
+    border-radius: 4px;
+    background-color: var(--color-paper-base);
+    color: var(--color-ink-charcoal);
+    outline: none;
+    box-sizing: border-box;
+  }
+
+  .ref-search-input:focus {
+    border-color: var(--color-olive);
+  }
+
+  .ref-list {
+    max-height: 200px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 4px;
+  }
+
+  .ref-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+    padding: 6px 8px;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-ink-charcoal);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+  }
+
+  .ref-option:hover {
+    background-color: var(--color-paper-hover);
+  }
+
+  .ref-option-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .ref-option-badge {
+    font-size: 10px;
+    color: var(--color-ink-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .ref-empty {
+    padding: 12px 8px;
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    color: var(--color-ink-muted);
+    text-align: center;
+  }
+
+  .ref-popover-footer {
+    padding: 6px 8px;
+    border-top: 1px solid var(--color-paper-border);
+    background-color: var(--color-paper-surface);
+  }
+
+  .ref-create-btn {
+    width: 100%;
+    padding: 5px 8px;
+    border: 1px dashed var(--color-olive);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-olive);
+    font-family: var(--font-ui);
+    font-size: 11.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+  }
+
+  .ref-create-btn:hover {
+    background-color: var(--color-olive-subtle);
   }
 </style>

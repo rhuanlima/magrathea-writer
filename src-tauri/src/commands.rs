@@ -570,12 +570,20 @@ pub fn load_scene_content_internal(state: &AppState, scene_id: &str) -> Result<S
         scene_id.trim()
     };
 
-    let blob_bytes = vault
-        .read_blob(trimmed_id)
-        .map_err(|e| format!("Falha ao ler blob da cena: {e}"))?;
-
-    String::from_utf8(blob_bytes)
-        .map_err(|e| format!("Conteúdo da cena não é uma string UTF-8 válida: {e}"))
+    match vault.read_blob(trimmed_id) {
+        Ok(blob_bytes) => String::from_utf8(blob_bytes)
+            .map_err(|e| format!("Conteúdo da cena não é uma string UTF-8 válida: {e}")),
+        Err(e) => {
+            if let Ok(manifest) = vault.manifest() {
+                if let Some(item) = manifest.items.iter().find(|it| it.id == trimmed_id) {
+                    if item.blob_id.is_none() {
+                        return Ok(format!("# {}\n\n", item.title));
+                    }
+                }
+            }
+            Err(format!("Falha ao ler blob da cena: {e}"))
+        }
+    }
 }
 
 /// Estrutura de resposta contendo a árvore do manuscrito e a lixeira interna.

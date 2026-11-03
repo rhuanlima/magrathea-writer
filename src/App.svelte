@@ -72,6 +72,7 @@
       await vault.refreshStatus();
       if (vault.isOpen && !vault.isLocked) {
         await manuscript.refreshTree();
+        await vault.loadVaultIndex();
         await editorViewState.refreshProductivity();
       }
     })();
@@ -200,6 +201,7 @@
       currentContent = '';
     } else if (vault.isOpen && manuscript.items.length === 0) {
       void manuscript.refreshTree();
+      void vault.loadVaultIndex();
       void editorViewState.refreshProductivity();
     }
   });
@@ -240,6 +242,7 @@
       currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
     }
     await manuscript.refreshTree();
+    await vault.loadVaultIndex();
     await editorViewState.refreshProductivity();
   }
 
@@ -248,6 +251,7 @@
       currentContent = `# ${vault.projectTitle}\n\n${t('editor.welcomeMessage')}`;
     }
     await manuscript.refreshTree();
+    await vault.loadVaultIndex();
     await editorViewState.refreshProductivity();
   }
 

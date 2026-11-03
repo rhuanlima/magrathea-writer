@@ -13,48 +13,74 @@ import { vault } from '../vault/vault.svelte';
 import { manuscript } from '../vault/manuscript.svelte';
 
 export interface EntityCompletionItem {
+  id?: string;
   label: string;
   type: string;
   detail?: string;
   boost?: number;
 }
 
+export function getEntityKindLabel(kind: string): string {
+  switch (kind) {
+    case 'character':
+      return '👤 Personagem';
+    case 'location':
+      return '📍 Local';
+    case 'item':
+      return '🗝️ Objeto';
+    case 'faction':
+      return '⚔️ Facção';
+    case 'lore':
+      return '📜 Lore';
+    case 'chapter':
+      return '📖 Capítulo';
+    case 'scene':
+      return '🎬 Cena do Manuscrito';
+    default:
+      return '📝 Nota / Entidade';
+  }
+}
+
+function getKindBoost(kind: string, mentionCount = 0): number {
+  const base =
+    kind === 'character'
+      ? 4
+      : ['location', 'item', 'faction', 'lore', 'entity'].includes(kind)
+        ? 3
+        : 1;
+  return mentionCount > 0 ? base + 1 : base;
+}
+
 /**
- * Coleta todas as entidades e cenas conhecidas do cofre.
+ * Coleta todas as entidades (personagens, locais, itens, facções, lore) e cenas/capítulos conhecidos do cofre.
  */
 export function getKnownWorldItems(): EntityCompletionItem[] {
   const knownEntities = vault.entities;
-  const manuscriptScenes = manuscript.items.filter((it) => it.kind === 'scene');
   const optionsMap = new Map<string, EntityCompletionItem>();
 
-  // Adiciona itens do manuscrito
-  for (const scene of manuscriptScenes) {
-    optionsMap.set(scene.title.toLowerCase(), {
-      label: scene.title,
-      type: 'scene',
-      detail: 'Cena do Manuscrito',
-      boost: 1,
+  // 1. Adiciona todos os itens do manifesto (personagens, locais, itens, facções, lore, capítulos e cenas)
+  for (const item of manuscript.items) {
+    if (item.kind === 'part') continue;
+    optionsMap.set(item.title.toLowerCase(), {
+      id: item.id,
+      label: item.title,
+      type: item.kind,
+      detail: getEntityKindLabel(item.kind),
+      boost: getKindBoost(item.kind),
     });
   }
 
-  // Adiciona entidades da enciclopédia / índice
+  // 2. Enriquece/adiciona entidades do índice em memória (com resumo e contagem de menções)
   for (const ent of knownEntities) {
-    const kindLabel =
-      ent.kind === 'character'
-        ? '👤 Personagem'
-        : ent.kind === 'location'
-          ? '📍 Local'
-          : ent.kind === 'item'
-            ? '🗝️ Objeto'
-            : ent.kind === 'scene'
-              ? '📄 Cena'
-              : '📝 Nota';
+    if (ent.kind === 'part') continue;
+    const kindLabel = getEntityKindLabel(ent.kind);
 
     optionsMap.set(ent.title.toLowerCase(), {
+      id: ent.id,
       label: ent.title,
       type: ent.kind,
-      detail: ent.summary || kindLabel,
-      boost: ent.mention_count > 0 ? 2 : 1,
+      detail: ent.summary ? `${kindLabel} · ${ent.summary}` : kindLabel,
+      boost: getKindBoost(ent.kind, ent.mention_count),
     });
   }
 
@@ -133,6 +159,7 @@ export function getAutocompleteSuggestions(beforeText: string): {
 
 /**
  * Fonte de autocompletion para o CodeMirror 6.
+ * Considera os colchetes/parênteses de fechamento inseridos automaticamente por `closeBrackets()`.
  */
 function literaryLinkCompletionSource(context: CompletionContext): CompletionResult | null {
   // Verifica se há link indireto `[alias](...`
@@ -140,9 +167,13 @@ function literaryLinkCompletionSource(context: CompletionContext): CompletionRes
   if (indirectWord) {
     const res = getAutocompleteSuggestions(indirectWord.text);
     if (!res) return null;
+    const after = context.state.sliceDoc(context.pos, context.pos + 1);
+    const to = after === ')' ? context.pos + 1 : context.pos;
     return {
       from: indirectWord.from,
+      to,
       options: res.options,
+      filter: false,
     };
   }
 
@@ -151,9 +182,13 @@ function literaryLinkCompletionSource(context: CompletionContext): CompletionRes
   if (wikiWord) {
     const res = getAutocompleteSuggestions(wikiWord.text);
     if (!res) return null;
+    const after = context.state.sliceDoc(context.pos, context.pos + 2);
+    const to = after === ']]' ? context.pos + 2 : after.startsWith(']') ? context.pos + 1 : context.pos;
     return {
       from: wikiWord.from,
+      to,
       options: res.options,
+      filter: false,
     };
   }
 

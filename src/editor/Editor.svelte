@@ -387,7 +387,12 @@
         try {
           const scene = manuscript.items.find((i) => i.id === activeId);
           const blobId = scene?.blob_id || activeId;
-          const content = await vault.loadScene(blobId);
+          let content: string;
+          try {
+            content = await vault.loadScene(blobId);
+          } catch {
+            content = scene ? `# ${scene.title}\n\n` : '';
+          }
 
           if (mySeq !== loadSequence) return;
 

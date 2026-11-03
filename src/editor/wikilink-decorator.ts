@@ -14,6 +14,7 @@ import {
   Decoration,
   type DecorationSet,
 } from '@codemirror/view';
+import { manuscript } from '../vault/manuscript.svelte';
 
 class WikilinkWidget extends WidgetType {
   constructor(
@@ -33,17 +34,44 @@ class WikilinkWidget extends WidgetType {
     span.className = 'cm-wikilink-chip';
     span.setAttribute('data-target', this.target);
     span.setAttribute('data-label', this.label);
-    span.setAttribute('title', `[[${this.target}]]`);
+    span.setAttribute('title', `[[${this.target}]] — Cmd/Ctrl+Clique (ou clique no 🔗) para abrir a ficha`);
 
     const icon = document.createElement('span');
     icon.className = 'cm-wikilink-icon';
     icon.textContent = '🔗';
+    icon.addEventListener('mousedown', (e) => {
+      const found = manuscript.items.find(
+        (it) =>
+          it.title.toLowerCase() === this.target.toLowerCase() ||
+          it.slug.toLowerCase() === this.target.toLowerCase()
+      );
+      if (found) {
+        e.preventDefault();
+        e.stopPropagation();
+        manuscript.selectScene(found.id);
+      }
+    });
     span.appendChild(icon);
 
     const text = document.createElement('span');
     text.className = 'cm-wikilink-text';
     text.textContent = this.label;
     span.appendChild(text);
+
+    span.addEventListener('mousedown', (e) => {
+      if (e.metaKey || e.ctrlKey) {
+        const found = manuscript.items.find(
+          (it) =>
+            it.title.toLowerCase() === this.target.toLowerCase() ||
+            it.slug.toLowerCase() === this.target.toLowerCase()
+        );
+        if (found) {
+          e.preventDefault();
+          e.stopPropagation();
+          manuscript.selectScene(found.id);
+        }
+      }
+    });
 
     return span;
   }
