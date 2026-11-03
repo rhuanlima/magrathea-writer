@@ -322,7 +322,7 @@ pub fn get_entity_appearances(index: &VaultIndex, entity_id: &str) -> Vec<Entity
     let mut appearances = Vec::new();
 
     for b in backlinks {
-        if b.source_kind == "scene" {
+        if matches!(b.source_kind.as_str(), "scene" | "chapter" | "part") {
             appearances.push(EntityAppearance {
                 scene_id: b.source_id,
                 scene_title: b.source_title,
