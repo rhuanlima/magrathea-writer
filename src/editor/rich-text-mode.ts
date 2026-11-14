@@ -125,6 +125,8 @@ const boldItalicMarkDeco = Decoration.mark({ class: 'cm-rt-bold cm-rt-italic' })
 const underlineMarkDeco = Decoration.mark({ class: 'cm-rt-underline' });
 const strikethroughMarkDeco = Decoration.mark({ class: 'cm-rt-strikethrough' });
 const codeMarkDeco = Decoration.mark({ class: 'cm-rt-code' });
+// Marcadores à mostra (sob o cursor ou ainda sem par): cinza claro, só como indicação.
+const markerHintDeco = Decoration.mark({ class: 'cm-rt-marker' });
 
 /**
  * Identifica a linha final (1-indexed) do bloco de frontmatter YAML no início do documento.
@@ -163,7 +165,10 @@ interface InlineTokenMatch {
 /**
  * Extrai tokens inline de formatação de uma linha sem sobreposição e ignorando [[wikilinks]].
  */
-function findInlineMatches(lineText: string, startOffset: number): InlineTokenMatch[] {
+function findInlineMatches(
+  lineText: string,
+  startOffset: number,
+): { tokens: InlineTokenMatch[]; strays: Array<{ from: number; to: number }> } {
   const occupied = new Uint8Array(lineText.length);
 
   // Protege [[wikilinks]] para que a decoração de chip bronze funcione livremente
@@ -223,7 +228,25 @@ function findInlineMatches(lineText: string, startOffset: number): InlineTokenMa
     }
   }
 
-  return results.sort((a, b) => a.from - b.from);
+  // Marcadores que não formaram um par com conteúdo (ex.: `****` recém-inserido ou `**texto` aberto)
+  const strays: Array<{ from: number; to: number }> = [];
+  const strayRegex = /\*{2,}|~~|<\/?u>/g;
+  let sm: RegExpExecArray | null;
+  while ((sm = strayRegex.exec(lineText)) !== null) {
+    const from = sm.index;
+    const to = from + sm[0].length;
+    if (from < startOffset) continue;
+    let free = true;
+    for (let i = from; i < to; i++) {
+      if (occupied[i]) {
+        free = false;
+        break;
+      }
+    }
+    if (free) strays.push({ from, to });
+  }
+
+  return { tokens: results.sort((a, b) => a.from - b.from), strays };
 }
 
 /**
@@ -237,6 +260,10 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 
   const decorations: Range<Decoration>[] = [];
   const fmEndLine = getFrontmatterEndLine(state);
+  const selectionRanges = state.selection.ranges;
+  // Os marcadores só ficam ocultos longe do cursor; sob ele, o autor vê (e edita) a sintaxe.
+  const touchesSelection = (from: number, to: number): boolean =>
+    selectionRanges.some((r) => r.from <= to && r.to >= from);
 
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
@@ -249,24 +276,32 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
     const text = line.text;
     if (!text) continue;
 
+    const cursorOnLine = touchesSelection(line.from, line.to);
+
     // 1. Quebra de cena (*** ou --- isolados na linha, fora do frontmatter)
     if (/^\s*(\*{3,}|-{3,})\s*$/.test(text)) {
-      decorations.push(sceneBreakLineDeco.range(line.from));
-      decorations.push(sceneBreakReplaceDeco.range(line.from, line.to));
+      if (cursorOnLine) {
+        decorations.push(markerHintDeco.range(line.from, line.to));
+      } else {
+        decorations.push(sceneBreakLineDeco.range(line.from));
+        decorations.push(sceneBreakReplaceDeco.range(line.from, line.to));
+      }
       continue;
     }
 
     let contentStartOffset = 0;
 
     // 2. Títulos (#, ##, ###)
-    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(text);
+    const headingMatch = /^(#{1,6})\s+(.+)$/.exec(text);
     if (headingMatch) {
       const hashes = headingMatch[1];
       const prefixLen = hashes.length + 1;
       const level = hashes.length;
-      const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco;
+      const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco; // níveis 4–6 usam o estilo de H3
       decorations.push(lineDeco.range(line.from));
-      decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+      decorations.push(
+        (cursorOnLine ? markerHintDeco : hiddenDelimiterDeco).range(line.from, line.from + prefixLen),
+      );
       contentStartOffset = prefixLen;
     } else {
       // 3. Citação (> )
@@ -274,15 +309,19 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       if (quoteMatch) {
         const prefixLen = quoteMatch[1].length;
         decorations.push(blockquoteLineDeco.range(line.from));
-        decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+        decorations.push(
+          (cursorOnLine ? markerHintDeco : hiddenDelimiterDeco).range(line.from, line.from + prefixLen),
+        );
         contentStartOffset = prefixLen;
       } else {
         // 4. Lista com marcadores (- ou * seguidos de espaço)
-        const bulletMatch = /^([-*]\s+)(.*)$/.exec(text);
+        const bulletMatch = /^(\*\s+)(.*)$/.exec(text);
         if (bulletMatch) {
           const prefixLen = bulletMatch[1].length;
           decorations.push(listItemLineDeco.range(line.from));
-          decorations.push(bulletReplaceDeco.range(line.from, line.from + prefixLen));
+          decorations.push(
+            (cursorOnLine ? markerHintDeco : bulletReplaceDeco).range(line.from, line.from + prefixLen),
+          );
           contentStartOffset = prefixLen;
         } else if (/^\d+\.\s+/.test(text)) {
           decorations.push(listItemLineDeco.range(line.from));
@@ -291,17 +330,21 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
     }
 
     // 5. Formatações inline dentro da linha
-    const inlineMatches = findInlineMatches(text, contentStartOffset);
-    for (const token of inlineMatches) {
+    const { tokens, strays } = findInlineMatches(text, contentStartOffset);
+    for (const stray of strays) {
+      decorations.push(markerHintDeco.range(line.from + stray.from, line.from + stray.to));
+    }
+    for (const token of tokens) {
       const absFrom = line.from + token.from;
       const absTo = line.from + token.to;
       const innerFrom = absFrom + token.openLen;
       const innerTo = absTo - token.closeLen;
 
       if (innerFrom < innerTo) {
-        decorations.push(hiddenDelimiterDeco.range(absFrom, innerFrom));
+        const revealed = touchesSelection(absFrom, absTo);
+        decorations.push((revealed ? markerHintDeco : hiddenDelimiterDeco).range(absFrom, innerFrom));
         decorations.push(token.markDeco.range(innerFrom, innerTo));
-        decorations.push(hiddenDelimiterDeco.range(innerTo, absTo));
+        decorations.push((revealed ? markerHintDeco : hiddenDelimiterDeco).range(innerTo, absTo));
       }
     }
   }
@@ -310,32 +353,43 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 }
 
 /**
- * Protege o bloco de frontmatter oculto no Modo Visual contra deleção acidental por Backspace
- * e reposiciona o cursor para o início do corpo do texto caso caia dentro do frontmatter oculto.
+ * Protege o bloco de frontmatter oculto no Modo Visual: como o autor não o enxerga, nenhuma edição
+ * feita pelo usuário (digitar, Backspace/Delete, recortar, colar, arrastar) pode alterá-lo. Os trechos
+ * da alteração que cairiam dentro do frontmatter são descartados e o restante é aplicado normalmente.
+ * Alterações programáticas (ex.: troca de cena) passam intactas.
  */
 const frontmatterVisualGuard = EditorState.transactionFilter.of((tr: Transaction) => {
-  const isVisual = tr.startState.field(richTextModeField, false);
-  if (!isVisual) return tr;
+  if (!tr.docChanged) return tr;
+  if (!tr.startState.field(richTextModeField, false)) return tr;
+  if (!tr.isUserEvent('input') && !tr.isUserEvent('delete') && !tr.isUserEvent('move')) return tr;
 
   const fmEndLine = getFrontmatterEndLine(tr.startState);
   if (fmEndLine === 0 || fmEndLine >= tr.startState.doc.lines) return tr;
 
   const bodyStartPos = tr.startState.doc.line(fmEndLine + 1).from;
 
-  // Se o usuário pressionar Backspace no início do primeiro parágrafo do corpo, impede apagar o frontmatter
-  if (tr.isUserEvent('delete.backward')) {
-    let touchesFrontmatter = false;
-    tr.changes.iterChangedRanges((fromA) => {
-      if (fromA < bodyStartPos) {
-        touchesFrontmatter = true;
-      }
-    });
-    if (touchesFrontmatter) {
-      return [];
+  let touchesFrontmatter = false;
+  const kept: Array<{ from: number; to: number; insert: string }> = [];
+  tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    if (fromA >= bodyStartPos) {
+      kept.push({ from: fromA, to: toA, insert: inserted.toString() });
+      return;
     }
-  }
+    touchesFrontmatter = true;
+    // Texto inserido dentro do frontmatter é descartado; a parte removida que
+    // ultrapassa o frontmatter é mantida a partir do início do corpo.
+    if (toA > bodyStartPos) {
+      kept.push({ from: bodyStartPos, to: toA, insert: inserted.toString() });
+    }
+  });
+  if (!touchesFrontmatter) return tr;
+  if (kept.length === 0) return [];
 
-  return tr;
+  return {
+    changes: kept,
+    userEvent: tr.annotation(Transaction.userEvent) ?? undefined,
+    scrollIntoView: tr.scrollIntoView,
+  };
 });
 
 /**
@@ -349,7 +403,7 @@ export function getActiveFormats(state: EditorState): ActiveFormats {
   const headingMatch = /^(#{1,3})\s+/.exec(text);
   const heading = (headingMatch ? headingMatch[1].length : 0) as 0 | 1 | 2 | 3;
   const blockquote = /^>\s+/.test(text);
-  const bulletList = /^[-*]\s+/.test(text) && !/^\s*(\*{3,}|-{3,})\s*$/.test(text);
+  const bulletList = /^\*\s+/.test(text) && !/^\s*(\*{3,}|-{3,})\s*$/.test(text);
 
   const relFrom = Math.max(0, from - line.from);
   const relTo = Math.min(text.length, to - line.from);
@@ -388,10 +442,67 @@ export function getActiveFormats(state: EditorState): ActiveFormats {
 }
 
 /**
+ * Negrito (`**`) e itálico (`*`) compartilham o mesmo caractere: `*x*` é itálico, `**x**` é
+ * negrito e `***x***` é ambos. Em vez de tratar cada marcador isoladamente (o que faria o
+ * itálico "comer" um dos `**`), alterna o tamanho da sequência de asteriscos ao redor do texto.
+ * Retorna `false` quando o texto não está cercado por asteriscos (fluxo normal de aplicação).
+ */
+function toggleAsteriskRun(view: EditorView, weight: 1 | 2): boolean {
+  const { state, dispatch } = view;
+  const { from, to } = state.selection.main;
+  const doc = state.doc;
+
+  // Alvo: a seleção ou, sem seleção, a palavra sob o cursor
+  let start = from;
+  let end = to;
+  if (from === to) {
+    const word = state.wordAt(from);
+    if (!word) return false;
+    start = word.from;
+    end = word.to;
+  }
+
+  // Asteriscos que a própria seleção já inclui nas pontas fazem parte da sequência
+  while (start < end && doc.sliceString(start, start + 1) === '*') start++;
+  while (end > start && doc.sliceString(end - 1, end) === '*') end--;
+  if (start >= end) return false;
+
+  let left = 0;
+  while (start - left > 0 && doc.sliceString(start - left - 1, start - left) === '*') left++;
+  let right = 0;
+  while (end + right < doc.length && doc.sliceString(end + right, end + right + 1) === '*') right++;
+
+  const run = Math.min(left, right);
+  if (run === 0 || run > 3) return false;
+
+  // run: 1 = itálico, 2 = negrito, 3 = ambos (bit 1 = itálico, bit 2 = negrito)
+  const nextRun = run ^ weight;
+  const delimiter = '*'.repeat(nextRun);
+  const cursorOffset = from === to ? from - start : 0;
+
+  dispatch({
+    changes: [
+      { from: start - run, to: start, insert: delimiter },
+      { from: end, to: end + run, insert: delimiter },
+    ],
+    selection:
+      from === to
+        ? { anchor: start - run + nextRun + cursorOffset }
+        : { anchor: start - run + nextRun, head: end - run + nextRun },
+  });
+  view.focus();
+  return true;
+}
+
+/**
  * Alterna uma formatação inline simétrica (ex.: `**` para negrito, `*` para itálico, `~~` para tachado).
  * Funciona tanto com texto selecionado quanto quando o cursor está dentro de uma palavra já formatada.
  */
 export function toggleSymmetricFormat(view: EditorView, marker: string): boolean {
+  if ((marker === '*' || marker === '**') && toggleAsteriskRun(view, marker.length as 1 | 2)) {
+    return true;
+  }
+
   const { state, dispatch } = view;
   const { from, to } = state.selection.main;
   const len = marker.length;
@@ -592,7 +703,7 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
   const { state, dispatch } = view;
   const line = state.doc.lineAt(state.selection.main.from);
   const targetPrefix = `${'#'.repeat(level)} `;
-  const existingHeading = /^(#{1,3})\s+/.exec(line.text);
+  const existingHeading = /^(#{1,6})\s+/.exec(line.text);
 
   if (existingHeading) {
     const existingLen = existingHeading[0].length;
@@ -609,7 +720,7 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
     }
   } else {
     // Remove eventual prefixo de lista/citação antes de transformar em título
-    const blockPrefix = /^(?:>\s+|[-*]\s+)/.exec(line.text);
+    const blockPrefix = /^(?:>\s+|\*\s+)/.exec(line.text);
     const replaceLen = blockPrefix ? blockPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: targetPrefix },
@@ -621,22 +732,22 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
 }
 
 /**
- * Alterna Lista com Marcadores (`- `) na linha atual.
+ * Alterna Lista com Marcadores (`* `; o hífen no início da linha é fala de diálogo, não lista) na linha atual.
  */
 export function toggleBulletList(view: EditorView): boolean {
   const { state, dispatch } = view;
   const line = state.doc.lineAt(state.selection.main.from);
-  const existingBullet = /^([-*]\s+)/.exec(line.text);
+  const existingBullet = /^(\*\s+)/.exec(line.text);
 
   if (existingBullet && !/^\s*(\*{3,}|-{3,})\s*$/.test(line.text)) {
     dispatch({
       changes: { from: line.from, to: line.from + existingBullet[1].length, insert: '' },
     });
   } else {
-    const otherPrefix = /^(?:#{1,3}\s+|>\s+)/.exec(line.text);
+    const otherPrefix = /^(?:#{1,6}\s+|>\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
-      changes: { from: line.from, to: line.from + replaceLen, insert: '- ' },
+      changes: { from: line.from, to: line.from + replaceLen, insert: '* ' },
     });
   }
 
@@ -657,7 +768,7 @@ export function toggleBlockquote(view: EditorView): boolean {
       changes: { from: line.from, to: line.from + existingQuote[1].length, insert: '' },
     });
   } else {
-    const otherPrefix = /^(?:#{1,3}\s+|[-*]\s+)/.exec(line.text);
+    const otherPrefix = /^(?:#{1,6}\s+|\*\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: '> ' },
@@ -679,7 +790,7 @@ export function clearFormatting(view: EditorView): boolean {
   const raw = state.sliceDoc(targetRange.from, targetRange.to);
 
   const cleaned = raw
-    .replace(/^(?:#{1,6}\s+|>\s+|[-*]\s+)/gm, '')
+    .replace(/^(?:#{1,6}\s+|>\s+|\*\s+)/gm, '')
     .replace(/\*\*\*([^*\n]+)\*\*\*/g, '$1')
     .replace(/\*\*([^*\n]+)\*\*/g, '$1')
     .replace(/__([^_\n]+)__/g, '$1')
@@ -720,7 +831,7 @@ export const richTextKeymap: Extension = keymap.of([
 export const richTextModeExtension: Extension = [
   richTextModeField,
   frontmatterVisualGuard,
-  EditorView.decorations.compute(['doc', richTextModeField], (state): DecorationSet => {
+  EditorView.decorations.compute(['doc', 'selection', richTextModeField], (state): DecorationSet => {
     return buildRichTextDecorations(state);
   }),
   EditorView.baseTheme({
@@ -787,6 +898,13 @@ export const richTextModeExtension: Extension = [
     '.cm-rt-strikethrough': {
       textDecoration: 'line-through',
       opacity: '0.78',
+    },
+    '.cm-rt-marker': {
+      color: 'var(--color-ink-faded, #94A3B8)',
+      fontWeight: '400',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      letterSpacing: '0',
     },
     '.cm-rt-code': {
       fontFamily: 'var(--font-mono, monospace)',

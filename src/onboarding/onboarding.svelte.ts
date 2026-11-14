@@ -113,7 +113,7 @@ export const COURSE_LESSONS: CourseLesson[] = [
       },
       {
         icon: 'ℹ️',
-        title: 'Inspetor Lateral (Cmd+I)',
+        title: 'Inspetor Lateral (Cmd+Shift+\\)',
         desc: 'Acompanhe menções, backlinks, sinopses e a galeria da cena ativa sem sair da página de escrita.',
       },
       {

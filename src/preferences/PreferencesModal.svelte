@@ -781,7 +781,7 @@
           <div class="shortcuts-list">
             <span class="key-pill">Cmd+L: Trancar</span>
             <span class="key-pill">Cmd+K: Paleta</span>
-            <span class="key-pill">Cmd+I: Inspetor</span>
+            <span class="key-pill">Cmd+Shift+\: Inspetor</span>
             <span class="key-pill">Cmd+,: Preferências</span>
           </div>
         </div>

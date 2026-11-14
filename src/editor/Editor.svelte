@@ -24,6 +24,8 @@
   } from './rich-text-mode';
   import { editorViewState } from './editor-view-state.svelte';
   import { theme } from '../design';
+  import { t } from '../i18n';
+  import EditorHelp from './EditorHelp.svelte';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
   import { typewriterAudio } from './typewriter-audio';
@@ -45,6 +47,7 @@
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
   let isStyleModalOpen = $state(false);
+  let isHelpOpen = $state(false);
   let activeFormats = $state<ActiveFormats>(DEFAULT_ACTIVE_FORMATS);
 
   function ensureCursorOutsideFrontmatter(targetView: EditorView) {
@@ -330,10 +333,10 @@
       e.preventDefault();
       editorViewState.toggleFocus(view);
     }
-    // Cmd/Ctrl + Shift + F: Alternar Modo Zen
-    else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyF') {
+    // Cmd/Ctrl + /: Ajuda rápida do editor (atalhos e sintaxe)
+    else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === '/') {
       e.preventDefault();
-      editorViewState.toggleZen();
+      isHelpOpen = !isHelpOpen;
     }
     // Cmd/Ctrl + Shift + M: Alternar Metas / Dashboard
     else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyM') {
@@ -482,20 +485,25 @@
 
     <!-- Centro: Alternador de Modo (Editor Comum vs Markdown) e Modo Foco -->
     <div class="footer-center">
-      <button
-        type="button"
-        class="focus-pill-btn"
-        class:active={editorPreferences.editorMode === 'visual'}
-        onclick={() => {
-          editorPreferences.toggleEditorMode();
-          view?.focus();
-        }}
-        title={editorPreferences.editorMode === 'visual'
-          ? 'Modo Editor Comum ativo (clique para ver código Markdown)'
-          : 'Modo Markdown ativo (clique para usar Editor Visual Rich Text)'}
-      >
-        {editorPreferences.editorMode === 'visual' ? '📝 Editor Comum' : '⌨️ Markdown'}
-      </button>
+      <div class="footer-mode-switch" role="radiogroup" aria-label={t('literary.modeGroup')}>
+        {#each [{ mode: 'visual', icon: '📝' }, { mode: 'markdown', icon: '⌨️' }] as option (option.mode)}
+          <button
+            type="button"
+            class="focus-pill-btn"
+            class:active={editorPreferences.editorMode === option.mode}
+            role="radio"
+            aria-checked={editorPreferences.editorMode === option.mode}
+            onclick={() => {
+              editorPreferences.setEditorMode(option.mode as 'visual' | 'markdown');
+              view?.focus();
+            }}
+            title={option.mode === 'visual' ? t('literary.modeVisualHint') : t('literary.modeMarkdownHint')}
+          >
+            {option.icon}
+            {option.mode === 'visual' ? t('literary.modeVisual') : t('literary.modeMarkdown')}
+          </button>
+        {/each}
+      </div>
 
       {#if editorViewState.isFocusMode}
         <button
@@ -532,6 +540,18 @@
 
       <button
         type="button"
+        class="icon-action-btn help-action"
+        class:active={isHelpOpen}
+        onclick={() => (isHelpOpen = !isHelpOpen)}
+        title={t('editorHelp.open')}
+        aria-label={t('editorHelp.open')}
+        aria-expanded={isHelpOpen}
+      >
+        ?
+      </button>
+
+      <button
+        type="button"
         class="icon-action-btn lock-action"
         onclick={() => vault.lockVault()}
         title="Trancar Mundo (Cmd+L)"
@@ -545,13 +565,21 @@
         class="icon-action-btn inspector-toggle"
         class:active={vault.isInspectorOpen}
         onclick={() => vault.toggleInspector()}
-        title="Alternar Inspetor Lateral (Cmd+I)"
+        title="Alternar Inspetor Lateral (Cmd+Shift+\)"
         aria-label="Alternar Inspetor Lateral"
       >
         ☰
       </button>
     </div>
   </footer>
+
+  <EditorHelp
+    isOpen={isHelpOpen}
+    onClose={() => {
+      isHelpOpen = false;
+      view?.focus();
+    }}
+  />
 
   <StyleStatsModal
     isOpen={isStyleModalOpen}
@@ -563,6 +591,11 @@
 </div>
 
 <style>
+  .footer-mode-switch {
+    display: inline-flex;
+    gap: 4px;
+  }
+
   .editor-wrapper {
     display: flex;
     flex-direction: column;
@@ -726,7 +759,13 @@
     color: var(--color-ink-charcoal);
   }
 
-  .icon-action-btn.inspector-toggle.active {
+  .icon-action-btn.help-action {
+    font-weight: 700;
+    font-family: var(--font-ui);
+  }
+
+  .icon-action-btn.inspector-toggle.active,
+  .icon-action-btn.help-action.active {
     color: var(--color-olive);
   }
 

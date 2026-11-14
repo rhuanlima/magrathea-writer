@@ -143,7 +143,7 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
                 "menu_toggle_inspector",
                 "Alternar Inspetor de Fichas",
                 true,
-                Some("CmdOrCtrl+I"),
+                Some("CmdOrCtrl+Shift+\\"),
             )?,
             &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(

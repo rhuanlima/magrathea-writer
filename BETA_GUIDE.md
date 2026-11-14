@@ -68,7 +68,7 @@ We encourage you to experiment with these 5 quests in an active novel, novella, 
 3. Open **Preferences (`Cmd+,`)** to explore immersive focus and sensory features:
    - **Typewriter Audio:** Real acoustic typewriter audio recorded per key (including distinct spacebar, backspace, and carriage return sounds).
    - **Dynamic Focus Mode (`Cmd+Alt+F`):** Gently fades surrounding paragraphs, highlighting only the sentence you are actively typing.
-   - **Zen Mode (`Cmd+Shift+F` or `F11`):** Eliminates every chrome element, window frame, and status bar, leaving only you and your words on digital paper.
+   - **Zen Mode (`F11`):** Eliminates every chrome element, window frame, and status bar, leaving only you and your words on digital paper.
    - **Smart Daily Word Goals & Pomodoro:** Strict word count computation (no inflation on copy/pasting) and timer to maintain momentum.
    - **Stylometric Statistics:** Click the bottom word counter to inspect verb density, *-ly* adverb usage, adjectives, and pacing.
 
@@ -107,10 +107,10 @@ We encourage you to experiment with these 5 quests in an active novel, novella, 
 | :--- | :--- |
 | **`Cmd+K`** or **`Ctrl+K`** | **Global Command Palette & Quick Open** (instant scene search and actions) |
 | **`Cmd+\`** or **`Ctrl+\`** | Toggle Manuscript Sidebar |
-| **`Cmd+I`** or **`Ctrl+I`** | Toggle Entity Inspector Panel |
+| **`Cmd+Shift+\`** or **`Ctrl+Shift+\`** | Toggle Entity Inspector Panel |
 | **`Cmd+,`** | Open Preferences (Focus, Typography, Typewriter Sound) |
 | **`Cmd+Alt+F`** | Toggle Dynamic Paragraph Focus Mode |
-| **`Cmd+Shift+F`** | Toggle Immersive Zen Mode (Zero Chrome) |
+| **`F11`** | Toggle Immersive Zen Mode (Zero Chrome) |
 | **`Cmd+Shift+T`** | Open Literary Timeline |
 | **`Cmd+Shift+G`** | Open Narrative Graph and Mind-map Canvas |
 | **`Cmd+Shift+P`** | Productivity Goals & Word Count Dashboard |

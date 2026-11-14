@@ -465,7 +465,7 @@
           type="button"
           class="action-button icon-only"
           onclick={() => searchStore.openModal()}
-          title="Busca Global no Projeto (Cmd+L / Cmd+Shift+F)"
+          title="Busca Global no Projeto (Cmd+Shift+F)"
         >
           🔍
         </button>

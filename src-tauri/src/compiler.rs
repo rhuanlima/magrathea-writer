@@ -857,10 +857,10 @@ pub fn parse_markdown_blocks(content: &str, section_title: Option<&str>) -> Vec<
             continue;
         }
 
-        // Lista de tópicos (- item ou * item)
+        // Lista de tópicos (* item ou • item). O hífen no início da linha ("- Olá") é a fala de
+        // diálogo digitada no teclado, não uma lista: segue como parágrafo com travessão.
         if let Some(item_text) = trimmed
-            .strip_prefix("- ")
-            .or_else(|| trimmed.strip_prefix("* "))
+            .strip_prefix("* ")
             .or_else(|| trimmed.strip_prefix("• "))
         {
             flush_quote(&mut quote_lines, &mut blocks);
@@ -873,7 +873,18 @@ pub fn parse_markdown_blocks(content: &str, section_title: Option<&str>) -> Vec<
 
         flush_quote(&mut quote_lines, &mut blocks);
         flush_list(&mut list_items, &mut blocks);
-        let spans = parse_inline_spans(trimmed);
+        let dialogue;
+        let paragraph_text = match trimmed
+            .strip_prefix("- ")
+            .or_else(|| trimmed.strip_prefix("– "))
+        {
+            Some(speech) => {
+                dialogue = format!("— {}", speech.trim_start());
+                dialogue.as_str()
+            }
+            None => trimmed,
+        };
+        let spans = parse_inline_spans(paragraph_text);
         if !spans.is_empty() {
             blocks.push(MarkdownBlock::Paragraph(spans));
         }
@@ -2364,6 +2375,29 @@ mod tests {
     }
 
     #[test]
+    fn test_hyphen_dialogue_is_a_paragraph_with_em_dash_not_a_list() {
+        let blocks = parse_markdown_blocks("- Olá, disse ele.\n- Oi, respondeu ela.", None);
+        assert_eq!(blocks.len(), 2);
+        for (block, expected) in blocks
+            .iter()
+            .zip(["— Olá, disse ele.", "— Oi, respondeu ela."])
+        {
+            match block {
+                MarkdownBlock::Paragraph(spans) => assert_eq!(spans_to_plain_text(spans), expected),
+                _ => panic!("fala de diálogo deve ser parágrafo"),
+            }
+        }
+    }
+
+    #[test]
+    fn test_asterisk_and_bullet_prefixes_remain_lists() {
+        let blocks = parse_markdown_blocks("* um\n• dois", None);
+        assert!(
+            matches!(blocks.as_slice(), [MarkdownBlock::BulletList(items)] if items.len() == 2)
+        );
+    }
+
+    #[test]
     fn test_parse_inline_spans_rich_formatting() {
         let spans = parse_inline_spans(
             "Texto **negrito**, *itálico*, ***ambos***, <u>sublinhado</u> e ~~tachado~~.",
@@ -2388,7 +2422,7 @@ mod tests {
 
     #[test]
     fn test_parse_markdown_blocks_and_renderers() {
-        let md = "# Capítulo 1\n\n## Subtítulo\n\nParágrafo com **negrito** e *itálico*.\n— Diálogo na linha seguinte.\n\n> Uma citação marcante.\n\n- Primeiro item\n- Segundo item\n\n* * *\n\nCena final.";
+        let md = "# Capítulo 1\n\n## Subtítulo\n\nParágrafo com **negrito** e *itálico*.\n— Diálogo na linha seguinte.\n\n> Uma citação marcante.\n\n* Primeiro item\n* Segundo item\n\n* * *\n\nCena final.";
         let blocks = parse_markdown_blocks(md, Some("Capítulo 1"));
         // O H1 repetindo o título da seção é omitido para evitar duplicação
         assert_eq!(blocks.len(), 7);
