@@ -267,12 +267,12 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
     let contentStartOffset = 0;
 
     // 2. Títulos (#, ##, ###)
-    const headingMatch = /^(#{1,3})\s+(.+)$/.exec(text);
+    const headingMatch = /^(#{1,6})\s+(.+)$/.exec(text);
     if (headingMatch) {
       const hashes = headingMatch[1];
       const prefixLen = hashes.length + 1;
       const level = hashes.length;
-      const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco;
+      const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco; // níveis 4–6 usam o estilo de H3
       decorations.push(lineDeco.range(line.from));
       if (!cursorOnLine) {
         decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
@@ -675,7 +675,7 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
   const { state, dispatch } = view;
   const line = state.doc.lineAt(state.selection.main.from);
   const targetPrefix = `${'#'.repeat(level)} `;
-  const existingHeading = /^(#{1,3})\s+/.exec(line.text);
+  const existingHeading = /^(#{1,6})\s+/.exec(line.text);
 
   if (existingHeading) {
     const existingLen = existingHeading[0].length;
@@ -716,7 +716,7 @@ export function toggleBulletList(view: EditorView): boolean {
       changes: { from: line.from, to: line.from + existingBullet[1].length, insert: '' },
     });
   } else {
-    const otherPrefix = /^(?:#{1,3}\s+|>\s+)/.exec(line.text);
+    const otherPrefix = /^(?:#{1,6}\s+|>\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: '- ' },
@@ -740,7 +740,7 @@ export function toggleBlockquote(view: EditorView): boolean {
       changes: { from: line.from, to: line.from + existingQuote[1].length, insert: '' },
     });
   } else {
-    const otherPrefix = /^(?:#{1,3}\s+|[-*]\s+)/.exec(line.text);
+    const otherPrefix = /^(?:#{1,6}\s+|[-*]\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: '> ' },

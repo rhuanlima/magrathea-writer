@@ -262,4 +262,18 @@ O vento soprava forte.`;
       expect(scene(8)).toBe(0);
     });
   });
+
+  it('títulos de nível 4–6 também são renderizados e trocados pelos botões H1–H3', () => {
+    const state = EditorState.create({ doc: 'Texto\n\n#### Subtítulo', selection: { anchor: 0 }, extensions: [richTextModeExtension] });
+    let hidden = 0;
+    buildRichTextDecorations(state).between(0, state.doc.length, (from, to, deco) => {
+      if (to > from && !deco.spec.class && !deco.spec.widget) hidden++;
+    });
+    expect(hidden).toBe(1);
+
+    const view = createTestView('#### Subtítulo', 0);
+    toggleHeading(view, 2);
+    expect(view.state.doc.toString()).toBe('## Subtítulo');
+    view.destroy();
+  });
 });
