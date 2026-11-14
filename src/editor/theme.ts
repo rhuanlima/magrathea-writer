@@ -64,6 +64,8 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
           color: '#FFFFFF',
         },
         '.cm-scroller': {
+          // O CodeMirror define monospace no próprio .cm-scroller, o que sobrescreve a fonte de '&'
+          fontFamily: 'var(--editor-font-family, var(--font-literary, Georgia, serif))',
           overflowX: 'hidden !important',
           overflowY: 'auto',
           boxSizing: 'border-box',
@@ -116,6 +118,8 @@ export function getEditorThemeExtension(isDark: boolean): Extension {
         color: 'var(--color-ink-charcoal, #111827)',
       },
       '.cm-scroller': {
+        // O CodeMirror define monospace no próprio .cm-scroller, o que sobrescreve a fonte de '&'
+        fontFamily: 'var(--editor-font-family, var(--font-literary, Georgia, serif))',
         overflowX: 'hidden !important',
         overflowY: 'auto',
         boxSizing: 'border-box',
