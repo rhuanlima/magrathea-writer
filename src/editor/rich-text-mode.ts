@@ -310,32 +310,43 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 }
 
 /**
- * Protege o bloco de frontmatter oculto no Modo Visual contra deleção acidental por Backspace
- * e reposiciona o cursor para o início do corpo do texto caso caia dentro do frontmatter oculto.
+ * Protege o bloco de frontmatter oculto no Modo Visual: como o autor não o enxerga, nenhuma edição
+ * feita pelo usuário (digitar, Backspace/Delete, recortar, colar, arrastar) pode alterá-lo. Os trechos
+ * da alteração que cairiam dentro do frontmatter são descartados e o restante é aplicado normalmente.
+ * Alterações programáticas (ex.: troca de cena) passam intactas.
  */
 const frontmatterVisualGuard = EditorState.transactionFilter.of((tr: Transaction) => {
-  const isVisual = tr.startState.field(richTextModeField, false);
-  if (!isVisual) return tr;
+  if (!tr.docChanged) return tr;
+  if (!tr.startState.field(richTextModeField, false)) return tr;
+  if (!tr.isUserEvent('input') && !tr.isUserEvent('delete') && !tr.isUserEvent('move')) return tr;
 
   const fmEndLine = getFrontmatterEndLine(tr.startState);
   if (fmEndLine === 0 || fmEndLine >= tr.startState.doc.lines) return tr;
 
   const bodyStartPos = tr.startState.doc.line(fmEndLine + 1).from;
 
-  // Se o usuário pressionar Backspace no início do primeiro parágrafo do corpo, impede apagar o frontmatter
-  if (tr.isUserEvent('delete.backward')) {
-    let touchesFrontmatter = false;
-    tr.changes.iterChangedRanges((fromA) => {
-      if (fromA < bodyStartPos) {
-        touchesFrontmatter = true;
-      }
-    });
-    if (touchesFrontmatter) {
-      return [];
+  let touchesFrontmatter = false;
+  const kept: Array<{ from: number; to: number; insert: string }> = [];
+  tr.changes.iterChanges((fromA, toA, _fromB, _toB, inserted) => {
+    if (fromA >= bodyStartPos) {
+      kept.push({ from: fromA, to: toA, insert: inserted.toString() });
+      return;
     }
-  }
+    touchesFrontmatter = true;
+    // Texto inserido dentro do frontmatter é descartado; a parte removida que
+    // ultrapassa o frontmatter é mantida a partir do início do corpo.
+    if (toA > bodyStartPos) {
+      kept.push({ from: bodyStartPos, to: toA, insert: inserted.toString() });
+    }
+  });
+  if (!touchesFrontmatter) return tr;
+  if (kept.length === 0) return [];
 
-  return tr;
+  return {
+    changes: kept,
+    userEvent: tr.annotation(Transaction.userEvent) ?? undefined,
+    scrollIntoView: tr.scrollIntoView,
+  };
 });
 
 /**

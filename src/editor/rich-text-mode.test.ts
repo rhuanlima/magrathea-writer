@@ -179,4 +179,50 @@ O vento soprava forte.`;
       view.destroy();
     });
   });
+
+  describe('proteção do frontmatter oculto', () => {
+    const doc = '---\ntitle: a\n---\n\nTexto do corpo';
+    const bodyStart = doc.indexOf('Texto');
+
+    it('Cmd+A e apagar preserva o frontmatter e apaga só o corpo', () => {
+      const view = createTestView(doc, 0, doc.length);
+      view.dispatch({ changes: { from: 0, to: doc.length }, userEvent: 'delete.selection' });
+      expect(view.state.doc.toString()).toBe('---\ntitle: a\n---\n\n');
+      view.destroy();
+    });
+
+    it('digitar sobre uma seleção total preserva o frontmatter', () => {
+      const view = createTestView(doc, 0, doc.length);
+      view.dispatch({ changes: { from: 0, to: doc.length, insert: 'Novo' }, userEvent: 'input.type' });
+      expect(view.state.doc.toString()).toBe('---\ntitle: a\n---\n\nNovo');
+      view.destroy();
+    });
+
+    it('Delete (forward) no fim do frontmatter e recortar também são protegidos', () => {
+      const view = createTestView(doc, 0, bodyStart + 5);
+      view.dispatch({ changes: { from: 0, to: bodyStart + 5 }, userEvent: 'delete.cut' });
+      expect(view.state.doc.toString().startsWith('---\ntitle: a\n---')).toBe(true);
+      view.destroy();
+    });
+
+    it('não interfere em alterações programáticas (troca de cena) nem no modo Markdown', () => {
+      const view = createTestView(doc, 0);
+      view.dispatch({ changes: { from: 0, to: doc.length, insert: 'Outra cena' } });
+      expect(view.state.doc.toString()).toBe('Outra cena');
+
+      const md = createTestView(doc, 0, doc.length);
+      md.dispatch({ effects: setRichTextMode.of(false) });
+      md.dispatch({ changes: { from: 0, to: doc.length }, userEvent: 'delete.selection' });
+      expect(md.state.doc.toString()).toBe('');
+      view.destroy();
+      md.destroy();
+    });
+
+    it('edições normais no corpo continuam funcionando', () => {
+      const view = createTestView(doc, bodyStart);
+      view.dispatch({ changes: { from: bodyStart, insert: 'X' }, userEvent: 'input.type' });
+      expect(view.state.doc.toString()).toBe('---\ntitle: a\n---\n\nXTexto do corpo');
+      view.destroy();
+    });
+  });
 });
