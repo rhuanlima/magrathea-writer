@@ -25,6 +25,7 @@
   import { editorViewState } from './editor-view-state.svelte';
   import { theme } from '../design';
   import { t } from '../i18n';
+  import EditorHelp from './EditorHelp.svelte';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
   import { typewriterAudio } from './typewriter-audio';
@@ -46,6 +47,7 @@
   let currentDoc = $state('');
   let autosaveStatus = $state<AutosaveStatus>('saved');
   let isStyleModalOpen = $state(false);
+  let isHelpOpen = $state(false);
   let activeFormats = $state<ActiveFormats>(DEFAULT_ACTIVE_FORMATS);
 
   function ensureCursorOutsideFrontmatter(targetView: EditorView) {
@@ -336,6 +338,11 @@
       e.preventDefault();
       editorViewState.toggleZen();
     }
+    // Cmd/Ctrl + /: Ajuda rápida do editor (atalhos e sintaxe)
+    else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === '/') {
+      e.preventDefault();
+      isHelpOpen = !isHelpOpen;
+    }
     // Cmd/Ctrl + Shift + M: Alternar Metas / Dashboard
     else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyM') {
       e.preventDefault();
@@ -538,6 +545,18 @@
 
       <button
         type="button"
+        class="icon-action-btn help-action"
+        class:active={isHelpOpen}
+        onclick={() => (isHelpOpen = !isHelpOpen)}
+        title={t('editorHelp.open')}
+        aria-label={t('editorHelp.open')}
+        aria-expanded={isHelpOpen}
+      >
+        ?
+      </button>
+
+      <button
+        type="button"
         class="icon-action-btn lock-action"
         onclick={() => vault.lockVault()}
         title="Trancar Mundo (Cmd+L)"
@@ -558,6 +577,14 @@
       </button>
     </div>
   </footer>
+
+  <EditorHelp
+    isOpen={isHelpOpen}
+    onClose={() => {
+      isHelpOpen = false;
+      view?.focus();
+    }}
+  />
 
   <StyleStatsModal
     isOpen={isStyleModalOpen}
@@ -737,7 +764,13 @@
     color: var(--color-ink-charcoal);
   }
 
-  .icon-action-btn.inspector-toggle.active {
+  .icon-action-btn.help-action {
+    font-weight: 700;
+    font-family: var(--font-ui);
+  }
+
+  .icon-action-btn.inspector-toggle.active,
+  .icon-action-btn.help-action.active {
     color: var(--color-olive);
   }
 
