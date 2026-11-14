@@ -116,7 +116,7 @@ O vento soprava forte.`;
 
     // Lista com marcadores
     toggleBulletList(view);
-    expect(view.state.doc.toString()).toBe('- Capítulo Primeiro');
+    expect(view.state.doc.toString()).toBe('* Capítulo Primeiro');
     expect(getActiveFormats(view.state).bulletList).toBe(true);
 
     // Troca lista -> citação
@@ -275,5 +275,17 @@ O vento soprava forte.`;
     toggleHeading(view, 2);
     expect(view.state.doc.toString()).toBe('## Subtítulo');
     view.destroy();
+  });
+
+  it('hífen de diálogo no início da linha não é tratado como lista', () => {
+    const state = EditorState.create({ doc: '- Olá, disse ele.', selection: { anchor: 0 }, extensions: [richTextModeExtension] });
+    expect(getActiveFormats(state).bulletList).toBe(false);
+    let widgets = 0;
+    buildRichTextDecorations(
+      EditorState.create({ doc: '- Olá, disse ele.\n\nFim', selection: { anchor: 20 }, extensions: [richTextModeExtension] }),
+    ).between(0, 99, (_f, _t, d) => {
+      if (d.spec.widget) widgets++;
+    });
+    expect(widgets).toBe(0);
   });
 });

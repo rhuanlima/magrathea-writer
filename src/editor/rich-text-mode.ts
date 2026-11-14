@@ -290,7 +290,7 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
         contentStartOffset = prefixLen;
       } else {
         // 4. Lista com marcadores (- ou * seguidos de espaço)
-        const bulletMatch = /^([-*]\s+)(.*)$/.exec(text);
+        const bulletMatch = /^(\*\s+)(.*)$/.exec(text);
         if (bulletMatch) {
           const prefixLen = bulletMatch[1].length;
           decorations.push(listItemLineDeco.range(line.from));
@@ -375,7 +375,7 @@ export function getActiveFormats(state: EditorState): ActiveFormats {
   const headingMatch = /^(#{1,3})\s+/.exec(text);
   const heading = (headingMatch ? headingMatch[1].length : 0) as 0 | 1 | 2 | 3;
   const blockquote = /^>\s+/.test(text);
-  const bulletList = /^[-*]\s+/.test(text) && !/^\s*(\*{3,}|-{3,})\s*$/.test(text);
+  const bulletList = /^\*\s+/.test(text) && !/^\s*(\*{3,}|-{3,})\s*$/.test(text);
 
   const relFrom = Math.max(0, from - line.from);
   const relTo = Math.min(text.length, to - line.from);
@@ -692,7 +692,7 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
     }
   } else {
     // Remove eventual prefixo de lista/citação antes de transformar em título
-    const blockPrefix = /^(?:>\s+|[-*]\s+)/.exec(line.text);
+    const blockPrefix = /^(?:>\s+|\*\s+)/.exec(line.text);
     const replaceLen = blockPrefix ? blockPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: targetPrefix },
@@ -704,12 +704,12 @@ export function toggleHeading(view: EditorView, level: 1 | 2 | 3): boolean {
 }
 
 /**
- * Alterna Lista com Marcadores (`- `) na linha atual.
+ * Alterna Lista com Marcadores (`* `; o hífen no início da linha é fala de diálogo, não lista) na linha atual.
  */
 export function toggleBulletList(view: EditorView): boolean {
   const { state, dispatch } = view;
   const line = state.doc.lineAt(state.selection.main.from);
-  const existingBullet = /^([-*]\s+)/.exec(line.text);
+  const existingBullet = /^(\*\s+)/.exec(line.text);
 
   if (existingBullet && !/^\s*(\*{3,}|-{3,})\s*$/.test(line.text)) {
     dispatch({
@@ -719,7 +719,7 @@ export function toggleBulletList(view: EditorView): boolean {
     const otherPrefix = /^(?:#{1,6}\s+|>\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
-      changes: { from: line.from, to: line.from + replaceLen, insert: '- ' },
+      changes: { from: line.from, to: line.from + replaceLen, insert: '* ' },
     });
   }
 
@@ -740,7 +740,7 @@ export function toggleBlockquote(view: EditorView): boolean {
       changes: { from: line.from, to: line.from + existingQuote[1].length, insert: '' },
     });
   } else {
-    const otherPrefix = /^(?:#{1,6}\s+|[-*]\s+)/.exec(line.text);
+    const otherPrefix = /^(?:#{1,6}\s+|\*\s+)/.exec(line.text);
     const replaceLen = otherPrefix ? otherPrefix[0].length : 0;
     dispatch({
       changes: { from: line.from, to: line.from + replaceLen, insert: '> ' },
@@ -762,7 +762,7 @@ export function clearFormatting(view: EditorView): boolean {
   const raw = state.sliceDoc(targetRange.from, targetRange.to);
 
   const cleaned = raw
-    .replace(/^(?:#{1,6}\s+|>\s+|[-*]\s+)/gm, '')
+    .replace(/^(?:#{1,6}\s+|>\s+|\*\s+)/gm, '')
     .replace(/\*\*\*([^*\n]+)\*\*\*/g, '$1')
     .replace(/\*\*([^*\n]+)\*\*/g, '$1')
     .replace(/__([^_\n]+)__/g, '$1')
