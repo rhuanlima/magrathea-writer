@@ -237,6 +237,10 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 
   const decorations: Range<Decoration>[] = [];
   const fmEndLine = getFrontmatterEndLine(state);
+  const selectionRanges = state.selection.ranges;
+  // Os marcadores só ficam ocultos longe do cursor; sob ele, o autor vê (e edita) a sintaxe.
+  const touchesSelection = (from: number, to: number): boolean =>
+    selectionRanges.some((r) => r.from <= to && r.to >= from);
 
   for (let i = 1; i <= state.doc.lines; i++) {
     const line = state.doc.line(i);
@@ -249,10 +253,14 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
     const text = line.text;
     if (!text) continue;
 
+    const cursorOnLine = touchesSelection(line.from, line.to);
+
     // 1. Quebra de cena (*** ou --- isolados na linha, fora do frontmatter)
     if (/^\s*(\*{3,}|-{3,})\s*$/.test(text)) {
-      decorations.push(sceneBreakLineDeco.range(line.from));
-      decorations.push(sceneBreakReplaceDeco.range(line.from, line.to));
+      if (!cursorOnLine) {
+        decorations.push(sceneBreakLineDeco.range(line.from));
+        decorations.push(sceneBreakReplaceDeco.range(line.from, line.to));
+      }
       continue;
     }
 
@@ -266,7 +274,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       const level = hashes.length;
       const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco;
       decorations.push(lineDeco.range(line.from));
-      decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+      if (!cursorOnLine) {
+        decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+      }
       contentStartOffset = prefixLen;
     } else {
       // 3. Citação (> )
@@ -274,7 +284,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       if (quoteMatch) {
         const prefixLen = quoteMatch[1].length;
         decorations.push(blockquoteLineDeco.range(line.from));
-        decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+        if (!cursorOnLine) {
+          decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
+        }
         contentStartOffset = prefixLen;
       } else {
         // 4. Lista com marcadores (- ou * seguidos de espaço)
@@ -282,7 +294,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
         if (bulletMatch) {
           const prefixLen = bulletMatch[1].length;
           decorations.push(listItemLineDeco.range(line.from));
-          decorations.push(bulletReplaceDeco.range(line.from, line.from + prefixLen));
+          if (!cursorOnLine) {
+            decorations.push(bulletReplaceDeco.range(line.from, line.from + prefixLen));
+          }
           contentStartOffset = prefixLen;
         } else if (/^\d+\.\s+/.test(text)) {
           decorations.push(listItemLineDeco.range(line.from));
@@ -299,9 +313,10 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       const innerTo = absTo - token.closeLen;
 
       if (innerFrom < innerTo) {
-        decorations.push(hiddenDelimiterDeco.range(absFrom, innerFrom));
+        const revealed = touchesSelection(absFrom, absTo);
+        if (!revealed) decorations.push(hiddenDelimiterDeco.range(absFrom, innerFrom));
         decorations.push(token.markDeco.range(innerFrom, innerTo));
-        decorations.push(hiddenDelimiterDeco.range(innerTo, absTo));
+        if (!revealed) decorations.push(hiddenDelimiterDeco.range(innerTo, absTo));
       }
     }
   }
@@ -788,7 +803,7 @@ export const richTextKeymap: Extension = keymap.of([
 export const richTextModeExtension: Extension = [
   richTextModeField,
   frontmatterVisualGuard,
-  EditorView.decorations.compute(['doc', richTextModeField], (state): DecorationSet => {
+  EditorView.decorations.compute(['doc', 'selection', richTextModeField], (state): DecorationSet => {
     return buildRichTextDecorations(state);
   }),
   EditorView.baseTheme({

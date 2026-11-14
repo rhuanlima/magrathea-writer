@@ -225,4 +225,41 @@ O vento soprava forte.`;
       view.destroy();
     });
   });
+
+  describe('marcadores sob o cursor', () => {
+    const hiddenRanges = (state: EditorState): Array<[number, number]> => {
+      const out: Array<[number, number]> = [];
+      buildRichTextDecorations(state).between(0, state.doc.length, (from, to, deco) => {
+        if (to > from && !deco.spec.class && !deco.spec.widget) out.push([from, to]);
+      });
+      return out;
+    };
+    const mk = (doc: string, pos: number) =>
+      EditorState.create({ doc, selection: { anchor: pos }, extensions: [richTextModeExtension] });
+
+    it('oculta os delimitadores quando o cursor está fora do trecho formatado', () => {
+      expect(hiddenRanges(mk('um **grande** dia', 16))).toEqual([[3, 5], [11, 13]]);
+    });
+
+    it('revela os delimitadores quando o cursor está dentro ou encostado no trecho', () => {
+      expect(hiddenRanges(mk('um **grande** dia', 7))).toEqual([]);
+      expect(hiddenRanges(mk('um **grande** dia', 3))).toEqual([]);
+      expect(hiddenRanges(mk('um **grande** dia', 12))).toEqual([]);
+    });
+
+    it('revela o prefixo de título e a quebra de cena apenas na linha do cursor', () => {
+      expect(hiddenRanges(mk('# Título\n\nTexto', 12))).toEqual([[0, 2]]);
+      expect(hiddenRanges(mk('# Título\n\nTexto', 4))).toEqual([]);
+
+      const scene = (pos: number) => {
+        let widgets = 0;
+        buildRichTextDecorations(mk('Antes\n\n***\n\nDepois', pos)).between(0, 99, (_f, _t, d) => {
+          if (d.spec.widget) widgets++;
+        });
+        return widgets;
+      };
+      expect(scene(0)).toBe(1);
+      expect(scene(8)).toBe(0);
+    });
+  });
 });
