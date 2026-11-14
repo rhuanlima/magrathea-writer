@@ -100,10 +100,47 @@
   }
 </script>
 
+{#snippet iconList()}
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+    <circle cx="2.5" cy="4" r="0.9" fill="currentColor" stroke="none" /><circle cx="2.5" cy="8" r="0.9" fill="currentColor" stroke="none" /><circle cx="2.5" cy="12" r="0.9" fill="currentColor" stroke="none" />
+    <path d="M6 4h8M6 8h8M6 12h8" />
+  </svg>
+{/snippet}
+
+{#snippet iconQuote()}
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true">
+    <path d="M2.5 3v10" /><path d="M6 5h8M6 8h8M6 11h5" />
+  </svg>
+{/snippet}
+
+{#snippet iconClear()}
+  <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 3.5h8M7 3.5v8" /><path d="M10 10l3.5 3.5M13.5 10L10 13.5" />
+  </svg>
+{/snippet}
+
+{#snippet iconVisual()}
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M3 13l1-3.5L11.5 2l2.5 2.5L6.5 12z" /><path d="M10 3.5l2.5 2.5" />
+  </svg>
+{/snippet}
+
+{#snippet iconCode()}
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M5.5 4L1.5 8l4 4M10.5 4l4 4-4 4" />
+  </svg>
+{/snippet}
+
+{#snippet iconLink()}
+  <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M6.5 9.5a3 3 0 004.2 0l2-2a3 3 0 00-4.2-4.2l-.8.8" /><path d="M9.5 6.5a3 3 0 00-4.2 0l-2 2a3 3 0 004.2 4.2l.8-.8" />
+  </svg>
+{/snippet}
+
 <div class="literary-bar" role="toolbar" aria-label="Barra de Formatação e Ferramentas Literárias">
   <div class="bar-inner">
-    <!-- 1. Alternador de Modo: Editor Comum (Visual / Rich Text) vs Markdown -->
-    <div class="mode-switch" role="radiogroup" aria-label="Modo de Edição">
+    <!-- 1. Modo do editor: Texto Comum (Visual / Rich Text) vs Markdown -->
+    <div class="tool-group mode-switch" role="radiogroup" aria-label={t('literary.modeGroup')}>
       <button
         type="button"
         class="mode-btn"
@@ -116,7 +153,7 @@
         role="radio"
         aria-checked={editorPreferences.editorMode === 'visual'}
       >
-        <span class="mode-icon">📝</span>
+        {@render iconVisual()}
         <span>{t('literary.modeVisual')}</span>
       </button>
       <button
@@ -131,13 +168,13 @@
         role="radio"
         aria-checked={editorPreferences.editorMode === 'markdown'}
       >
-        <span class="mode-icon">⌨️</span>
+        {@render iconCode()}
         <span>{t('literary.modeMarkdown')}</span>
       </button>
     </div>
 
-    <!-- 2. Ferramentas de Formatação de Editor de Texto Comum (Rich Text) -->
-    <div class="btn-group">
+    <!-- 2. Formatação de texto -->
+    <div class="tool-group" role="group" aria-label={t('literary.groupFormat')}>
       <button
         type="button"
         class="lit-btn fmt-bold"
@@ -174,9 +211,7 @@
       >
         S
       </button>
-
-      <div class="divider"></div>
-
+      <span class="divider" aria-hidden="true"></span>
       <button
         type="button"
         class="lit-btn fmt-heading"
@@ -204,42 +239,40 @@
       >
         H3
       </button>
-
-      <div class="divider"></div>
-
+      <span class="divider" aria-hidden="true"></span>
       <button
         type="button"
-        class="lit-btn fmt-block"
+        class="lit-btn "
         class:active={activeFormats.bulletList}
         onclick={() => view && toggleBulletList(view)}
         title={t('literary.bulletList')}
       >
-        •≡
+        {@render iconList()}
       </button>
       <button
         type="button"
-        class="lit-btn fmt-block"
+        class="lit-btn "
         class:active={activeFormats.blockquote}
         onclick={() => view && toggleBlockquote(view)}
         title={t('literary.blockquote')}
       >
-        ❝
+        {@render iconQuote()}
       </button>
       <button
         type="button"
-        class="lit-btn fmt-clear"
+        class="lit-btn "
         onclick={() => view && clearFormatting(view)}
         title={t('literary.clearFormatting')}
       >
-        Tₓ
+        {@render iconClear()}
       </button>
     </div>
 
-    <!-- 3. Ferramentas Tipográficas Literárias -->
-    <div class="btn-group">
+    <!-- 3. Pontuação literária -->
+    <div class="tool-group" role="group" aria-label={t('literary.groupInsert')}>
       <button
         type="button"
-        class="lit-btn"
+        class="lit-btn "
         onclick={() => insertTypography('—')}
         title={t('literary.emDash')}
       >
@@ -247,7 +280,7 @@
       </button>
       <button
         type="button"
-        class="lit-btn"
+        class="lit-btn "
         onclick={() => insertTypography('“', '”')}
         title={t('literary.quotes')}
       >
@@ -255,7 +288,7 @@
       </button>
       <button
         type="button"
-        class="lit-btn"
+        class="lit-btn "
         onclick={() => insertTypography('«', '»')}
         title={t('literary.guillemets')}
       >
@@ -263,37 +296,40 @@
       </button>
       <button
         type="button"
-        class="lit-btn"
+        class="lit-btn "
         onclick={() => insertTypography('…')}
         title={t('literary.ellipsis')}
       >
         …
       </button>
-      <div class="divider"></div>
+      <span class="divider" aria-hidden="true"></span>
       <button
         type="button"
         class="lit-btn break-btn"
         onclick={insertSceneBreak}
         title={t('literary.sceneBreak')}
       >
-        ***
+        * * *
       </button>
-      <div class="divider"></div>
+    </div>
 
-      <!-- Botão e Popover de Referência Rápida [[Personagem / Entidade]] -->
-      <div class="ref-dropdown-container">
-        <button
-          type="button"
-          class="lit-btn ref-trigger-btn"
-          class:active={isRefMenuOpen}
-          onclick={() => {
-            isRefMenuOpen = !isRefMenuOpen;
-            if (!isRefMenuOpen) refSearch = '';
-          }}
-          title="Referenciar Personagem, Local, Item ou Cena ([[...]])"
-        >
-          🔗 [[Referenciar]]
-        </button>
+    <!-- 4. Referência rápida [[Personagem / Entidade]] -->
+    <div class="ref-dropdown-container">
+      <button
+        type="button"
+        class="ref-trigger-btn"
+        class:active={isRefMenuOpen}
+        onclick={() => {
+          isRefMenuOpen = !isRefMenuOpen;
+          if (!isRefMenuOpen) refSearch = '';
+        }}
+        title={t('literary.referenceHint')}
+        aria-haspopup="dialog"
+        aria-expanded={isRefMenuOpen}
+      >
+        {@render iconLink()}
+        <span>{t('literary.reference')}</span>
+      </button>
 
         {#if isRefMenuOpen}
           <div class="ref-popover" role="dialog" aria-label="Referenciar Entidade">
@@ -361,17 +397,17 @@
             </div>
           </div>
         {/if}
-      </div>
     </div>
   </div>
 </div>
 
 <style>
+  /* Todos os grupos compartilham a mesma altura (34px), o mesmo raio e o mesmo fundo,
+     para que os controles fiquem alinhados na mesma linha de base. */
   .literary-bar {
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 5px var(--space-md);
+    padding: 6px var(--space-md);
     background-color: var(--color-paper-base);
     border-bottom: 1px solid var(--color-paper-border);
     user-select: none;
@@ -380,38 +416,49 @@
   .bar-inner {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    max-width: 720px;
-    width: 100%;
+    justify-content: center;
     flex-wrap: wrap;
+    gap: 6px 10px;
+    width: 100%;
+    max-width: 960px;
   }
 
-  .mode-switch {
+  .tool-group {
     display: inline-flex;
     align-items: center;
-    background-color: var(--color-paper-surface);
-    padding: 2px;
-    border-radius: var(--rounded-md, 6px);
-    border: 1px solid var(--color-paper-border);
     gap: 2px;
+    height: 34px;
+    padding: 3px;
+    box-sizing: border-box;
+    background-color: var(--color-paper-surface);
+    border: 1px solid var(--color-paper-border);
+    border-radius: var(--rounded-md, 6px);
+  }
+
+  .mode-btn,
+  .lit-btn,
+  .ref-trigger-btn {
+    box-sizing: border-box;
+    height: 26px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent;
+    border-radius: var(--rounded-sm, 4px);
+    background: transparent;
+    color: var(--color-ink-charcoal);
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
   }
 
   .mode-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 4px 10px;
-    border: none;
-    border-radius: var(--rounded-sm, 4px);
-    background: transparent;
+    gap: 6px;
+    padding: 0 10px;
     color: var(--color-ink-muted);
     font-family: var(--font-ui);
-    font-size: 11.5px;
+    font-size: 12px;
     font-weight: 500;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    line-height: 1.2;
+    line-height: 1;
   }
 
   .mode-btn:hover {
@@ -425,37 +472,13 @@
     font-weight: 600;
   }
 
-  .mode-icon {
-    font-size: 12px;
-    line-height: 1;
-  }
-
-  .btn-group {
-    display: inline-flex;
-    align-items: center;
-    gap: 2px;
-    background-color: var(--color-paper-surface);
-    padding: 2px 5px;
-    border-radius: var(--rounded-md, 6px);
-    border: 1px solid var(--color-paper-border);
-  }
-
   .lit-btn {
-    font-family: var(--font-literary);
-    font-size: 14px;
-    font-weight: 500;
     min-width: 28px;
-    height: 26px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 5px;
-    border: 1px solid transparent;
-    border-radius: var(--rounded-sm, 4px);
-    background: transparent;
-    color: var(--color-ink-charcoal);
-    cursor: pointer;
-    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    padding: 0 6px;
+    font-family: var(--font-ui);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
   }
 
   .lit-btn:hover {
@@ -471,59 +494,49 @@
   }
 
   .fmt-bold {
-    font-family: var(--font-ui);
     font-weight: 700;
-    font-size: 12.5px;
   }
 
   .fmt-italic {
     font-family: var(--font-literary);
     font-style: italic;
     font-weight: 600;
-    font-size: 14px;
+    font-size: 15px;
   }
 
   .fmt-underline {
-    font-family: var(--font-ui);
     text-decoration: underline;
+    text-underline-offset: 2px;
     font-weight: 600;
-    font-size: 12.5px;
   }
 
   .fmt-strike {
-    font-family: var(--font-ui);
     text-decoration: line-through;
     font-weight: 600;
-    font-size: 12.5px;
   }
 
   .fmt-heading {
-    font-family: var(--font-ui);
-    font-size: 11px;
+    font-size: 11.5px;
     font-weight: 700;
+    min-width: 30px;
   }
 
-  .fmt-block {
-    font-family: var(--font-ui);
-    font-size: 12px;
-  }
-
-  .fmt-clear {
-    font-family: var(--font-ui);
-    font-size: 11px;
-    color: var(--color-ink-muted);
+  /* Pontuação literária: glifos tipográficos no mesmo tamanho e fonte */
+  .tool-group:not(.mode-switch) .lit-btn:not(.fmt-bold):not(.fmt-italic):not(.fmt-underline):not(.fmt-strike):not(.fmt-heading) {
+    font-family: var(--font-literary);
+    font-size: 15px;
   }
 
   .break-btn {
-    font-size: 12px;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
+    font-size: 13px;
   }
 
   .divider {
     width: 1px;
     height: 16px;
+    margin: 0 3px;
     background-color: var(--color-paper-border);
-    margin: 0 2px;
   }
 
   .ref-dropdown-container {
@@ -532,11 +545,20 @@
   }
 
   .ref-trigger-btn {
-    font-family: var(--font-ui);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 0 8px;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    border-color: var(--color-bronze, #8C733E);
     color: var(--color-bronze, #8C733E);
+    font-family: var(--font-ui);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .ref-trigger-btn:hover,
+  .ref-trigger-btn.active {
+    background-color: var(--color-paper-hover);
   }
 
   .ref-popover {

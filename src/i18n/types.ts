@@ -214,6 +214,10 @@ export interface TranslationSchema {
     ellipsis: string;
     sceneBreak: string;
     modeVisual: string;
+    groupFormat: string;
+    groupInsert: string;
+    reference: string;
+    referenceHint: string;
     modeGroup: string;
     modeMarkdown: string;
     modeVisualHint: string;
