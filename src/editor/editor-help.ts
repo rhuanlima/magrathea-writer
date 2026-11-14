@@ -58,7 +58,9 @@ export const HELP_SECTIONS: HelpSection[] = [
     rows: [
       { id: 'commandPalette', keys: 'Mod+K' },
       { id: 'focusMode', keys: 'Mod+Alt+F' },
-      { id: 'goals', keys: 'Mod+Shift+M' },
+      { id: 'zenMode', keys: 'F11' },
+      { id: 'inspector', keys: 'Mod+Shift+\\' },
+      { id: 'goals', keys: 'Mod+Shift+P' },
       { id: 'exportBook', keys: 'Mod+Shift+E' },
       { id: 'timeline', keys: 'Mod+Shift+T' },
       { id: 'graph', keys: 'Mod+Shift+G' },

@@ -15,7 +15,7 @@ export const enUS: TranslationSchema = {
     saved: 'Saved to vault',
     saving: 'Saving...',
     focusModeToggle: 'Toggle Dynamic Focus Mode (Cmd/Ctrl+Alt+F)',
-    zenModeToggle: 'Toggle Immersive Zen Mode (Cmd/Ctrl+Shift+F)',
+    zenModeToggle: 'Toggle Immersive Zen Mode (F11)',
     exitZen: 'Exit Zen Mode',
   },
   vault: {
@@ -254,6 +254,8 @@ export const enUS: TranslationSchema = {
     syntaxWikilink: 'Link to a world entry',
     commandPalette: 'Command palette',
     focusMode: 'Focus mode',
+    zenMode: 'Zen mode',
+    inspector: 'Side inspector',
     goals: 'Goals and productivity',
     exportBook: 'Export manuscript',
     timeline: 'Timeline',

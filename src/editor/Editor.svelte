@@ -333,11 +333,6 @@
       e.preventDefault();
       editorViewState.toggleFocus(view);
     }
-    // Cmd/Ctrl + Shift + F: Alternar Modo Zen
-    else if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.code === 'KeyF') {
-      e.preventDefault();
-      editorViewState.toggleZen();
-    }
     // Cmd/Ctrl + /: Ajuda rápida do editor (atalhos e sintaxe)
     else if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey && e.key === '/') {
       e.preventDefault();
@@ -570,7 +565,7 @@
         class="icon-action-btn inspector-toggle"
         class:active={vault.isInspectorOpen}
         onclick={() => vault.toggleInspector()}
-        title="Alternar Inspetor Lateral (Cmd+I)"
+        title="Alternar Inspetor Lateral (Cmd+Shift+\)"
         aria-label="Alternar Inspetor Lateral"
       >
         ☰

@@ -257,6 +257,8 @@ export interface TranslationSchema {
     syntaxWikilink: string;
     commandPalette: string;
     focusMode: string;
+    zenMode: string;
+    inspector: string;
     goals: string;
     exportBook: string;
     timeline: string;

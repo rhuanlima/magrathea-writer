@@ -68,7 +68,7 @@ Sugerimos que você experimente as 5 missões abaixo em um projeto de romance, c
 3. Abra as **Preferências (`Cmd+,`)** e experimente os recursos sensoriais e de foco:
    - **Som de Máquina de Escrever:** Áudio acústico real gravado tecla a tecla (com som dedicado para letras, barra de espaço suave, tecla apagar e retorno de carro).
    - **Modo Foco Dinâmico (`Cmd+Alt+F`):** Desvanece os parágrafos ao redor e ilumina suavemente o parágrafo que você está escrevendo no momento.
-   - **Modo Zen (`Cmd+Shift+F` ou `F11`):** Remove toda a interface gráfica (barras, status, menus), deixando apenas você e as palavras sobre o papel digital puro.
+   - **Modo Zen (`F11`):** Remove toda a interface gráfica (barras, status, menus), deixando apenas você e as palavras sobre o papel digital puro.
    - **Metas Diárias Inteligentes & Pomodoro:** Cálculo estrito de palavras digitadas no dia (sem inflar ao colar blocos) e temporizador para manter o ritmo.
    - **Estatísticas Estilométricas:** Clique no contador de palavras no rodapé para visualizar a densidade de verbos, advérbios em *-mente*, adjetivos e ritmo textual.
 
@@ -107,10 +107,10 @@ Sugerimos que você experimente as 5 missões abaixo em um projeto de romance, c
 | :--- | :--- |
 | **`Cmd+K`** ou **`Ctrl+K`** | **Paleta de Comandos Global & Quick Open** (busca qualquer cena ou comando) |
 | **`Cmd+\`** ou **`Ctrl+\`** | Alternar Barra Lateral do Manuscrito |
-| **`Cmd+I`** ou **`Ctrl+I`** | Alternar Painel Inspetor de Fichas e Backlinks |
+| **`Cmd+Shift+\`** ou **`Ctrl+Shift+\`** | Alternar Painel Inspetor de Fichas e Backlinks |
 | **`Cmd+,`** | Abrir Preferências (Foco, Tipografia, Som de Máquina de Escrever) |
 | **`Cmd+Alt+F`** | Alternar Modo Foco Dinâmico por Parágrafo |
-| **`Cmd+Shift+F`** | Alternar Modo Zen Imersivo (Chrome Zero) |
+| **`F11`** | Alternar Modo Zen Imersivo (Chrome Zero) |
 | **`Cmd+Shift+T`** | Abrir Linha do Tempo Literária |
 | **`Cmd+Shift+G`** | Abrir Grafo e Canvas de Mapas Mentais |
 | **`Cmd+Shift+P`** | Painel de Metas Diárias e Produtividade |

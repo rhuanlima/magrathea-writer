@@ -15,7 +15,7 @@ export const ptBR: TranslationSchema = {
     saved: 'Salvo no cofre',
     saving: 'Salvando...',
     focusModeToggle: 'Alternar Modo Foco Dinâmico (Cmd/Ctrl+Alt+F)',
-    zenModeToggle: 'Alternar Modo Zen Imersivo (Cmd/Ctrl+Shift+F)',
+    zenModeToggle: 'Alternar Modo Zen Imersivo (F11)',
     exitZen: 'Sair do Modo Zen',
   },
   vault: {
@@ -254,6 +254,8 @@ export const ptBR: TranslationSchema = {
     syntaxWikilink: 'Link para uma ficha do mundo',
     commandPalette: 'Paleta de comandos',
     focusMode: 'Modo Foco',
+    zenMode: 'Modo Zen',
+    inspector: 'Inspetor lateral',
     goals: 'Metas e produtividade',
     exportBook: 'Exportar manuscrito',
     timeline: 'Linha do tempo',
