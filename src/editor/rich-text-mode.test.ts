@@ -133,4 +133,50 @@ O vento soprava forte.`;
     expect(view.state.doc.toString()).toBe('Um grande mistério antigo perdido');
     view.destroy();
   });
+
+  describe('negrito e itálico combinados (asteriscos adjacentes)', () => {
+    it('Cmd+I em texto em negrito adiciona itálico sem remover o negrito', () => {
+      const view = createTestView('**x**', 2, 3);
+      toggleItalic(view);
+      expect(view.state.doc.toString()).toBe('***x***');
+      toggleItalic(view);
+      expect(view.state.doc.toString()).toBe('**x**');
+      view.destroy();
+    });
+
+    it('Cmd+B em texto em itálico adiciona negrito sem remover o itálico', () => {
+      const view = createTestView('*x*', 1, 2);
+      toggleBold(view);
+      expect(view.state.doc.toString()).toBe('***x***');
+      toggleBold(view);
+      expect(view.state.doc.toString()).toBe('*x*');
+      view.destroy();
+    });
+
+    it('remove só o negrito de um trecho em negrito+itálico', () => {
+      const view = createTestView('***x***', 3, 4);
+      toggleBold(view);
+      expect(view.state.doc.toString()).toBe('*x*');
+      view.destroy();
+    });
+
+    it('funciona com o cursor dentro da palavra e com a seleção incluindo os marcadores', () => {
+      let view = createTestView('um **grande** dia', 7);
+      toggleItalic(view);
+      expect(view.state.doc.toString()).toBe('um ***grande*** dia');
+      view.destroy();
+
+      view = createTestView('**x**', 0, 5);
+      toggleItalic(view);
+      expect(view.state.doc.toString()).toBe('***x***');
+      view.destroy();
+    });
+
+    it('mantém a seleção sobre o texto interno após a troca', () => {
+      const view = createTestView('**noite**', 2, 7);
+      toggleItalic(view);
+      expect(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to)).toBe('noite');
+      view.destroy();
+    });
+  });
 });

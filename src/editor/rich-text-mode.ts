@@ -388,10 +388,67 @@ export function getActiveFormats(state: EditorState): ActiveFormats {
 }
 
 /**
+ * Negrito (`**`) e itálico (`*`) compartilham o mesmo caractere: `*x*` é itálico, `**x**` é
+ * negrito e `***x***` é ambos. Em vez de tratar cada marcador isoladamente (o que faria o
+ * itálico "comer" um dos `**`), alterna o tamanho da sequência de asteriscos ao redor do texto.
+ * Retorna `false` quando o texto não está cercado por asteriscos (fluxo normal de aplicação).
+ */
+function toggleAsteriskRun(view: EditorView, weight: 1 | 2): boolean {
+  const { state, dispatch } = view;
+  const { from, to } = state.selection.main;
+  const doc = state.doc;
+
+  // Alvo: a seleção ou, sem seleção, a palavra sob o cursor
+  let start = from;
+  let end = to;
+  if (from === to) {
+    const word = state.wordAt(from);
+    if (!word) return false;
+    start = word.from;
+    end = word.to;
+  }
+
+  // Asteriscos que a própria seleção já inclui nas pontas fazem parte da sequência
+  while (start < end && doc.sliceString(start, start + 1) === '*') start++;
+  while (end > start && doc.sliceString(end - 1, end) === '*') end--;
+  if (start >= end) return false;
+
+  let left = 0;
+  while (start - left > 0 && doc.sliceString(start - left - 1, start - left) === '*') left++;
+  let right = 0;
+  while (end + right < doc.length && doc.sliceString(end + right, end + right + 1) === '*') right++;
+
+  const run = Math.min(left, right);
+  if (run === 0 || run > 3) return false;
+
+  // run: 1 = itálico, 2 = negrito, 3 = ambos (bit 1 = itálico, bit 2 = negrito)
+  const nextRun = run ^ weight;
+  const delimiter = '*'.repeat(nextRun);
+  const cursorOffset = from === to ? from - start : 0;
+
+  dispatch({
+    changes: [
+      { from: start - run, to: start, insert: delimiter },
+      { from: end, to: end + run, insert: delimiter },
+    ],
+    selection:
+      from === to
+        ? { anchor: start - run + nextRun + cursorOffset }
+        : { anchor: start - run + nextRun, head: end - run + nextRun },
+  });
+  view.focus();
+  return true;
+}
+
+/**
  * Alterna uma formatação inline simétrica (ex.: `**` para negrito, `*` para itálico, `~~` para tachado).
  * Funciona tanto com texto selecionado quanto quando o cursor está dentro de uma palavra já formatada.
  */
 export function toggleSymmetricFormat(view: EditorView, marker: string): boolean {
+  if ((marker === '*' || marker === '**') && toggleAsteriskRun(view, marker.length as 1 | 2)) {
+    return true;
+  }
+
   const { state, dispatch } = view;
   const { from, to } = state.selection.main;
   const len = marker.length;
