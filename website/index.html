@@ -1385,8 +1385,10 @@
             <h3>Texto Comum (Rich Text), Markdown & Modo Zen</h3>
             <p>
               Alterne com 1 clique entre o <strong>Editor de Texto Comum (WYSIWYG)</strong> — limpo e sem códigos visíveis —
-              e o <strong>Modo Markdown</strong>. Inclui Modo Zen imersivo (Cmd+Shift+F) e tipografia clássica (EB Garamond)
-              na largura áurea de 720px.
+              e o <strong>Modo Markdown</strong>. Os marcadores aparecem em cinza claro só onde o cursor está e somem
+              quando a formatação está completa. Um botão <strong>?</strong> (ou <code>Cmd/Ctrl+/</code>) abre a ajuda
+              rápida com atalhos e sintaxe. Inclui Modo Zen imersivo (F11) e tipografia clássica (EB Garamond) na
+              largura áurea de 720px.
             </p>
           </div>
 
@@ -1418,7 +1420,8 @@
             <h3>Soberania & Exportação Livre</h3>
             <p>
               Zero vendor lock-in. Exporte seus mundos para Markdown aberto perfeitamente compatível com Obsidian, ou
-              gere documentos finais elegantes em PDF diagramado, Microsoft Word (DOCX) e EPUB.
+              gere documentos finais elegantes em PDF diagramado, Microsoft Word (DOCX) e EPUB. Falas de diálogo digitadas
+              com hífen saem com travessão (—) em todos os formatos.
             </p>
           </div>
 
@@ -1538,6 +1541,19 @@
               Com certeza! O formato de exportação para Markdown aberto inclui toda a estrutura de pastas e wikilinks
               compatíveis com o ecossistema de aplicativos baseados em arquivos Markdown, além de exportador para DOCX
               (Word), PDF e EPUB.
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question" onclick="toggleFaq(this)">
+              <span>Como escrevo diálogos e listas?</span>
+              <span class="arrow">▼</span>
+            </div>
+            <div class="faq-answer">
+              Comece a linha com um hífen (<code>- Olá, disse ele.</code>) e a exportação a transforma em fala com
+              travessão (<code>— Olá, disse ele.</code>). Para listas com marcadores, use <code>* item</code>. Em dúvida
+              sobre algum atalho ou sintaxe, clique no <strong>?</strong> no rodapé do editor ou use
+              <code>Cmd/Ctrl+/</code>.
             </div>
           </div>
 
