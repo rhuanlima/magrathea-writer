@@ -211,6 +211,7 @@ export const ptBR: TranslationSchema = {
     ellipsis: 'Reticências (…)',
     sceneBreak: 'Quebra de Cena (***)',
     modeVisual: 'Editor Comum',
+    modeGroup: 'Modo de Edição',
     modeMarkdown: 'Markdown',
     modeVisualHint: 'Modo Editor de Texto Comum (Rich Text / WYSIWYG — oculta marcações Markdown)',
     modeMarkdownHint: 'Modo Código Markdown (exibe marcações **, #, ---)',

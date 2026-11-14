@@ -24,6 +24,7 @@
   } from './rich-text-mode';
   import { editorViewState } from './editor-view-state.svelte';
   import { theme } from '../design';
+  import { t } from '../i18n';
   import { editorThemeCompartment, getEditorThemeExtension } from './theme';
   import { editorPreferences } from './editor-preferences.svelte';
   import { typewriterAudio } from './typewriter-audio';
@@ -482,20 +483,25 @@
 
     <!-- Centro: Alternador de Modo (Editor Comum vs Markdown) e Modo Foco -->
     <div class="footer-center">
-      <button
-        type="button"
-        class="focus-pill-btn"
-        class:active={editorPreferences.editorMode === 'visual'}
-        onclick={() => {
-          editorPreferences.toggleEditorMode();
-          view?.focus();
-        }}
-        title={editorPreferences.editorMode === 'visual'
-          ? 'Modo Editor Comum ativo (clique para ver código Markdown)'
-          : 'Modo Markdown ativo (clique para usar Editor Visual Rich Text)'}
-      >
-        {editorPreferences.editorMode === 'visual' ? '📝 Editor Comum' : '⌨️ Markdown'}
-      </button>
+      <div class="footer-mode-switch" role="radiogroup" aria-label={t('literary.modeGroup')}>
+        {#each [{ mode: 'visual', icon: '📝' }, { mode: 'markdown', icon: '⌨️' }] as option (option.mode)}
+          <button
+            type="button"
+            class="focus-pill-btn"
+            class:active={editorPreferences.editorMode === option.mode}
+            role="radio"
+            aria-checked={editorPreferences.editorMode === option.mode}
+            onclick={() => {
+              editorPreferences.setEditorMode(option.mode as 'visual' | 'markdown');
+              view?.focus();
+            }}
+            title={option.mode === 'visual' ? t('literary.modeVisualHint') : t('literary.modeMarkdownHint')}
+          >
+            {option.icon}
+            {option.mode === 'visual' ? t('literary.modeVisual') : t('literary.modeMarkdown')}
+          </button>
+        {/each}
+      </div>
 
       {#if editorViewState.isFocusMode}
         <button
@@ -563,6 +569,11 @@
 </div>
 
 <style>
+  .footer-mode-switch {
+    display: inline-flex;
+    gap: 4px;
+  }
+
   .editor-wrapper {
     display: flex;
     flex-direction: column;

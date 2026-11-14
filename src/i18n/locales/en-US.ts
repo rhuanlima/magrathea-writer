@@ -211,6 +211,7 @@ export const enUS: TranslationSchema = {
     ellipsis: 'Ellipsis (…)',
     sceneBreak: 'Scene Break (***)',
     modeVisual: 'Rich Text',
+    modeGroup: 'Editing Mode',
     modeMarkdown: 'Markdown',
     modeVisualHint: 'Rich Text Visual Editor Mode (WYSIWYG — hides Markdown syntax)',
     modeMarkdownHint: 'Markdown Source Mode (shows **, #, --- syntax)',
