@@ -1,6 +1,6 @@
 {
   "name": "magrathea-writer",
-  "version": "0.9.6-beta.5",
+  "version": "0.9.6-beta.6",
   "private": true,
   "type": "module",
   "scripts": {
