@@ -125,6 +125,8 @@ const boldItalicMarkDeco = Decoration.mark({ class: 'cm-rt-bold cm-rt-italic' })
 const underlineMarkDeco = Decoration.mark({ class: 'cm-rt-underline' });
 const strikethroughMarkDeco = Decoration.mark({ class: 'cm-rt-strikethrough' });
 const codeMarkDeco = Decoration.mark({ class: 'cm-rt-code' });
+// Marcadores à mostra (sob o cursor ou ainda sem par): cinza claro, só como indicação.
+const markerHintDeco = Decoration.mark({ class: 'cm-rt-marker' });
 
 /**
  * Identifica a linha final (1-indexed) do bloco de frontmatter YAML no início do documento.
@@ -163,7 +165,10 @@ interface InlineTokenMatch {
 /**
  * Extrai tokens inline de formatação de uma linha sem sobreposição e ignorando [[wikilinks]].
  */
-function findInlineMatches(lineText: string, startOffset: number): InlineTokenMatch[] {
+function findInlineMatches(
+  lineText: string,
+  startOffset: number,
+): { tokens: InlineTokenMatch[]; strays: Array<{ from: number; to: number }> } {
   const occupied = new Uint8Array(lineText.length);
 
   // Protege [[wikilinks]] para que a decoração de chip bronze funcione livremente
@@ -223,7 +228,25 @@ function findInlineMatches(lineText: string, startOffset: number): InlineTokenMa
     }
   }
 
-  return results.sort((a, b) => a.from - b.from);
+  // Marcadores que não formaram um par com conteúdo (ex.: `****` recém-inserido ou `**texto` aberto)
+  const strays: Array<{ from: number; to: number }> = [];
+  const strayRegex = /\*{2,}|~~|<\/?u>/g;
+  let sm: RegExpExecArray | null;
+  while ((sm = strayRegex.exec(lineText)) !== null) {
+    const from = sm.index;
+    const to = from + sm[0].length;
+    if (from < startOffset) continue;
+    let free = true;
+    for (let i = from; i < to; i++) {
+      if (occupied[i]) {
+        free = false;
+        break;
+      }
+    }
+    if (free) strays.push({ from, to });
+  }
+
+  return { tokens: results.sort((a, b) => a.from - b.from), strays };
 }
 
 /**
@@ -257,7 +280,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 
     // 1. Quebra de cena (*** ou --- isolados na linha, fora do frontmatter)
     if (/^\s*(\*{3,}|-{3,})\s*$/.test(text)) {
-      if (!cursorOnLine) {
+      if (cursorOnLine) {
+        decorations.push(markerHintDeco.range(line.from, line.to));
+      } else {
         decorations.push(sceneBreakLineDeco.range(line.from));
         decorations.push(sceneBreakReplaceDeco.range(line.from, line.to));
       }
@@ -274,9 +299,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       const level = hashes.length;
       const lineDeco = level === 1 ? h1LineDeco : level === 2 ? h2LineDeco : h3LineDeco; // níveis 4–6 usam o estilo de H3
       decorations.push(lineDeco.range(line.from));
-      if (!cursorOnLine) {
-        decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
-      }
+      decorations.push(
+        (cursorOnLine ? markerHintDeco : hiddenDelimiterDeco).range(line.from, line.from + prefixLen),
+      );
       contentStartOffset = prefixLen;
     } else {
       // 3. Citação (> )
@@ -284,9 +309,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
       if (quoteMatch) {
         const prefixLen = quoteMatch[1].length;
         decorations.push(blockquoteLineDeco.range(line.from));
-        if (!cursorOnLine) {
-          decorations.push(hiddenDelimiterDeco.range(line.from, line.from + prefixLen));
-        }
+        decorations.push(
+          (cursorOnLine ? markerHintDeco : hiddenDelimiterDeco).range(line.from, line.from + prefixLen),
+        );
         contentStartOffset = prefixLen;
       } else {
         // 4. Lista com marcadores (- ou * seguidos de espaço)
@@ -294,9 +319,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
         if (bulletMatch) {
           const prefixLen = bulletMatch[1].length;
           decorations.push(listItemLineDeco.range(line.from));
-          if (!cursorOnLine) {
-            decorations.push(bulletReplaceDeco.range(line.from, line.from + prefixLen));
-          }
+          decorations.push(
+            (cursorOnLine ? markerHintDeco : bulletReplaceDeco).range(line.from, line.from + prefixLen),
+          );
           contentStartOffset = prefixLen;
         } else if (/^\d+\.\s+/.test(text)) {
           decorations.push(listItemLineDeco.range(line.from));
@@ -305,8 +330,11 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
     }
 
     // 5. Formatações inline dentro da linha
-    const inlineMatches = findInlineMatches(text, contentStartOffset);
-    for (const token of inlineMatches) {
+    const { tokens, strays } = findInlineMatches(text, contentStartOffset);
+    for (const stray of strays) {
+      decorations.push(markerHintDeco.range(line.from + stray.from, line.from + stray.to));
+    }
+    for (const token of tokens) {
       const absFrom = line.from + token.from;
       const absTo = line.from + token.to;
       const innerFrom = absFrom + token.openLen;
@@ -314,9 +342,9 @@ export function buildRichTextDecorations(state: EditorState): DecorationSet {
 
       if (innerFrom < innerTo) {
         const revealed = touchesSelection(absFrom, absTo);
-        if (!revealed) decorations.push(hiddenDelimiterDeco.range(absFrom, innerFrom));
+        decorations.push((revealed ? markerHintDeco : hiddenDelimiterDeco).range(absFrom, innerFrom));
         decorations.push(token.markDeco.range(innerFrom, innerTo));
-        if (!revealed) decorations.push(hiddenDelimiterDeco.range(innerTo, absTo));
+        decorations.push((revealed ? markerHintDeco : hiddenDelimiterDeco).range(innerTo, absTo));
       }
     }
   }
@@ -870,6 +898,13 @@ export const richTextModeExtension: Extension = [
     '.cm-rt-strikethrough': {
       textDecoration: 'line-through',
       opacity: '0.78',
+    },
+    '.cm-rt-marker': {
+      color: 'var(--color-ink-faded, #94A3B8)',
+      fontWeight: '400',
+      fontStyle: 'normal',
+      textDecoration: 'none',
+      letterSpacing: '0',
     },
     '.cm-rt-code': {
       fontFamily: 'var(--font-mono, monospace)',

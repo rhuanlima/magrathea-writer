@@ -288,4 +288,40 @@ O vento soprava forte.`;
     });
     expect(widgets).toBe(0);
   });
+
+  describe('marcadores em cinza claro como indicação', () => {
+    const hintRanges = (doc: string, pos: number): Array<[number, number]> => {
+      const state = EditorState.create({ doc, selection: { anchor: pos }, extensions: [richTextModeExtension] });
+      const out: Array<[number, number]> = [];
+      buildRichTextDecorations(state).between(0, doc.length, (from, to, deco) => {
+        if (deco.spec.class === 'cm-rt-marker') out.push([from, to]);
+      });
+      return out;
+    };
+
+    it('marcadores sob o cursor ficam cinza em vez de sumirem', () => {
+      expect(hintRanges('um **grande** dia', 7)).toEqual([[3, 5], [11, 13]]);
+      expect(hintRanges('# Título\n\nTexto', 3)).toEqual([[0, 2]]);
+    });
+
+    it('marcadores sem par (ex.: **** recém-inserido) ficam cinza mesmo com o cursor longe', () => {
+      expect(hintRanges('a ****\n\nfim', 10)).toEqual([[2, 6]]);
+      expect(hintRanges('a **aberto\n\nfim', 14)).toEqual([[2, 4]]);
+      expect(hintRanges('a <u></u> b', 11)).toEqual([[2, 5], [5, 9]]);
+    });
+
+    it('formatação completa e longe do cursor não mostra marcador nenhum', () => {
+      expect(hintRanges('um **grande** dia', 16)).toEqual([]);
+    });
+
+    it('ao completar o par e sair do trecho, o marcador some', () => {
+      const view = createTestView('a ****', 4);
+      expect(hintRanges(view.state.doc.toString(), 4)).toEqual([[2, 6]]);
+      view.dispatch({ changes: { from: 4, insert: 'oi' } });
+      const done = view.state.doc.toString();
+      expect(done).toBe('a **oi**');
+      expect(hintRanges(done, 0)).toEqual([]);
+      view.destroy();
+    });
+  });
 });
