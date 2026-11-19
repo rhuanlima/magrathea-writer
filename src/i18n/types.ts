@@ -28,9 +28,6 @@ export interface TranslationSchema {
     focusModeToggle: string;
     zenModeToggle: string;
     exitZen: string;
-    hemingwayMode: string;
-    hemingwayModeSubtitle: string;
-    hemingwayExitHint: string;
   };
   vault: {
     status: {
