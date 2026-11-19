@@ -1,31 +1,39 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
   import { fade } from 'svelte/transition';
   import { t } from '../i18n';
 
   interface Props {
     active: boolean;
-    cursorX: number;
-    cursorY: number;
-    cursorHeight?: number;
-    hasCursorCoords?: boolean;
+    lineHeightPx?: number;
   }
 
-  let {
-    active,
-    cursorX,
-    cursorY,
-    cursorHeight = 24,
-    hasCursorCoords = true,
-  }: Props = $props();
+  let { active, lineHeightPx = 24 }: Props = $props();
 
   let showExitHint = $state(false);
   let hintTimer: ReturnType<typeof setTimeout> | null = null;
 
-  const coneScale = $derived(Math.max(0.85, Math.min(1.6, cursorHeight / 24)));
+  let viewportWidth = $state(typeof window !== 'undefined' ? window.innerWidth : 1280);
+  let viewportHeight = $state(typeof window !== 'undefined' ? window.innerHeight : 800);
+
+  const anchorX = $derived(viewportWidth / 2);
+  const anchorY = $derived(Math.max(180, viewportHeight - 70));
+  const coneScale = $derived(Math.max(0.85, Math.min(1.6, lineHeightPx / 24)));
+
+  function updateViewportSize() {
+    if (typeof window !== 'undefined') {
+      viewportWidth = window.innerWidth;
+      viewportHeight = window.innerHeight;
+    }
+  }
+
+  onMount(() => {
+    updateViewportSize();
+  });
 
   $effect(() => {
     if (active) {
+      updateViewportSize();
       showExitHint = true;
       if (hintTimer) {
         clearTimeout(hintTimer);
@@ -51,6 +59,8 @@
   });
 </script>
 
+<svelte:window onresize={updateViewportSize} />
+
 {#if active}
   <div
     class="hemingway-overlay"
@@ -74,26 +84,21 @@
         </linearGradient>
         <mask id="hemingway-spotlight-mask" maskUnits="userSpaceOnUse">
           <rect x="0" y="0" width="100%" height="100%" fill="#ffffff" />
-          {#if hasCursorCoords}
-            <g
-              class="hemingway-spotlight-group"
-              style="transform: translate({cursorX}px, {cursorY}px) scale({coneScale});"
-            >
-              <path
-                d="M -46 8 L -290 -145 Q 0 -178 290 -145 L 46 8 Q 0 20 -46 8 Z"
-                fill="url(#hemingway-cone-fade)"
-                filter="url(#hemingway-cone-blur)"
-              />
-              <ellipse
-                cx="0"
-                cy="-16"
-                rx="115"
-                ry="32"
-                fill="#000000"
-                filter="url(#hemingway-core-blur)"
-              />
-            </g>
-          {/if}
+          <g transform="translate({anchorX}, {anchorY}) scale({coneScale})">
+            <path
+              d="M -46 8 L -290 -145 Q 0 -178 290 -145 L 46 8 Q 0 20 -46 8 Z"
+              fill="url(#hemingway-cone-fade)"
+              filter="url(#hemingway-cone-blur)"
+            />
+            <ellipse
+              cx="0"
+              cy="-16"
+              rx="115"
+              ry="32"
+              fill="#000000"
+              filter="url(#hemingway-core-blur)"
+            />
+          </g>
         </mask>
       </defs>
 
@@ -107,12 +112,10 @@
       />
     </svg>
 
-    {#if hasCursorCoords}
-      <div
-        class="hemingway-base-pill"
-        style="transform: translate3d(calc({cursorX}px - 50%), calc({cursorY}px + 5px), 0);"
-      ></div>
-    {/if}
+    <div
+      class="hemingway-base-pill"
+      style="transform: translate3d(calc({anchorX}px - 50%), calc({anchorY}px + 5px), 0);"
+    ></div>
 
     {#if showExitHint}
       <div class="hemingway-exit-hint" out:fade={{ duration: 250 }}>
@@ -140,11 +143,6 @@
     pointer-events: none;
   }
 
-  .hemingway-spotlight-group {
-    transition: transform 55ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
-  }
-
   .hemingway-base-pill {
     position: fixed;
     top: 0;
@@ -157,8 +155,6 @@
       0 0 10px 1px rgba(246, 226, 179, 0.55),
       0 0 2px rgba(255, 250, 235, 0.9);
     pointer-events: none;
-    transition: transform 55ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: transform;
   }
 
   .hemingway-exit-hint {
