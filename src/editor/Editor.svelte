@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
+  import { getCurrentWindow } from '@tauri-apps/api/window';
   import { EditorView, basicSetup } from 'codemirror';
   import { EditorState, Compartment, Transaction, type Extension } from '@codemirror/state';
   import { lineNumbers } from '@codemirror/view';
@@ -88,11 +89,9 @@
   let typewriterRafId: number | null = null;
   let hemingwayRafId: number | null = null;
   let lastSavedWikilinksSig = '';
-  let hemingwayCursorX = $state(0);
-  let hemingwayCursorY = $state(0);
-  let hemingwayCursorHeight = $state(24);
-  let hasHemingwayCursor = $state(false);
-  let removeScrollerScrollListener: (() => void) | null = null;
+  let hemingwayLineHeightPx = $state(24);
+  let wasFullscreenBeforeHemingway = false;
+  let enteredFullscreenByHemingway = false;
 
   /**
    * Extrai uma assinatura leve dos [[wikilinks]] presentes no texto para evitar
@@ -112,42 +111,83 @@
     }
   }
 
-  function updateHemingwayCursor() {
-    if (!view || !editorViewState.isHemingwayMode) return;
-    const head = view.state.selection.main.head;
-    const coords = view.coordsAtPos(head);
-    if (coords) {
-      hemingwayCursorX = coords.left;
-      hemingwayCursorY = coords.bottom;
-      hemingwayCursorHeight = Math.max(16, coords.bottom - coords.top);
-      hasHemingwayCursor = true;
-    } else if (editorElement && !hasHemingwayCursor) {
-      const rect = editorElement.getBoundingClientRect();
-      hemingwayCursorX = rect.left + rect.width / 2;
-      hemingwayCursorY = rect.top + rect.height * 0.62;
-      hasHemingwayCursor = true;
+  function isTauriRuntime(): boolean {
+    return (
+      typeof window !== 'undefined' &&
+      ('__TAURI_INTERNALS__' in window || '__TAURI__' in window)
+    );
+  }
+
+  async function setHemingwayFullscreen(enable: boolean): Promise<void> {
+    if (typeof window === 'undefined') return;
+    try {
+      if (isTauriRuntime()) {
+        const win = getCurrentWindow();
+        if (enable) {
+          wasFullscreenBeforeHemingway = await win.isFullscreen();
+          if (!wasFullscreenBeforeHemingway) {
+            await win.setFullscreen(true);
+            enteredFullscreenByHemingway = true;
+          }
+        } else if (enteredFullscreenByHemingway && !wasFullscreenBeforeHemingway) {
+          enteredFullscreenByHemingway = false;
+          await win.setFullscreen(false);
+        }
+      } else if (typeof document !== 'undefined') {
+        if (enable) {
+          wasFullscreenBeforeHemingway = Boolean(document.fullscreenElement);
+          if (!wasFullscreenBeforeHemingway && document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen();
+            enteredFullscreenByHemingway = true;
+          }
+        } else if (enteredFullscreenByHemingway && !wasFullscreenBeforeHemingway && document.fullscreenElement) {
+          enteredFullscreenByHemingway = false;
+          await document.exitFullscreen?.();
+        }
+      }
+    } catch {
+      // Ignora falhas de permissão de tela cheia em ambientes restritos
     }
   }
 
-  function anchorHemingwayScroll() {
-    if (!view || !editorViewState.isHemingwayMode) return;
+  function getCurrentTranslateX(el: HTMLElement): number {
+    if (typeof window === 'undefined' || typeof DOMMatrix === 'undefined') return 0;
+    const raw = window.getComputedStyle(el).transform;
+    if (!raw || raw === 'none') return 0;
+    try {
+      return new DOMMatrix(raw).m41;
+    } catch {
+      return 0;
+    }
+  }
+
+  function anchorHemingwayTypewriter() {
+    if (!view || !editorViewState.isHemingwayMode || typeof window === 'undefined') return;
     const head = view.state.selection.main.head;
     const coords = view.coordsAtPos(head);
-    if (coords) {
-      const scroller = view.scrollDOM;
-      const scrollerRect = scroller.getBoundingClientRect();
-      const desiredTop = scrollerRect.top + scrollerRect.height * 0.62;
-      const delta = coords.top - desiredTop;
-      if (Math.abs(delta) > 1.5) {
-        scroller.scrollTop += delta;
-      }
+    if (!coords) return;
+
+    hemingwayLineHeightPx = Math.max(16, coords.bottom - coords.top);
+
+    const anchorX = window.innerWidth / 2;
+    const anchorY = Math.max(180, window.innerHeight - 70);
+
+    // Rolagem vertical estilo máquina de escrever: mantém a linha ativa sobre o feixe fixo no rodapé
+    const deltaY = coords.bottom - anchorY;
+    if (Math.abs(deltaY) > 1) {
+      view.scrollDOM.scrollTop += deltaY;
     }
-    updateHemingwayCursor();
+
+    // Deslocamento horizontal estilo carro de máquina de escrever: move o texto para manter o cursor no centro
+    const currentVisualTx = getCurrentTranslateX(view.contentDOM);
+    const untransformedCursorX = coords.left - currentVisualTx;
+    const targetOffsetX = anchorX - untransformedCursorX;
+    view.contentDOM.style.transform = `translate3d(${targetOffsetX}px, 0, 0)`;
   }
 
   function handleWindowResize() {
     if (editorViewState.isHemingwayMode) {
-      requestAnimationFrame(anchorHemingwayScroll);
+      requestAnimationFrame(anchorHemingwayTypewriter);
     } else if (editorPreferences.typewriterScrolling) {
       requestAnimationFrame(recenterTypewriter);
     }
@@ -208,13 +248,12 @@
       }
 
       if (editorViewState.isHemingwayMode && (update.docChanged || update.selectionSet)) {
-        updateHemingwayCursor();
         if (hemingwayRafId !== null) {
           cancelAnimationFrame(hemingwayRafId);
         }
         hemingwayRafId = requestAnimationFrame(() => {
           hemingwayRafId = null;
-          anchorHemingwayScroll();
+          anchorHemingwayTypewriter();
         });
       } else if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
         if (typewriterRafId !== null) {
@@ -348,21 +387,10 @@
     activeFormats = getActiveFormats(view.state);
     editorViewState.applyInitialFocus(view);
 
-    const scroller = view.scrollDOM;
-    const handleScrollerScroll = () => {
-      if (editorViewState.isHemingwayMode) {
-        updateHemingwayCursor();
-      }
-    };
-    scroller.addEventListener('scroll', handleScrollerScroll, { passive: true });
-    removeScrollerScrollListener = () => {
-      scroller.removeEventListener('scroll', handleScrollerScroll);
-    };
-
     if (editorElement && typeof ResizeObserver !== 'undefined') {
       editorResizeObserver = new ResizeObserver(() => {
         if (editorViewState.isHemingwayMode) {
-          requestAnimationFrame(anchorHemingwayScroll);
+          requestAnimationFrame(anchorHemingwayTypewriter);
         } else if (editorPreferences.typewriterScrolling) {
           requestAnimationFrame(recenterTypewriter);
         }
@@ -416,14 +444,23 @@
     }
   });
 
-  // Ancora e foca o cursor ao entrar no Hemingway Mode
+  // Gerencia tela cheia e ancoragem typewriter ao entrar/sair do Hemingway Mode
   $effect(() => {
-    if (editorViewState.isHemingwayMode && view) {
-      requestAnimationFrame(() => {
-        if (!view || !editorViewState.isHemingwayMode) return;
-        view.focus();
-        anchorHemingwayScroll();
-      });
+    const active = editorViewState.isHemingwayMode;
+    if (active) {
+      void setHemingwayFullscreen(true);
+      if (view) {
+        requestAnimationFrame(() => {
+          if (!view || !editorViewState.isHemingwayMode) return;
+          view.focus();
+          anchorHemingwayTypewriter();
+        });
+      }
+    } else {
+      void setHemingwayFullscreen(false);
+      if (view) {
+        view.contentDOM.style.transform = '';
+      }
     }
   });
 
@@ -508,9 +545,8 @@
       cancelAnimationFrame(hemingwayRafId);
       hemingwayRafId = null;
     }
-    if (removeScrollerScrollListener) {
-      removeScrollerScrollListener();
-      removeScrollerScrollListener = null;
+    if (enteredFullscreenByHemingway) {
+      void setHemingwayFullscreen(false);
     }
     if (editorResizeObserver) {
       editorResizeObserver.disconnect();
@@ -551,10 +587,7 @@
 
   <HemingwayOverlay
     active={editorViewState.isHemingwayMode}
-    cursorX={hemingwayCursorX}
-    cursorY={hemingwayCursorY}
-    cursorHeight={hemingwayCursorHeight}
-    hasCursorCoords={hasHemingwayCursor}
+    lineHeightPx={hemingwayLineHeightPx}
   />
 
   <FloatingHud sceneWordsCount={wordsCount} />
@@ -728,8 +761,10 @@
   }
 
   :global(.editor-container.hemingway-active .cm-content) {
-    padding-top: 45vh !important;
-    padding-bottom: 45vh !important;
+    padding-top: 85vh !important;
+    padding-bottom: 20vh !important;
+    transition: transform 60ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: transform;
   }
 
   .editor-footer {
