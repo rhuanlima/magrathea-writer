@@ -107,6 +107,11 @@
         listenToEvent('menu_zen_mode', () => {
           editorViewState.toggleZen();
         }),
+        listenToEvent('menu_hemingway_mode', () => {
+          if (vault.isOpen && !vault.isLocked) {
+            editorViewState.toggleHemingway();
+          }
+        }),
         listenToEvent('menu_toggle_theme', () => {
           theme.toggleTheme();
         }),
@@ -257,6 +262,19 @@
 
   function handleGlobalKeydown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
+      if (isViewMenuOpen) {
+        isViewMenuOpen = false;
+        return;
+      }
+      if (editorViewState.isHemingwayMode) {
+        const hasOpenPopup =
+          typeof document !== 'undefined' &&
+          document.querySelector('.cm-tooltip-autocomplete, .cm-tooltip, [role="dialog"]') !== null;
+        if (!hasOpenPopup) {
+          editorViewState.exitHemingway();
+        }
+        return;
+      }
       if (editorViewState.isFocusMode) {
         editorViewState.exitFocus();
       } else if (editorViewState.isZenMode) {
@@ -311,7 +329,12 @@
 
 <svelte:window onkeydown={handleGlobalKeydown} onclick={handleGlobalClick} />
 
-<main class="app-shell" class:zen-active={editorViewState.isZenMode} class:focus-mode-active={editorViewState.isFocusMode}>
+<main
+  class="app-shell"
+  class:zen-active={editorViewState.isZenMode}
+  class:focus-mode-active={editorViewState.isFocusMode}
+  class:hemingway-active={editorViewState.isHemingwayMode}
+>
   {#if editorViewState.isZenMode}
     <div class="zen-exit-zone" role="region" aria-label={t('editor.exitZen')}>
       <button
@@ -378,6 +401,18 @@
                 <span class="item-icon">✨</span>
                 <span class="item-text">Modo Foco</span>
                 <span class="item-shortcut">⌥⌘F</span>
+              </button>
+
+              <button
+                type="button"
+                class="dropdown-item"
+                onclick={() => {
+                  isViewMenuOpen = false;
+                  editorViewState.toggleHemingway();
+                }}
+              >
+                <span class="item-icon">🕯️</span>
+                <span class="item-text">{t('editor.hemingwayMode')}</span>
               </button>
 
               <button
@@ -745,6 +780,17 @@
   .app-shell.focus-mode-active :global(.editor-footer) {
     background-color: var(--color-focus-footer-bg) !important;
     border-top: 1px solid var(--color-focus-footer-border) !important;
+  }
+
+  /* Hemingway Mode: ocultação de barras, menus, inspetores e contadores */
+  .app-shell.hemingway-active .app-header,
+  .app-shell.hemingway-active :global(.sidebar-container),
+  .app-shell.hemingway-active :global(.inspector-panel),
+  .app-shell.hemingway-active :global(.scene-header),
+  .app-shell.hemingway-active :global(.literary-bar),
+  .app-shell.hemingway-active :global(.editor-footer),
+  .app-shell.hemingway-active :global(.floating-hud) {
+    display: none !important;
   }
 
   .app-header {

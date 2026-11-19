@@ -16,6 +16,7 @@ class EditorViewState {
   // Configurações de exibição e foco
   isFocusMode = $state<boolean>(false);
   isZenMode = $state<boolean>(false);
+  isHemingwayMode = $state<boolean>(false);
   isHudVisible = $state<boolean>(true);
   isHudMinimized = $state<boolean>(false);
   isProductivityModalOpen = $state<boolean>(false);
@@ -124,6 +125,27 @@ class EditorViewState {
    */
   exitZen(): void {
     this.isZenMode = false;
+  }
+
+  /**
+   * Alterna o Hemingway Mode (foco imersivo com iluminação dinâmica, não persistido entre sessões).
+   */
+  toggleHemingway(): void {
+    this.isHemingwayMode = !this.isHemingwayMode;
+  }
+
+  /**
+   * Ativa o Hemingway Mode.
+   */
+  enterHemingway(): void {
+    this.isHemingwayMode = true;
+  }
+
+  /**
+   * Sai imediatamente do Hemingway Mode.
+   */
+  exitHemingway(): void {
+    this.isHemingwayMode = false;
   }
 
   /**

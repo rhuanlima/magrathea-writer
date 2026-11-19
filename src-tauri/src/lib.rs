@@ -155,6 +155,13 @@ pub fn setup_native_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Err
             )?,
             &MenuItem::with_id(
                 handle,
+                "menu_hemingway_mode",
+                "Hemingway Mode",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(
+                handle,
                 "menu_toggle_theme",
                 "Alternar Modo Claro / Escuro",
                 true,

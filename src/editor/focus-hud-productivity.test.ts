@@ -51,6 +51,7 @@ describe('M3 — Foco Dinâmico, Zen Mode, HUD e Metas Literárias', () => {
     // Reseta estado do editorViewState
     editorViewState.isFocusMode = false;
     editorViewState.isZenMode = false;
+    editorViewState.isHemingwayMode = false;
     editorViewState.isHudVisible = true;
     editorViewState.isHudMinimized = false;
     editorViewState.isProductivityModalOpen = false;
@@ -108,6 +109,25 @@ describe('M3 — Foco Dinâmico, Zen Mode, HUD e Metas Literárias', () => {
 
       editorViewState.exitZen();
       expect(editorViewState.isZenMode).toBe(false);
+    });
+  });
+
+  describe('Hemingway Mode (Iluminação Dinâmica)', () => {
+    it('deve alternar, entrar e sair do Hemingway Mode sem persistir em localStorage (RN03)', () => {
+      localStorage.clear();
+      expect(editorViewState.isHemingwayMode).toBe(false);
+
+      editorViewState.toggleHemingway();
+      expect(editorViewState.isHemingwayMode).toBe(true);
+      expect(localStorage.getItem('magrathea-hemingway-mode')).toBeNull();
+
+      editorViewState.exitHemingway();
+      expect(editorViewState.isHemingwayMode).toBe(false);
+
+      editorViewState.enterHemingway();
+      expect(editorViewState.isHemingwayMode).toBe(true);
+      editorViewState.toggleHemingway();
+      expect(editorViewState.isHemingwayMode).toBe(false);
     });
   });
 
