@@ -34,7 +34,6 @@
   import LiteraryBar from './LiteraryBar.svelte';
   import FloatingHud from './FloatingHud.svelte';
   import StyleStatsModal from './StyleStatsModal.svelte';
-  import HemingwayOverlay from './HemingwayOverlay.svelte';
 
   interface Props {
     initialContent?: string;
@@ -86,13 +85,7 @@
   let loadSequence = 0;
   let editorResizeObserver: ResizeObserver | null = null;
   let typewriterRafId: number | null = null;
-  let hemingwayRafId: number | null = null;
   let lastSavedWikilinksSig = '';
-  let hemingwayCursorX = $state(0);
-  let hemingwayCursorY = $state(0);
-  let hemingwayCursorHeight = $state(24);
-  let hasHemingwayCursor = $state(false);
-  let removeScrollerScrollListener: (() => void) | null = null;
 
   /**
    * Extrai uma assinatura leve dos [[wikilinks]] presentes no texto para evitar
@@ -105,50 +98,15 @@
   }
 
   function recenterTypewriter() {
-    if (view && editorPreferences.typewriterScrolling && !editorViewState.isHemingwayMode) {
+    if (view && editorPreferences.typewriterScrolling) {
       view.dispatch({
         effects: EditorView.scrollIntoView(view.state.selection.main.head, { y: 'center' }),
       });
     }
   }
 
-  function updateHemingwayCursor() {
-    if (!view || !editorViewState.isHemingwayMode) return;
-    const head = view.state.selection.main.head;
-    const coords = view.coordsAtPos(head);
-    if (coords) {
-      hemingwayCursorX = coords.left;
-      hemingwayCursorY = coords.bottom;
-      hemingwayCursorHeight = Math.max(16, coords.bottom - coords.top);
-      hasHemingwayCursor = true;
-    } else if (editorElement && !hasHemingwayCursor) {
-      const rect = editorElement.getBoundingClientRect();
-      hemingwayCursorX = rect.left + rect.width / 2;
-      hemingwayCursorY = rect.top + rect.height * 0.62;
-      hasHemingwayCursor = true;
-    }
-  }
-
-  function anchorHemingwayScroll() {
-    if (!view || !editorViewState.isHemingwayMode) return;
-    const head = view.state.selection.main.head;
-    const coords = view.coordsAtPos(head);
-    if (coords) {
-      const scroller = view.scrollDOM;
-      const scrollerRect = scroller.getBoundingClientRect();
-      const desiredTop = scrollerRect.top + scrollerRect.height * 0.62;
-      const delta = coords.top - desiredTop;
-      if (Math.abs(delta) > 1.5) {
-        scroller.scrollTop += delta;
-      }
-    }
-    updateHemingwayCursor();
-  }
-
   function handleWindowResize() {
-    if (editorViewState.isHemingwayMode) {
-      requestAnimationFrame(anchorHemingwayScroll);
-    } else if (editorPreferences.typewriterScrolling) {
+    if (editorPreferences.typewriterScrolling) {
       requestAnimationFrame(recenterTypewriter);
     }
   }
@@ -207,16 +165,7 @@
         activeFormats = getActiveFormats(update.state);
       }
 
-      if (editorViewState.isHemingwayMode && (update.docChanged || update.selectionSet)) {
-        updateHemingwayCursor();
-        if (hemingwayRafId !== null) {
-          cancelAnimationFrame(hemingwayRafId);
-        }
-        hemingwayRafId = requestAnimationFrame(() => {
-          hemingwayRafId = null;
-          anchorHemingwayScroll();
-        });
-      } else if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
+      if (editorPreferences.typewriterScrolling && (update.docChanged || update.selectionSet)) {
         if (typewriterRafId !== null) {
           cancelAnimationFrame(typewriterRafId);
         }
@@ -348,22 +297,9 @@
     activeFormats = getActiveFormats(view.state);
     editorViewState.applyInitialFocus(view);
 
-    const scroller = view.scrollDOM;
-    const handleScrollerScroll = () => {
-      if (editorViewState.isHemingwayMode) {
-        updateHemingwayCursor();
-      }
-    };
-    scroller.addEventListener('scroll', handleScrollerScroll, { passive: true });
-    removeScrollerScrollListener = () => {
-      scroller.removeEventListener('scroll', handleScrollerScroll);
-    };
-
     if (editorElement && typeof ResizeObserver !== 'undefined') {
       editorResizeObserver = new ResizeObserver(() => {
-        if (editorViewState.isHemingwayMode) {
-          requestAnimationFrame(anchorHemingwayScroll);
-        } else if (editorPreferences.typewriterScrolling) {
+        if (editorPreferences.typewriterScrolling) {
           requestAnimationFrame(recenterTypewriter);
         }
       });
@@ -413,17 +349,6 @@
   $effect(() => {
     if (editorPreferences.typewriterScrolling && view) {
       requestAnimationFrame(recenterTypewriter);
-    }
-  });
-
-  // Ancora e foca o cursor ao entrar no Hemingway Mode
-  $effect(() => {
-    if (editorViewState.isHemingwayMode && view) {
-      requestAnimationFrame(() => {
-        if (!view || !editorViewState.isHemingwayMode) return;
-        view.focus();
-        anchorHemingwayScroll();
-      });
     }
   });
 
@@ -504,14 +429,6 @@
       cancelAnimationFrame(typewriterRafId);
       typewriterRafId = null;
     }
-    if (hemingwayRafId !== null) {
-      cancelAnimationFrame(hemingwayRafId);
-      hemingwayRafId = null;
-    }
-    if (removeScrollerScrollListener) {
-      removeScrollerScrollListener();
-      removeScrollerScrollListener = null;
-    }
     if (editorResizeObserver) {
       editorResizeObserver.disconnect();
       editorResizeObserver = null;
@@ -544,18 +461,9 @@
     class="editor-container"
     class:show-line-numbers={editorPreferences.showLineNumbers}
     class:typewriter-scrolling={editorPreferences.typewriterScrolling}
-    class:hemingway-active={editorViewState.isHemingwayMode}
     style="--editor-font-size: {editorPreferences.fontSize}px; --editor-font-family: {editorPreferences.fontFamilyCss}; --editor-line-height: {editorPreferences.lineHeight}; --editor-column-max-width: {editorPreferences.columnMaxWidthPx};"
     bind:this={editorElement}
   ></div>
-
-  <HemingwayOverlay
-    active={editorViewState.isHemingwayMode}
-    cursorX={hemingwayCursorX}
-    cursorY={hemingwayCursorY}
-    cursorHeight={hemingwayCursorHeight}
-    hasCursorCoords={hasHemingwayCursor}
-  />
 
   <FloatingHud sceneWordsCount={wordsCount} />
 
@@ -724,11 +632,6 @@
 
   :global(.editor-container.typewriter-scrolling .cm-content) {
     padding-top: 35vh !important;
-    padding-bottom: 45vh !important;
-  }
-
-  :global(.editor-container.hemingway-active .cm-content) {
-    padding-top: 45vh !important;
     padding-bottom: 45vh !important;
   }
 

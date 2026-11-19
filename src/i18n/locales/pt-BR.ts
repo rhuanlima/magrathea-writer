@@ -17,9 +17,6 @@ export const ptBR: TranslationSchema = {
     focusModeToggle: 'Alternar Modo Foco Dinâmico (Cmd/Ctrl+Alt+F)',
     zenModeToggle: 'Alternar Modo Zen Imersivo (F11)',
     exitZen: 'Sair do Modo Zen',
-    hemingwayMode: 'Hemingway Mode',
-    hemingwayModeSubtitle: 'Escrita imersiva com feixe de luz dinâmico',
-    hemingwayExitHint: 'Pressione ESC para sair do Hemingway Mode',
   },
   vault: {
     status: {
