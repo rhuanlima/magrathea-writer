@@ -95,6 +95,17 @@
       },
     },
     {
+      id: 'action-hemingway',
+      category: 'action',
+      title: 'Hemingway Mode',
+      subtitle: 'Escrita imersiva com feixe de luz dinâmico sobre o cursor',
+      icon: '🕯️',
+      shortcut: 'Esc (sair)',
+      execute: () => {
+        editorViewState.toggleHemingway();
+      },
+    },
+    {
       id: 'action-theme',
       category: 'action',
       title: 'Alternar Modo Claro / Escuro',

@@ -17,6 +17,9 @@ export const enUS: TranslationSchema = {
     focusModeToggle: 'Toggle Dynamic Focus Mode (Cmd/Ctrl+Alt+F)',
     zenModeToggle: 'Toggle Immersive Zen Mode (F11)',
     exitZen: 'Exit Zen Mode',
+    hemingwayMode: 'Hemingway Mode',
+    hemingwayModeSubtitle: 'Immersive writing with dynamic spotlight beam',
+    hemingwayExitHint: 'Press ESC to exit Hemingway Mode',
   },
   vault: {
     status: {
